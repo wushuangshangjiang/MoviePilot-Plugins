@@ -131,7 +131,7 @@ class WebHook(_PluginBase):
         """
         向第三方Webhook发送请求
         """
-        if not self._enabled or not self._webhook_url:
+        if not self._enabled or not self._webhook_url or event.event_type != "transfer.complete":
             return
 
         def __to_dict(_event):
@@ -169,11 +169,11 @@ class WebHook(_PluginBase):
         else:
             ret = RequestUtils().get_res(self._webhook_url, params=event_info)
         if ret:
-            logger.info("发送成功：%s" % self._webhook_url)
+            logger.info("入库刷新请求发送成功：%s" % self._webhook_url)
         elif ret is not None:
-            logger.error(f"发送失败，状态码：{ret.status_code}，返回信息：{ret.text} {ret.reason}")
+            logger.error(f"入库刷新请求发送失败，状态码：{ret.status_code}，返回信息：{ret.text} {ret.reason}")
         else:
-            logger.error("发送失败，未获取到返回信息")
+            logger.error("入库刷新请求发送失败，未获取到返回信息")
 
     def stop_service(self):
         """
