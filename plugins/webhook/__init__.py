@@ -14,7 +14,7 @@ class WebHook(_PluginBase):
     # 插件图标
     plugin_icon = "webhook.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -131,7 +131,7 @@ class WebHook(_PluginBase):
         """
         向第三方Webhook发送请求
         """
-        if not self._enabled or not self._webhook_url or event.event_type != "transfer.complete":
+        if not self._enabled or not self._webhook_url:
             return
 
         def __to_dict(_event):
@@ -164,6 +164,8 @@ class WebHook(_PluginBase):
             "data": __to_dict(event.event_data)
         }
 
+        if event.event_type != "transfer.complete":
+            return
         if self._method == 'POST':
             ret = RequestUtils(content_type="application/json").post_res(self._webhook_url, json=event_info)
         else:
