@@ -1,8 +1,8 @@
 {
     "WebHook": {
         "name": "Webhook",
-        "description": "转移完成时,发送webhook,修改自原作者:https://github.com/jxxghp",
-        "version": "1.1",
+        "description": "转移完成时,发送webhook",
+        "version": "1.2",
         "icon": "webhook.png",
         "author": "wushuangshangjiang",
         "level": 1
