@@ -10,15 +10,15 @@ class WebHook(_PluginBase):
     # 插件名称
     plugin_name = "Webhook"
     # 插件描述
-    plugin_desc = "事件发生时向第三方地址发送请求。"
+    plugin_desc = "转移完成时,发送webhook,修改字原作者:https://github.com/jxxghp"
     # 插件图标
     plugin_icon = "webhook.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
-    plugin_author = "jxxghp"
+    plugin_author = "wushuangshangjiang"
     # 作者主页
-    author_url = "https://github.com/jxxghp"
+    author_url = "https://github.com/wushuangshangjiang"
     # 插件配置项ID前缀
     plugin_config_prefix = "webhook_"
     # 加载顺序
