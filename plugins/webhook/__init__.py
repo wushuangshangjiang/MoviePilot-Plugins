@@ -8,7 +8,7 @@ from app.log import logger
 
 class WebHook(_PluginBase):
     # 插件名称
-    plugin_name = "Webhook"
+    plugin_name = "Webhook-RefreshMedia"
     # 插件描述
     plugin_desc = "转移完成时,发送webhook,修改字原作者:https://github.com/jxxghp"
     # 插件图标
