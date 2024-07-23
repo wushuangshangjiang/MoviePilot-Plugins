@@ -33,7 +33,7 @@ class RssSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "rss.png"
     # 插件版本
-    plugin_version = "1.73"
+    plugin_version = "1.74"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -659,7 +659,7 @@ class RssSubscribe(_PluginBase):
             for index, result in enumerate(results):
                 if index > rss_num-1 and rss_num > 0: #只获取前四条数据
                     break
-                logger.info(f"当前第{index}条RSS数据:")
+                logger.info(f"当前第{index+1}条RSS数据:")
                 try:
                     title = result.get("title")
                     description = result.get("description")
