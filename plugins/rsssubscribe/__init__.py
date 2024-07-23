@@ -29,11 +29,11 @@ class RssSubscribe(_PluginBase):
     # 插件名称
     plugin_name = "自定义订阅"
     # 插件描述
-    plugin_desc = "定时刷新RSS报文,并对前4条进行处理。"
+    plugin_desc = "定时刷新RSS报文,并对前N条进行处理。"
     # 插件图标
     plugin_icon = "rss.png"
     # 插件版本
-    plugin_version = "1.6.1"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -68,6 +68,7 @@ class RssSubscribe(_PluginBase):
     _action: str = "subscribe"
     _save_path: str = ""
     _size_range: str = ""
+    _rss_num: int = ""
 
     def init_plugin(self, config: dict = None):
         self.rsshelper = RssHelper()
@@ -94,6 +95,7 @@ class RssSubscribe(_PluginBase):
             self._action = config.get("action")
             self._save_path = config.get("save_path")
             self._size_range = config.get("size_range")
+            self._rss_num = config.get("rss_num")
 
         if self._onlyonce:
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
@@ -277,6 +279,23 @@ class RssSubscribe(_PluginBase):
                                         }
                                     }
                                 ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {
+                                    'cols': 12,
+                                    'md': 6
+                                },
+                                'content': [
+                                    {
+                                        'component': 'VTextField',
+                                        'props': {
+                                            'model': 'rss_num',
+                                            'label': 'RSS条数',
+                                            'placeholder': '默认为0:即获取所有数据,负数同理,其他则为对应的数字'
+                                        }
+                                    }
+                                ]
                             }
                         ]
                     },
@@ -441,6 +460,7 @@ class RssSubscribe(_PluginBase):
             "cron": "*/30 * * * *",
             "address": "",
             "include": "",
+            "rss_num": "0",
             "exclude": "",
             "proxy": False,
             "clear": False,
@@ -598,6 +618,7 @@ class RssSubscribe(_PluginBase):
             "cron": self._cron,
             "address": self._address,
             "include": self._include,
+            "rss_num": self._rss_num,
             "exclude": self._exclude,
             "proxy": self._proxy,
             "clear": self._clear,
@@ -630,10 +651,13 @@ class RssSubscribe(_PluginBase):
             # 过滤规则
             filter_rule = self.systemconfig.get(SystemConfigKey.SubscribeFilterRules)
             # 解析数据
-            logger.info(f"只获取前4条RSS数据!")
+            if self._rss_num > 0:
+                logger.info(f"只获取前{self._rss_num}条RSS数据!")
+            else:
+                logger.info(f"获取所有RSS数据!")
             for index, result in enumerate(results):
-                if index > 3: #只获取前四条数据
-                    return
+                if index > self._rss_num and self._rss_num > 0: #只获取前四条数据
+                    break
                 logger.info(f"当前第{index+1}条RSS数据:")
                 try:
                     title = result.get("title")
