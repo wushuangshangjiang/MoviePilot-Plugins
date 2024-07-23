@@ -33,7 +33,7 @@ class RssSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "rss.png"
     # 插件版本
-    plugin_version = "1.71"
+    plugin_version = "1.72"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -68,7 +68,7 @@ class RssSubscribe(_PluginBase):
     _action: str = "subscribe"
     _save_path: str = ""
     _size_range: str = ""
-    _rss_num: int
+    _rss_num: str = ""
 
     def init_plugin(self, config: dict = None):
         self.rsshelper = RssHelper()
@@ -460,7 +460,7 @@ class RssSubscribe(_PluginBase):
             "cron": "*/30 * * * *",
             "address": "",
             "include": "",
-            "rss_num": 0,
+            "rss_num": "0",
             "exclude": "",
             "proxy": False,
             "clear": False,
@@ -651,12 +651,13 @@ class RssSubscribe(_PluginBase):
             # 过滤规则
             filter_rule = self.systemconfig.get(SystemConfigKey.SubscribeFilterRules)
             # 解析数据
-            if self._rss_num > 0:
-                logger.info(f"只获取前{self._rss_num}条RSS数据!")
+            rss_num = int(self._rss_num)
+            if rss_num > 0:
+                logger.info(f"只获取前{rss_num}条RSS数据!")
             else:
                 logger.info(f"获取所有RSS数据!")
             for index, result in enumerate(results):
-                if index > self._rss_num and self._rss_num > 0: #只获取前四条数据
+                if index > rss_num and rss_num > 0: #只获取前四条数据
                     break
                 logger.info(f"当前第{index+1}条RSS数据:")
                 try:
