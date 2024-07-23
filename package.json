@@ -9,7 +9,7 @@
     },
     "RssSubscribe": {
         "name": "自定义订阅",
-        "description": "定时刷新RSS报文,并处理前4条",
+        "description": "定时刷新RSS报文,并对前N条进行处理",
         "labels": "订阅",
         "version": "1.7",
         "icon": "rss.png",
