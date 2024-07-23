@@ -11,7 +11,7 @@
         "name": "自定义订阅",
         "description": "定时刷新RSS报文,并处理前4条",
         "labels": "订阅",
-        "version": "1.6",
+        "version": "1.6.1",
         "icon": "rss.png",
         "author": "wushuangshangjiang",
         "level": 2,
