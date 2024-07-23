@@ -632,9 +632,9 @@ class RssSubscribe(_PluginBase):
             # 解析数据
             logger.info(f"只获取前4条RSS数据!")
             for index, result in enumerate(results):
-                logger.info(f"当前第几{index}条RSS数据:")
                 if index > 3: #只获取前四条数据
                     return
+                logger.info(f"当前第{index+1}条RSS数据:")
                 try:
                     title = result.get("title")
                     description = result.get("description")
