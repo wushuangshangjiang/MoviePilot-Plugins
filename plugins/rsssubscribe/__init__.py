@@ -33,7 +33,7 @@ class RssSubscribe(_PluginBase):
     # 插件图标
     plugin_icon = "rss.png"
     # 插件版本
-    plugin_version = "1.7"
+    plugin_version = "1.71"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
