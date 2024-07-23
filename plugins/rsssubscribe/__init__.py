@@ -68,7 +68,7 @@ class RssSubscribe(_PluginBase):
     _action: str = "subscribe"
     _save_path: str = ""
     _size_range: str = ""
-    _rss_num: int = ""
+    _rss_num: int
 
     def init_plugin(self, config: dict = None):
         self.rsshelper = RssHelper()
@@ -460,7 +460,7 @@ class RssSubscribe(_PluginBase):
             "cron": "*/30 * * * *",
             "address": "",
             "include": "",
-            "rss_num": "0",
+            "rss_num": 0,
             "exclude": "",
             "proxy": False,
             "clear": False,
