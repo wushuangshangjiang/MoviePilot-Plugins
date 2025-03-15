@@ -26,7 +26,7 @@ from app.schemas.types import SystemConfigKey, MediaType
 lock = Lock()
 
 
-class RssSubscribe(_PluginBase):
+class Rss(_PluginBase):
     # 插件名称
     plugin_name = "自定义订阅-自用版"
     # 插件描述
