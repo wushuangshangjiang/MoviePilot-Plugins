@@ -1,5 +1,5 @@
 {
-    "rss-self": {
+    "RssSelf": {
         "name": "Webhook-RefreshMedia",
         "description": "转移完成时,发送webhook",
         "version": "2.0",
@@ -7,7 +7,7 @@
         "author": "wushuangshangjiang",
         "level": 1
     },
-    "webhook-self": {
+    "WebHookSelf": {
         "name": "自定义订阅-自用版",
         "description": "定时刷新RSS报文,并对前N条进行处理",
         "labels": "订阅",
