@@ -1,14 +1,14 @@
 {
     "MediaHook": {
-        "name": "Webhook-RefreshMedia",
-        "description": "转移完成时,发送webhook",
+        "name": "MediaHook",
+        "description": "转移完成时,发送webhook到mediaserver",
         "version": "2.0",
         "icon": "webhook.png",
         "author": "wushuangshangjiang",
         "level": 1
     },
     "Rss": {
-        "name": "自定义订阅-自用版",
+        "name": "RSS",
         "description": "定时刷新RSS报文,并对前N条进行处理",
         "labels": "订阅",
         "version": "2.0",
