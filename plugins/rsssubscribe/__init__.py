@@ -27,13 +27,13 @@ lock = Lock()
 
 class RssSubscribe(_PluginBase):
     # 插件名称
-    plugin_name = "自定义订阅"
+    plugin_name = "自定义订阅-自用版"
     # 插件描述
     plugin_desc = "定时刷新RSS报文,并对前N条进行处理。"
     # 插件图标
     plugin_icon = "rss.png"
     # 插件版本
-    plugin_version = "1.74"
+    plugin_version = "2.0"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
