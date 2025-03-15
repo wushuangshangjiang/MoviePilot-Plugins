@@ -6,7 +6,7 @@ from typing import Any, List, Dict, Tuple
 from app.log import logger
 
 
-class MediaWebHook(_PluginBase):
+class MediaHook(_PluginBase):
     # 插件名称
     plugin_name = "Webhook-RefreshMedia"
     # 插件描述
