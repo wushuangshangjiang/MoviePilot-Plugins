@@ -1,6 +1,6 @@
 {
     "WebHook": {
-        "name": "Webhook",
+        "name": "Webhook-RefreshMedia",
         "description": "转移完成时,发送webhook",
         "version": "2.0",
         "icon": "webhook.png",
