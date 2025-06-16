@@ -1,14 +1,15 @@
 from app.plugins import _PluginBase
+from app.utils.metadata import TMDB
+import requests
 from typing import Any, List, Dict, Tuple
 from app.log import logger
-import requests
 
 
 class TmdbHook(_PluginBase):
     plugin_name = "TmdbHook"
     plugin_desc = "使用自建 TMDB 反代服务，锁定电影/剧集名称"
     plugin_icon = "tmdb.png"
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     plugin_author = "wushuangshangjiang"
     author_url = "https://github.com/wushuangshangjiang"
     plugin_config_prefix = "tmdbhook_"
@@ -19,9 +20,14 @@ class TmdbHook(_PluginBase):
     _proxy_url = ""
 
     def init_plugin(self, config: dict = None):
+        """
+        初始化插件配置，并进行 TMDB 方法替换
+        """
         if config:
             self._enabled = config.get("enabled", False)
             self._proxy_url = config.get("proxy_url", "").rstrip('/')
+        if self._enabled:
+            self._patch_tmdb()
 
     def get_state(self) -> bool:
         return self._enabled
@@ -32,47 +38,25 @@ class TmdbHook(_PluginBase):
                 'component': 'VForm',
                 'content': [
                     {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {'cols': 12, 'md': 6},
-                                'content': [
-                                    {
-                                        'component': 'VSwitch',
-                                        'props': {
-                                            'model': 'enabled',
-                                            'label': '启用插件',
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
+                        'component': 'VSwitch',
+                        'props': {
+                            'model': 'enabled',
+                            'label': '启用插件',
+                        }
                     },
                     {
-                        'component': 'VRow',
-                        'content': [
-                            {
-                                'component': 'VCol',
-                                'props': {'cols': 12},
-                                'content': [
-                                    {
-                                        'component': 'VTextField',
-                                        'props': {
-                                            'model': 'proxy_url',
-                                            'label': 'TMDB 代理服务 URL',
-                                            'placeholder': 'http://127.0.0.1:9000'
-                                        }
-                                    }
-                                ]
-                            }
-                        ]
-                    },
+                        'component': 'VTextField',
+                        'props': {
+                            'model': 'proxy_url',
+                            'label': 'TMDB 代理地址',
+                            'placeholder': 'http://127.0.0.1:9000'
+                        }
+                    }
                 ]
             }
         ], {
             "enabled": False,
-            "proxy_url": "http://127.0.0.1:9000"
+            "proxy_url": ""
         }
 
     def get_command(self) -> List[Dict[str, Any]]:
@@ -81,58 +65,37 @@ class TmdbHook(_PluginBase):
     def get_api(self) -> List[Dict[str, Any]]:
         return []
 
-    def get_page(self) -> List[dict]:
+    def get_page(self) -> List[Dict[str, Any]]:
         return []
 
     def stop_service(self):
         pass
 
-    def get_metadata(self, media_type: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
+    def _patch_tmdb(self):
         """
-        MoviePilot 元数据请求钩子，劫持 TMDB 请求
-        media_type: 'movie' 或 'tv'
-        metadata: 包含 tmdb_id 和语言等参数
+        替换 TMDB.get 方法，将所有 TMDB 请求改为使用代理地址
         """
-        if not self._enabled or not self._proxy_url:
-            return {}
+        proxy_url = self._proxy_url
 
-        tmdb_id = metadata.get("tmdb_id")
-        language = metadata.get("language", "zh-CN")
+        if not proxy_url:
+            logger.warning("[TmdbHook] 未设置代理地址，不进行 patch")
+            return
 
-        if not tmdb_id or not media_type:
-            return {}
+        logger.info(f"[TmdbHook] TMDB 请求将被代理至：{proxy_url}")
 
-        try:
-            url = f"{self._proxy_url}/3/{media_type}/{tmdb_id}"
-            resp = requests.get(url, params={"language": language}, timeout=5)
-            resp.raise_for_status()
-            data = resp.json()
+        def _proxy_get(self, url: str, **kwargs):
+            # 替换 URL
+            if url.startswith("https://api.themoviedb.org/3"):
+                new_url = url.replace("https://api.themoviedb.org/3", f"{proxy_url}/3")
+            else:
+                new_url = url
+            try:
+                response = requests.get(new_url, params=kwargs.get("params"), timeout=10)
+                response.raise_for_status()
+                return response.json()
+            except Exception as e:
+                logger.error(f"[TmdbHook] TMDB 请求失败: {e}")
+                return {}
 
-            title = (
-                data.get("locked_title") or data.get("locked_name") or
-                data.get("title") or data.get("name") or ""
-            )
-            original_title = (
-                data.get("locked_original_title") or data.get("locked_original_name") or
-                data.get("original_title") or data.get("original_name") or ""
-            )
-
-            year = ""
-            if "release_date" in data and data["release_date"]:
-                year = data["release_date"][:4]
-            elif "first_air_date" in data and data["first_air_date"]:
-                year = data["first_air_date"][:4]
-
-            return {
-                "title": title,
-                "original_title": original_title,
-                "year": year,
-                "overview": data.get("overview", ""),
-                "poster_path": data.get("poster_path", ""),
-                "tmdb_id": tmdb_id,
-                "language": language,
-            }
-
-        except Exception as e:
-            logger.error(f"TmdbHook 插件请求失败: {e}")
-            return {}
+        # 替换 TMDB 的 get 方法
+        TMDB.get = _proxy_get.__get__(TMDB, TMDB)
