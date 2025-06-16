@@ -1,11 +1,6 @@
-
 from app.plugins import _PluginBase
-from app.core.event import eventmanager
-from app.schemas.types import EventType
-from app.utils.http import RequestUtils
 from typing import Any, List, Dict, Tuple
 from app.log import logger
-
 import requests
 
 
@@ -20,22 +15,18 @@ class TmdbHook(_PluginBase):
     plugin_order = 10
     auth_level = 1
 
-    # 配置参数，初始化默认值
-    _proxy_url: str = "http://127.0.0.1:9000"
-    _enabled: bool = False
+    _enabled = False
+    _proxy_url = ""
 
     def init_plugin(self, config: dict = None):
         if config:
             self._enabled = config.get("enabled", False)
-            self._proxy_url = config.get("proxy_url", "http://127.0.0.1:9000")
+            self._proxy_url = config.get("proxy_url", "").rstrip('/')
 
     def get_state(self) -> bool:
         return self._enabled
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
-        """
-        插件配置界面表单
-        """
         return [
             {
                 'component': 'VForm',
@@ -63,13 +54,13 @@ class TmdbHook(_PluginBase):
                         'content': [
                             {
                                 'component': 'VCol',
-                                'props': {'cols': 12, 'md': 12},
+                                'props': {'cols': 12},
                                 'content': [
                                     {
                                         'component': 'VTextField',
                                         'props': {
                                             'model': 'proxy_url',
-                                            'label': 'TMDB 代理服务基础 URL',
+                                            'label': 'TMDB 代理服务 URL',
                                             'placeholder': 'http://127.0.0.1:9000'
                                         }
                                     }
@@ -93,23 +84,39 @@ class TmdbHook(_PluginBase):
     def get_page(self) -> List[dict]:
         return []
 
-    def fetch_metadata(self, media_type: str, tmdb_id: str, language: str = "zh-CN") -> dict:
+    def stop_service(self):
+        pass
+
+    def get_metadata(self, media_type: str, metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
-        主动调用的辅助函数：通过反代请求 TMDB，返回锁定名称等元数据
+        MoviePilot 元数据请求钩子，劫持 TMDB 请求
+        media_type: 'movie' 或 'tv'
+        metadata: 包含 tmdb_id 和语言等参数
         """
-        if not self._enabled or not self._proxy_url or not tmdb_id:
+        if not self._enabled or not self._proxy_url:
             return {}
 
-        url = f"{self._proxy_url}/3/{media_type}/{tmdb_id}"
-        params = {"language": language}
+        tmdb_id = metadata.get("tmdb_id")
+        language = metadata.get("language", "zh-CN")
+
+        if not tmdb_id or not media_type:
+            return {}
 
         try:
-            resp = requests.get(url, params=params, timeout=5)
+            url = f"{self._proxy_url}/3/{media_type}/{tmdb_id}"
+            resp = requests.get(url, params={"language": language}, timeout=5)
             resp.raise_for_status()
             data = resp.json()
-            # 提取锁定名称和其他元数据
-            title = data.get("locked_title") or data.get("locked_name") or data.get("title") or data.get("name") or ""
-            original_title = data.get("locked_original_title") or data.get("locked_original_name") or data.get("original_title") or data.get("original_name") or ""
+
+            title = (
+                data.get("locked_title") or data.get("locked_name") or
+                data.get("title") or data.get("name") or ""
+            )
+            original_title = (
+                data.get("locked_original_title") or data.get("locked_original_name") or
+                data.get("original_title") or data.get("original_name") or ""
+            )
+
             year = ""
             if "release_date" in data and data["release_date"]:
                 year = data["release_date"][:4]
@@ -125,17 +132,7 @@ class TmdbHook(_PluginBase):
                 "tmdb_id": tmdb_id,
                 "language": language,
             }
+
         except Exception as e:
-            logger.error(f"TMDB代理请求失败: {str(e)}")
+            logger.error(f"TmdbHook 插件请求失败: {e}")
             return {}
-
-    # 你可以选择注册某个事件，或者写插件内调用fetch_metadata的逻辑
-    # 这里只示范事件注册的写法，假设监听某事件后调用fetch_metadata（视你业务需求）
-    @eventmanager.register(EventType)
-    def on_event(self, event):
-        # 根据事件数据判断是否调用fetch_metadata等逻辑
-        pass
-
-    def stop_service(self):
-        # 停止插件时执行的操作
-        pass
