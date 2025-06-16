@@ -18,5 +18,13 @@
         "history": {
             "v2.0": "自定义处理RSS的条数"
         }
+    },
+    "TmdbHook": {
+        "name": "TmdbHook",
+        "description": "HookTMDB,修改自定义字段",
+        "version": "2.0",
+        "icon": "rss.png",
+        "author": "wushuangshangjiang",
+        "level": 1
     }
 }
