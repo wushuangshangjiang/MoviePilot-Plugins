@@ -10,13 +10,13 @@ import requests
 
 
 class TmdbHook(_PluginBase):
-    plugin_name = "tmdbhook"
+    plugin_name = "TmdbHook"
     plugin_desc = "使用自建 TMDB 反代服务，锁定电影/剧集名称"
     plugin_icon = "tmdb.png"
     plugin_version = "1.0"
-    plugin_author = "your_name"
-    author_url = ""
-    plugin_config_prefix = "tmdbproxy_"
+    plugin_author = "wushuangshangjiang"
+    author_url = "https://github.com/wushuangshangjiang"
+    plugin_config_prefix = "tmdbhook_"
     plugin_order = 10
     auth_level = 1
 
