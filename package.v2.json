@@ -16,7 +16,8 @@
         "author": "wushuangshangjiang",
         "level": 2,
         "history": {
-            "v2.0": "自定义处理RSS的条数"
+            "v2.0": "自定义处理RSS的条数",
+            "v2.1": "跟随上游代码修复错误"
         }
     }
 }
