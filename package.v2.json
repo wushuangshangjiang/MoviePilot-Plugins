@@ -11,7 +11,7 @@
         "name": "RSS",
         "description": "定时刷新RSS报文,并对前N条进行处理",
         "labels": "订阅",
-        "version": "2.0",
+        "version": "2.1",
         "icon": "rss.png",
         "author": "wushuangshangjiang",
         "level": 2,
