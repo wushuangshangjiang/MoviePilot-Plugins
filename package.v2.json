@@ -21,7 +21,7 @@
         }
     },
     "ISO": {
-        "name": "ISO原盘匹配",
+        "name": "ISO",
         "description": "ISO原盘匹配",
         "labels": "原盘",
         "version": "2.7",
