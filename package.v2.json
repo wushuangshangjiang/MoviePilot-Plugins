@@ -22,14 +22,14 @@
     },
     "ISO": {
         "name": "ISO",
-        "description": "处理ISO文件到特殊路径",
+        "description": "ISO原盘分类",
         "labels": "原盘",
-        "version": "2.5",
+        "version": "2.0",
         "icon": "directory.png",
         "author": "wushuangshangjiang",
         "level": 2,
         "history": {
-            "v2.0": "特殊匹配原盘路径"
+            "v2.0": "在媒体识别阶段将ISO文件分类为原盘电影"
         }
     }
 }
