@@ -13,7 +13,7 @@ class ISO(_PluginBase):
     plugin_name = "ISO原盘匹配"
     plugin_desc = "识别到ISO文件时，将类别标记为原盘电影"
     plugin_icon = "directory.png"
-    plugin_version = "2.7"
+    plugin_version = "2.8"
     plugin_author = "wushuangshangjiang"
     author_url = "https://github.com/wushuangshangjiang"
     plugin_config_prefix = "iso_"

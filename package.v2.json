@@ -24,7 +24,7 @@
         "name": "ISO",
         "description": "ISO原盘匹配",
         "labels": "原盘",
-        "version": "2.7",
+        "version": "2.8",
         "icon": "directory.png",
         "author": "wushuangshangjiang",
         "level": 2,
