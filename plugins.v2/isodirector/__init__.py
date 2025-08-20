@@ -13,7 +13,7 @@ class ISOMatcherPlugin(_PluginBase):
     # 插件基础信息
     plugin_name = "ISO原盘匹配"
     plugin_desc = "将ISO文件匹配到原盘电影目录"
-    plugin_icon = "ISO.png"
+    plugin_icon = "directory.png"
     plugin_version = "2.0"
     plugin_author = "wushuangshangjiang"
     author_url = "https://github.com/wushuangshangjiang"
