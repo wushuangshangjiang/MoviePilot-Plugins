@@ -13,7 +13,7 @@ class ISO(_PluginBase):
     plugin_name = "ISO原盘匹配"
     plugin_desc = "将ISO文件匹配到原盘电影目录"
     plugin_icon = "directory.png"
-    plugin_version = "2.4"
+    plugin_version = "2.5"
     plugin_author = "wushuangshangjiang"
     author_url = "https://github.com/wushuangshangjiang"
     plugin_config_prefix = "iso_"
@@ -96,6 +96,7 @@ class ISO(_PluginBase):
 
         try:
             data = event.event_data
+            logger.debug(data)
             if not hasattr(data, 'render_str') or not data.render_str:
                 logger.warning("ISO路径替换异常：render_str为空")
                 return
