@@ -9,7 +9,7 @@ from app.schemas.types import ChainEventType, NotificationType
 
 logger = logging.getLogger("ISOMatcherPlugin")
 
-class ISOMatcherPlugin(_PluginBase):
+class ISO(_PluginBase):
     # 插件基础信息
     plugin_name = "ISO原盘匹配"
     plugin_desc = "将ISO文件匹配到原盘电影目录"
@@ -17,7 +17,7 @@ class ISOMatcherPlugin(_PluginBase):
     plugin_version = "2.1"
     plugin_author = "wushuangshangjiang"
     author_url = "https://github.com/wushuangshangjiang"
-    plugin_config_prefix = "isodirector_"
+    plugin_config_prefix = "iso_"
     plugin_order = 1
     auth_level = 1
 

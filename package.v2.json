@@ -21,7 +21,7 @@
         }
     },
     "ISO": {
-        "name": "ISODirector",
+        "name": "ISO",
         "description": "处理ISO文件到特殊路径",
         "labels": "原盘",
         "version": "2.1",
