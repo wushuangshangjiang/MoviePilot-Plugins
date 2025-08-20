@@ -13,7 +13,7 @@ class ISO(_PluginBase):
     plugin_name = "ISO原盘匹配"
     plugin_desc = "将ISO文件匹配到原盘电影目录"
     plugin_icon = "directory.png"
-    plugin_version = "2.3"
+    plugin_version = "2.4"
     plugin_author = "wushuangshangjiang"
     author_url = "https://github.com/wushuangshangjiang"
     plugin_config_prefix = "iso_"
@@ -73,6 +73,14 @@ class ISO(_PluginBase):
             "notify": False,
             "iso_target_dir": ""
         }
+
+    def get_api(self) -> List[Dict[str, Any]]:
+        # 暂不提供 API
+        return []
+
+    def get_page(self) -> List[dict]:
+        # 暂不提供前端页面
+        return []
 
     @eventmanager.register(ChainEventType.TransferRename)
     def handle_event(self, event: Event):
