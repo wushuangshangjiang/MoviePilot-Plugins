@@ -19,5 +19,17 @@
             "v2.0": "自定义处理RSS的条数",
             "v2.1": "跟随上游代码修复错误"
         }
+    },
+    "ISO": {
+        "name": "ISO",
+        "description": "处理ISO文件到特殊路径",
+        "labels": "原盘",
+        "version": "2.0",
+        "icon": "ISO.png",
+        "author": "wushuangshangjiang",
+        "level": 2,
+        "history": {
+            "v2.0": "特殊匹配原盘路径"
+        }
     }
 }
