@@ -21,10 +21,10 @@
         }
     },
     "ISO": {
-        "name": "ISO",
-        "description": "ISO原盘分类",
+        "name": "ISO原盘匹配",
+        "description": "ISO原盘匹配",
         "labels": "原盘",
-        "version": "2.0",
+        "version": "2.7",
         "icon": "directory.png",
         "author": "wushuangshangjiang",
         "level": 2,
