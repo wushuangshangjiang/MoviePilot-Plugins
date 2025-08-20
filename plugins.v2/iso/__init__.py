@@ -13,7 +13,7 @@ class ISO(_PluginBase):
     plugin_name = "ISO原盘匹配"
     plugin_desc = "将ISO文件匹配到原盘电影目录"
     plugin_icon = "directory.png"
-    plugin_version = "2.2"
+    plugin_version = "2.3"
     plugin_author = "wushuangshangjiang"
     author_url = "https://github.com/wushuangshangjiang"
     plugin_config_prefix = "iso_"
@@ -41,9 +41,29 @@ class ISO(_PluginBase):
                     {
                         'component': 'VRow',
                         'content': [
-                            {'component': 'VCol', 'props': {'cols': 12, 'md': 6}, 'content': [{'component': 'VSwitch', 'props': {'model': 'enabled', 'label': '启用插件'}}]},
-                            {'component': 'VCol', 'props': {'cols': 12, 'md': 6}, 'content': [{'component': 'VSwitch', 'props': {'model': 'notify', 'label': '发送通知'}}]},
-                            {'component': 'VCol', 'props': {'cols': 12}, 'content': [{'component': 'VTextField', 'props': {'model': 'iso_target_dir', 'label': 'ISO目标目录'}}]}
+                            {
+                                'component': 'VCol',
+                                'props': {'cols': 12, 'md': 6},
+                                'content': [
+                                    {'component': 'VSwitch', 'props': {'model': 'enabled', 'label': '启用插件'}}
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {'cols': 12, 'md': 6},
+                                'content': [
+                                    {'component': 'VSwitch', 'props': {'model': 'notify', 'label': '发送通知'}}
+                                ]
+                            },
+                            {
+                                'component': 'VCol',
+                                'props': {'cols': 12},
+                                'content': [
+                                    {'component': 'VTextField',
+                                     'props': {'model': 'iso_target_dir', 'label': 'ISO目标目录',
+                                               'placeholder': '填写ISO目标路径'}}
+                                ]
+                            }
                         ]
                     }
                 ]

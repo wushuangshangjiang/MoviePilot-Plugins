@@ -24,7 +24,7 @@
         "name": "ISO",
         "description": "处理ISO文件到特殊路径",
         "labels": "原盘",
-        "version": "2.2",
+        "version": "2.3",
         "icon": "directory.png",
         "author": "wushuangshangjiang",
         "level": 2,
