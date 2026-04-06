@@ -2978,6 +2978,7 @@ class WsEmbyCover(_PluginBase):
     @memory_efficient_operation
     def __generate_image_from_path(self, server, library_name, title, image_path=None, config_bg_color=None):
         logger.info(f"媒体库 {server}：{library_name} 正在生成封面图 ...")
+        image_data = False
 
         # 执行健康检查
         if not self.health_check():
@@ -3090,10 +3091,16 @@ class WsEmbyCover(_PluginBase):
         elif self._cover_style == 'static_5':
             create_style_static_5 = self.__load_style_creator("style_static_5", "create_style_static_5")
             safe_library_name = self.__sanitize_filename(library_name)
-            if image_path:
-                library_dir = Path(self._covers_input) / safe_library_name
+            cache_library_dir = Path(self._covers_path) / safe_library_name
+            custom_library_dir = Path(self._covers_input) / safe_library_name if self._covers_input else None
+            numbered_posters = [cache_library_dir / f"{index}.jpg" for index in range(1, 6)]
+
+            if all(path.exists() for path in numbered_posters):
+                library_dir = cache_library_dir
+            elif custom_library_dir and custom_library_dir.exists():
+                library_dir = custom_library_dir
             else:
-                library_dir = Path(self._covers_path) / safe_library_name
+                library_dir = cache_library_dir
             logger.info(f"static_5: 准备图片目录 {library_dir}")
             if self.prepare_library_images(library_dir, required_items=5):
                 logger.info("static_5: 图片目录准备完成，开始生成封面")
