@@ -3688,7 +3688,7 @@ class WsEmbyCover(_PluginBase):
             if not background_path:
                 background_url = self.__get_showcase_background_url(item)
                 if background_url:
-                    background_path = self.__download_image(service, background_url, library["Name"], count="bg")
+                    background_path = self.__download_image(service, background_url, library["Name"], count="fanart")
 
             poster_url = self.__get_showcase_poster_url(item)
             if not poster_url:
@@ -3703,7 +3703,7 @@ class WsEmbyCover(_PluginBase):
             for item in items:
                 fallback_url = self.__get_showcase_poster_url(item)
                 if fallback_url:
-                    background_path = self.__download_image(service, fallback_url, library["Name"], count="bg")
+                    background_path = self.__download_image(service, fallback_url, library["Name"], count="fanart")
                     if background_path:
                         break
 

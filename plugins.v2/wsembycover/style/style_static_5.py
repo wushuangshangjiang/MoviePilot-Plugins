@@ -207,14 +207,14 @@ def create_style_static_5(
             logger.warning("static_5 未找到可用海报图")
             return False
 
-        available_width = int(canvas_size[0] * 0.965)
-        gap = max(14, int(canvas_size[0] * 0.010))
-        poster_width = int((available_width - gap * 4) / 5)
+        available_width = int(canvas_size[0] * 0.90)
+        poster_width = int(available_width / 5.45)
         poster_height = int(poster_width * 1.43)
         cards = [_build_poster_card(path, (poster_width, poster_height), frame_color) for path in poster_paths[:5]]
 
-        cards_total_width = sum(card.size[0] for card in cards) + gap * (len(cards) - 1)
-        start_x = max(0, (canvas_size[0] - cards_total_width) // 2)
+        total_cards_width = sum(card.size[0] for card in cards)
+        gap = max(12, int((canvas_size[0] - total_cards_width) / 6))
+        start_x = gap
         start_y = canvas_size[1] - max(card.size[1] for card in cards) - int(canvas_size[1] * 0.03)
 
         for card in cards:
