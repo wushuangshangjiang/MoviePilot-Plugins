@@ -7,6 +7,7 @@ import mimetypes
 import os
 import re
 import ast
+import sys
 import threading
 import time
 import shutil
@@ -35,6 +36,8 @@ from app.schemas.types import EventType
 from app.schemas import ServiceInfo
 from app.utils.http import RequestUtils
 from app.utils.url import UrlUtils
+
+sys.dont_write_bytecode = True
 
 
 class WsEmbyCover(_PluginBase):
