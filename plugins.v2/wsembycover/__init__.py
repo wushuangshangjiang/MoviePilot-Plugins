@@ -45,7 +45,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.3"
+    plugin_version = "1.4"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -412,6 +412,12 @@ class WsEmbyCover(_PluginBase):
         if self._cover_style in ["animated_1", "animated_2", "animated_4"]:
             return self.__get_animated_2_required_items()
         return 1
+
+    def __get_fetch_target_count(self) -> int:
+        required_items = self.__get_required_items()
+        if self._cover_style == "static_5":
+            return required_items + 1
+        return required_items
 
     def __update_config(self):
         """
@@ -3371,7 +3377,7 @@ class WsEmbyCover(_PluginBase):
             items.extend(valid_items)
             
             # 如果已经有足够的有效项目，则停止获取
-            if len(items) >= required_items:
+            if len(items) >= target_items:
                 break
                 
             offset += batch_size
@@ -3382,7 +3388,7 @@ class WsEmbyCover(_PluginBase):
             if self.__is_single_image_style():
                 return self.__update_single_image(service, library, title, items[0])
             elif self._cover_style == "static_5":
-                return self.__update_showcase_image(service, library, title, items[:required_items])
+                return self.__update_showcase_image(service, library, title, items[:target_items])
             else:
                 return self.__update_grid_image(service, library, title, items[:required_items])
         else:
@@ -3401,6 +3407,7 @@ class WsEmbyCover(_PluginBase):
                                       include_types=include_types)
         
         required_items = self.__get_required_items()
+        target_items = self.__get_fetch_target_count()
         valid_items = []
         
         # 首先检查BoxSet本身是否有合适的图片
@@ -3410,9 +3417,9 @@ class WsEmbyCover(_PluginBase):
         valid_items.extend(valid_boxsets)
         
         # 如果BoxSet本身没有足够的图片，则获取其中的电影
-        if len(valid_items) < required_items:
+        if len(valid_items) < target_items:
             for boxset in boxsets:
-                if len(valid_items) >= required_items:
+                if len(valid_items) >= target_items:
                     break
                     
                 # 获取此BoxSet中的电影
@@ -3423,7 +3430,7 @@ class WsEmbyCover(_PluginBase):
                 valid_movies = self.__filter_valid_items(movies)
                 valid_items.extend(valid_movies)
                 
-                if len(valid_items) >= required_items:
+                if len(valid_items) >= target_items:
                     break
         
         # 使用获取到的有效项目更新封面
@@ -3431,7 +3438,7 @@ class WsEmbyCover(_PluginBase):
             if self.__is_single_image_style():
                 return self.__update_single_image(service, library, title, valid_items[0])
             elif self._cover_style == "static_5":
-                return self.__update_showcase_image(service, library, title, valid_items[:required_items])
+                return self.__update_showcase_image(service, library, title, valid_items[:target_items])
             else:
                 return self.__update_grid_image(service, library, title, valid_items[:required_items])
         else:
@@ -3452,6 +3459,7 @@ class WsEmbyCover(_PluginBase):
                                       include_types=include_types)
         
         required_items = self.__get_required_items()
+        target_items = self.__get_fetch_target_count()
         valid_items = []
         
         # 首先检查 playlist 本身是否有合适的图片
@@ -3461,9 +3469,9 @@ class WsEmbyCover(_PluginBase):
         valid_items.extend(valid_playlists)
         
         # 如果 playlist 本身没有足够的图片，则获取其中的电影
-        if len(valid_items) < required_items:
+        if len(valid_items) < target_items:
             for playlist in playlists:
-                if len(valid_items) >= required_items:
+                if len(valid_items) >= target_items:
                     break
                     
                 # 获取此 playlist 中的电影
@@ -3474,7 +3482,7 @@ class WsEmbyCover(_PluginBase):
                 valid_movies = self.__filter_valid_items(movies)
                 valid_items.extend(valid_movies)
                 
-                if len(valid_items) >= required_items:
+                if len(valid_items) >= target_items:
                     break
         
         # 使用获取到的有效项目更新封面
@@ -3482,7 +3490,7 @@ class WsEmbyCover(_PluginBase):
             if self.__is_single_image_style():
                 return self.__update_single_image(service, library, title, valid_items[0])
             elif self._cover_style == "static_5":
-                return self.__update_showcase_image(service, library, title, valid_items[:required_items])
+                return self.__update_showcase_image(service, library, title, valid_items[:target_items])
             else:
                 return self.__update_grid_image(service, library, title, valid_items[:required_items])
         else:
@@ -3680,6 +3688,7 @@ class WsEmbyCover(_PluginBase):
             return False
 
         background_path = None
+        background_item_id = None
         updated_item_ids = []
 
         for item in items:
@@ -3687,19 +3696,13 @@ class WsEmbyCover(_PluginBase):
                 logger.info("检测到停止信号，中断图片下载 ...")
                 return False
 
-            if not background_path:
-                background_url = self.__get_showcase_background_url(item)
-                if background_url:
-                    background_path = self.__download_image(service, background_url, library["Name"], count="fanart")
-
-            poster_url = self.__get_showcase_poster_url(item)
-            if not poster_url:
-                continue
-
-            poster_count = len(updated_item_ids) + 1
-            image_path = self.__download_image(service, poster_url, library["Name"], count=poster_count)
-            if image_path:
-                updated_item_ids.append(self.__get_item_id(item))
+            if background_path:
+                break
+            background_url = self.__get_showcase_background_url(item)
+            if background_url:
+                background_path = self.__download_image(service, background_url, library["Name"], count="fanart")
+                if background_path:
+                    background_item_id = self.__get_item_id(item)
 
         if not background_path:
             for item in items:
@@ -3707,7 +3710,28 @@ class WsEmbyCover(_PluginBase):
                 if fallback_url:
                     background_path = self.__download_image(service, fallback_url, library["Name"], count="fanart")
                     if background_path:
+                        background_item_id = self.__get_item_id(item)
                         break
+
+        poster_candidates = [item for item in items if self.__get_item_id(item) != background_item_id]
+        if len(poster_candidates) < self.__get_required_items():
+            for item in items:
+                if item not in poster_candidates:
+                    poster_candidates.append(item)
+
+        for item in poster_candidates:
+            if self._event.is_set():
+                logger.info("检测到停止信号，中断图片下载 ...")
+                return False
+            if len(updated_item_ids) >= self.__get_required_items():
+                break
+            poster_url = self.__get_showcase_poster_url(item)
+            if not poster_url:
+                continue
+            poster_count = len(updated_item_ids) + 1
+            image_path = self.__download_image(service, poster_url, library["Name"], count=poster_count)
+            if image_path:
+                updated_item_ids.append(self.__get_item_id(item))
 
         if not background_path or not updated_item_ids:
             return False
