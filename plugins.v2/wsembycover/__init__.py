@@ -1,5 +1,6 @@
 import base64
 import datetime
+import gc
 import hashlib
 import importlib
 import mimetypes
@@ -33,10 +34,6 @@ from app.schemas.types import EventType
 from app.schemas import ServiceInfo
 from app.utils.http import RequestUtils
 from app.utils.url import UrlUtils
-from app.plugins.wsembycover.utils.image_manager import ResolutionConfig, ImageResourceManager
-from app.plugins.wsembycover.utils.network_helper import NetworkHelper, validate_font_file
-from app.plugins.wsembycover.utils.performance_helper import PerformanceMonitor, ProgressTracker, memory_efficient_operation
-from app.plugins.wsembycover.utils.color_helper import ColorHelper
 
 
 class WsEmbyCover(_PluginBase):
@@ -47,7 +44,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.0"
+    plugin_version = "1.1"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -263,10 +260,10 @@ class WsEmbyCover(_PluginBase):
 
         # 初始化分辨率配置（确保安全初始化）
         try:
-            self._resolution_config = ResolutionConfig(self._resolution)
+            self._resolution_config = self.__new_resolution_config(self._resolution)
         except Exception as e:
             logger.warning(f"分辨率配置初始化失败，使用默认配置: {e}")
-            self._resolution_config = ResolutionConfig("480p")
+            self._resolution_config = self.__new_resolution_config("480p")
 
         if self._selected_servers:
             self._servers = self.mediaserver_helper.get_services(
@@ -337,9 +334,24 @@ class WsEmbyCover(_PluginBase):
         )
         return int(self._animated_2_image_count)
 
+    def __load_utils_module(self, module_name: str):
+        return importlib.import_module(f"app.plugins.wsembycover.utils.{module_name}")
+
     def __load_style_creator(self, module_name: str, func_name: str):
         module = importlib.import_module(f"app.plugins.wsembycover.style.{module_name}")
         return getattr(module, func_name)
+
+    def __new_resolution_config(self, resolution):
+        module = self.__load_utils_module("image_manager")
+        return getattr(module, "ResolutionConfig")(resolution)
+
+    def __validate_font_file(self, font_path: Path):
+        module = self.__load_utils_module("network_helper")
+        return getattr(module, "validate_font_file")(font_path)
+
+    def __new_network_helper(self, timeout: int, max_retries: int):
+        module = self.__load_utils_module("network_helper")
+        return getattr(module, "NetworkHelper")(timeout=timeout, max_retries=max_retries)
 
     def __compose_cover_style(self, base_style: str, variant: str) -> str:
         base = base_style if base_style in ["static_1", "static_2", "static_3", "static_4", "static_5"] else "static_1"
@@ -2975,8 +2987,8 @@ class WsEmbyCover(_PluginBase):
         
         return images if images else None  # 或改为 return images if images else False
 
-    @memory_efficient_operation
     def __generate_image_from_path(self, server, library_name, title, image_path=None, config_bg_color=None):
+        gc.collect()
         logger.info(f"媒体库 {server}：{library_name} 正在生成封面图 ...")
         image_data = False
 
@@ -2993,12 +3005,12 @@ class WsEmbyCover(_PluginBase):
                 try:
                     custom_w = int(self._custom_width)
                     custom_h = int(self._custom_height)
-                    self._resolution_config = ResolutionConfig((custom_w, custom_h))
+                    self._resolution_config = self.__new_resolution_config((custom_w, custom_h))
                 except ValueError:
                     logger.warning(f"自定义分辨率参数无效: {self._custom_width}x{self._custom_height}, 使用默认1080p")
-                    self._resolution_config = ResolutionConfig("1080p")
+                    self._resolution_config = self.__new_resolution_config("1080p")
             else:
-                self._resolution_config = ResolutionConfig(self._resolution)
+                self._resolution_config = self.__new_resolution_config(self._resolution)
 
         # 使用分辨率配置计算字体大小
         try:
@@ -3034,11 +3046,11 @@ class WsEmbyCover(_PluginBase):
             return False
 
         # 验证字体文件是否存在
-        if not validate_font_file(Path(self._zh_font_path)):
+        if not self.__validate_font_file(Path(self._zh_font_path)):
             logger.error(f"主标题字体文件无效: {self._zh_font_path}")
             return False
 
-        if not validate_font_file(Path(self._en_font_path)):
+        if not self.__validate_font_file(Path(self._en_font_path)):
             logger.error(f"副标题字体文件无效: {self._en_font_path}")
             return False
 
@@ -3265,6 +3277,7 @@ class WsEmbyCover(_PluginBase):
                                                     animation_reduce_colors=self._animation_reduce_colors,
                                                     image_count=animated_2_image_count,
                                                     stop_event=self._event)
+        gc.collect()
         return image_data
     
     def __generate_from_server(self, service, library, title):
@@ -4527,7 +4540,7 @@ class WsEmbyCover(_PluginBase):
             using_local_font = False
             if local_path_cfg:
                 local_font_p = Path(local_path_cfg)
-                if validate_font_file(local_font_p):
+                if self.__validate_font_file(local_font_p):
                     logger.info(f"{lang}字体: 使用本地指定路径 {local_font_p}")
                     current_font_path = local_font_p
                     using_local_font = True
@@ -4544,7 +4557,7 @@ class WsEmbyCover(_PluginBase):
                     except Exception as e:
                         logger.warning(f"读取哈希文件失败 {hash_file_path}: {e}。将重新下载。")
                 
-                font_file_is_valid = validate_font_file(downloaded_font_file_path)
+                font_file_is_valid = self.__validate_font_file(downloaded_font_file_path)
 
                 if url_has_changed or not font_file_is_valid:
                     if url_has_changed:
@@ -4629,9 +4642,9 @@ class WsEmbyCover(_PluginBase):
                 logger.warning("分辨率配置缺失，重新初始化")
                 # 使用用户设置的分辨率，而不是硬编码的1080p
                 if self._resolution == "custom":
-                    self._resolution_config = ResolutionConfig((self._custom_width, self._custom_height))
+                    self._resolution_config = self.__new_resolution_config((self._custom_width, self._custom_height))
                 else:
-                    self._resolution_config = ResolutionConfig(self._resolution)
+                    self._resolution_config = self.__new_resolution_config(self._resolution)
 
             # 检查字体文件
             if not self._zh_font_path or not self._en_font_path:
@@ -4639,11 +4652,11 @@ class WsEmbyCover(_PluginBase):
                 self.__get_fonts()
 
             # 验证字体文件有效性
-            if self._zh_font_path and not validate_font_file(Path(self._zh_font_path)):
+            if self._zh_font_path and not self.__validate_font_file(Path(self._zh_font_path)):
                 logger.warning("主标题字体文件无效，尝试重新下载")
                 return False
 
-            if self._en_font_path and not validate_font_file(Path(self._en_font_path)):
+            if self._en_font_path and not self.__validate_font_file(Path(self._en_font_path)):
                 logger.warning("副标题字体文件无效，尝试重新下载")
                 return False
 
@@ -4687,7 +4700,7 @@ class WsEmbyCover(_PluginBase):
                 return False
         
         # 使用优化的网络助手进行下载
-        network_helper = NetworkHelper(timeout=timeout, max_retries=retries)
+        network_helper = self.__new_network_helper(timeout=timeout, max_retries=retries)
 
         # 准备下载策略
         strategies = []
@@ -4714,7 +4727,7 @@ class WsEmbyCover(_PluginBase):
                 # 使用网络助手下载
                 if network_helper.download_file_sync(target_url, temp_path):
                     # 验证下载的字体文件
-                    if validate_font_file(temp_path):
+                    if self.__validate_font_file(temp_path):
                         # 验证通过后，将临时文件移动到正确位置
                         temp_path.replace(font_path)
                         logger.info(f"字体下载成功: 使用策略 {strategy_name}")
