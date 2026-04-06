@@ -129,8 +129,8 @@ def create_style_static_5(
 
         overlay_color = ColorHelper.darken_color(base_color, 0.68)
         frame_color = ColorHelper.lighten_color(base_color, 1.10)
-        text_color = (255, 255, 255, 242)
-        text_shadow = (18, 18, 18, 118)
+        text_color = ColorHelper.lighten_color(base_color, 1.28) + (242,)
+        text_shadow = ColorHelper.darken_color(base_color, 0.32) + (120,)
 
         ratio = min(1.0, max(0.0, float(color_ratio)))
         canvas = background.convert("RGBA")
@@ -217,8 +217,10 @@ def create_style_static_5(
         start_x = gap
         start_y = canvas_size[1] - max(card.size[1] for card in cards) - int(canvas_size[1] * 0.03)
 
-        for card in cards:
-            canvas.paste(card, (start_x, start_y), card)
+        float_offsets = [18, 6, 0, 10, 22]
+        for idx, card in enumerate(cards):
+            card_y = start_y + (float_offsets[idx] if idx < len(float_offsets) else 0)
+            canvas.paste(card, (start_x, card_y), card)
             start_x += card.size[0] + gap
 
         merged = Image.alpha_composite(
