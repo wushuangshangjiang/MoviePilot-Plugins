@@ -129,8 +129,8 @@ def create_style_static_5(
 
         overlay_color = ColorHelper.darken_color(base_color, 0.68)
         frame_color = ColorHelper.lighten_color(base_color, 1.10)
-        text_color = (248, 197, 82, 242)
-        text_shadow = (32, 14, 6, 118)
+        text_color = (255, 255, 255, 242)
+        text_shadow = (18, 18, 18, 118)
 
         ratio = min(1.0, max(0.0, float(color_ratio)))
         canvas = background.convert("RGBA")
