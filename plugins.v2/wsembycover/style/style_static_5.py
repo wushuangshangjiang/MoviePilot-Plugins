@@ -2,7 +2,7 @@ import base64
 from io import BytesIO
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps, ImageEnhance
 
 from app.log import logger
 from app.plugins.wsembycover.utils.color_helper import ColorHelper
@@ -113,8 +113,9 @@ def create_style_static_5(
 
         bg_src = Image.open(image_path).convert("RGB")
         background = ImageOps.fit(bg_src, canvas_size, method=Image.Resampling.LANCZOS)
-        blur_radius = max(12, int(float(blur_size) * (canvas_size[1] / 2400.0)))
-        background = background.filter(ImageFilter.GaussianBlur(radius=blur_radius))
+        background = ImageEnhance.Contrast(background).enhance(1.08)
+        background = ImageEnhance.Color(background).enhance(1.04)
+        background = background.filter(ImageFilter.GaussianBlur(radius=max(2, canvas_size[1] // 540)))
 
         if bg_color_config:
             base_color = ColorHelper.get_background_color(
@@ -126,38 +127,46 @@ def create_style_static_5(
         else:
             base_color = ColorHelper.get_background_color(bg_src)
 
-        overlay_color = ColorHelper.darken_color(base_color, 0.75)
-        frame_color = ColorHelper.lighten_color(base_color, 1.12)
-        text_color = (248, 232, 170, 235)
-        text_shadow = ColorHelper.darken_color(base_color, 0.55) + (110,)
+        overlay_color = ColorHelper.darken_color(base_color, 0.68)
+        frame_color = ColorHelper.lighten_color(base_color, 1.10)
+        text_color = (248, 197, 82, 242)
+        text_shadow = (32, 14, 6, 118)
 
-        ratio = float(color_ratio)
-        ratio = min(1.0, max(0.0, ratio))
-        tint_layer = Image.new("RGBA", canvas_size, overlay_color + (int(150 * ratio),))
-        canvas = Image.alpha_composite(background.convert("RGBA"), tint_layer)
+        ratio = min(1.0, max(0.0, float(color_ratio)))
+        canvas = background.convert("RGBA")
 
-        haze = Image.new("RGBA", canvas_size, (255, 248, 226, 0))
-        haze_draw = ImageDraw.Draw(haze)
+        left_gradient = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+        grad_px = left_gradient.load()
+        for x in range(canvas_size[0]):
+            strength = 1.0 - min(1.0, x / max(1, int(canvas_size[0] * 0.62)))
+            alpha = int((70 + 95 * ratio) * (strength ** 1.45))
+            color = overlay_color + (alpha,)
+            for y in range(canvas_size[1]):
+                grad_px[x, y] = color
+        canvas = Image.alpha_composite(canvas, left_gradient)
+
+        warm_haze = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+        haze_draw = ImageDraw.Draw(warm_haze)
         haze_draw.ellipse(
             [
-                int(canvas_size[0] * 0.34),
-                int(canvas_size[1] * -0.10),
-                int(canvas_size[0] * 1.02),
-                int(canvas_size[1] * 0.95),
+                int(canvas_size[0] * 0.48),
+                int(canvas_size[1] * -0.05),
+                int(canvas_size[0] * 1.03),
+                int(canvas_size[1] * 0.88),
             ],
-            fill=(255, 245, 220, 92),
+            fill=(255, 189, 102, 54),
         )
-        haze = haze.filter(ImageFilter.GaussianBlur(radius=max(24, canvas_size[1] // 30)))
-        canvas = Image.alpha_composite(canvas, haze)
+        warm_haze = warm_haze.filter(ImageFilter.GaussianBlur(radius=max(18, canvas_size[1] // 36)))
+        canvas = Image.alpha_composite(canvas, warm_haze)
 
-        bottom_glow = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-        glow_draw = ImageDraw.Draw(bottom_glow)
-        glow_draw.rectangle(
-            [(0, int(canvas_size[1] * 0.72)), (canvas_size[0], canvas_size[1])],
-            fill=ColorHelper.darken_color(base_color, 0.8) + (88,),
+        bottom_shade = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+        shade_draw = ImageDraw.Draw(bottom_shade)
+        shade_draw.rectangle(
+            [(0, int(canvas_size[1] * 0.73)), (canvas_size[0], canvas_size[1])],
+            fill=(32, 18, 10, 78),
         )
-        bottom_glow = bottom_glow.filter(ImageFilter.GaussianBlur(radius=max(28, canvas_size[1] // 28)))
-        canvas = Image.alpha_composite(canvas, bottom_glow)
+        bottom_shade = bottom_shade.filter(ImageFilter.GaussianBlur(radius=max(18, canvas_size[1] // 36)))
+        canvas = Image.alpha_composite(canvas, bottom_shade)
 
         text_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
         shadow_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
