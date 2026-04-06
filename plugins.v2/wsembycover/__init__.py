@@ -3322,6 +3322,7 @@ class WsEmbyCover(_PluginBase):
 
         logger.info(f"媒体库 {service.name}：{library['Name']} 开始筛选媒体项")
         required_items = self.__get_required_items()
+        target_items = self.__get_fetch_target_count()
         
         # 获取项目集合
         items = []
