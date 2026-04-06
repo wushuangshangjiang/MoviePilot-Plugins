@@ -1,6 +1,7 @@
 import base64
 import datetime
 import hashlib
+import importlib
 import mimetypes
 import os
 import re
@@ -32,15 +33,6 @@ from app.schemas.types import EventType
 from app.schemas import ServiceInfo
 from app.utils.http import RequestUtils
 from app.utils.url import UrlUtils
-from app.plugins.wsembycover.style.style_static_1 import create_style_static_1
-from app.plugins.wsembycover.style.style_static_2 import create_style_static_2
-from app.plugins.wsembycover.style.style_static_3  import create_style_static_3
-from app.plugins.wsembycover.style.style_static_4 import create_style_static_4
-from app.plugins.wsembycover.style.style_static_5 import create_style_static_5
-from app.plugins.wsembycover.style.style_animated_1 import create_style_animated_1
-from app.plugins.wsembycover.style.style_animated_2 import create_style_animated_2
-from app.plugins.wsembycover.style.style_animated_3 import create_style_animated_3
-from app.plugins.wsembycover.style.style_animated_4 import create_style_animated_4
 from app.plugins.wsembycover.utils.image_manager import ResolutionConfig, ImageResourceManager
 from app.plugins.wsembycover.utils.network_helper import NetworkHelper, validate_font_file
 from app.plugins.wsembycover.utils.performance_helper import PerformanceMonitor, ProgressTracker, memory_efficient_operation
@@ -344,6 +336,10 @@ class WsEmbyCover(_PluginBase):
             int,
         )
         return int(self._animated_2_image_count)
+
+    def __load_style_creator(self, module_name: str, func_name: str):
+        module = importlib.import_module(f"app.plugins.wsembycover.style.{module_name}")
+        return getattr(module, func_name)
 
     def __compose_cover_style(self, base_style: str, variant: str) -> str:
         base = base_style if base_style in ["static_1", "static_2", "static_3", "static_4", "static_5"] else "static_1"
@@ -3065,6 +3061,7 @@ class WsEmbyCover(_PluginBase):
 
         # 传递分辨率配置给图像生成函数
         if self._cover_style == 'static_1':
+            create_style_static_1 = self.__load_style_creator("style_static_1", "create_style_static_1")
             image_data = create_style_static_1(image_path, title, font_path,
                                                 font_size=font_size,
                                                 font_offset=font_offset,
@@ -3073,6 +3070,7 @@ class WsEmbyCover(_PluginBase):
                                                 resolution_config=self._resolution_config,
                                                 bg_color_config=bg_color_config)
         elif self._cover_style == 'static_2':
+            create_style_static_2 = self.__load_style_creator("style_static_2", "create_style_static_2")
             image_data = create_style_static_2(image_path, title, font_path,
                                                 font_size=font_size,
                                                 font_offset=font_offset,
@@ -3081,6 +3079,7 @@ class WsEmbyCover(_PluginBase):
                                                 resolution_config=self._resolution_config,
                                                 bg_color_config=bg_color_config)
         elif self._cover_style == 'static_4':
+            create_style_static_4 = self.__load_style_creator("style_static_4", "create_style_static_4")
             image_data = create_style_static_4(image_path, title, font_path,
                                                 font_size=font_size,
                                                 font_offset=font_offset,
@@ -3089,6 +3088,7 @@ class WsEmbyCover(_PluginBase):
                                                 resolution_config=self._resolution_config,
                                                 bg_color_config=bg_color_config)
         elif self._cover_style == 'static_5':
+            create_style_static_5 = self.__load_style_creator("style_static_5", "create_style_static_5")
             safe_library_name = self.__sanitize_filename(library_name)
             if image_path:
                 library_dir = Path(self._covers_input) / safe_library_name
@@ -3112,6 +3112,7 @@ class WsEmbyCover(_PluginBase):
             else:
                 logger.warning(f"static_5: 图片目录准备失败 {library_dir}")
         elif self._cover_style == 'static_3':
+            create_style_static_3 = self.__load_style_creator("style_static_3", "create_style_static_3")
             # 使用安全的文件名
             safe_library_name = self.__sanitize_filename(library_name)
             if image_path:
@@ -3132,6 +3133,7 @@ class WsEmbyCover(_PluginBase):
             else:
                 logger.warning(f"static_3: 图片目录准备失败 {library_dir}")
         elif self._cover_style == 'animated_3':
+            create_style_animated_3 = self.__load_style_creator("style_animated_3", "create_style_animated_3")
             # 动态封面强制使用 320x180 分辨率以保证性能
             anim_res = '320x180'
             logger.info(f"强制动图生成分辨率为: {anim_res}")
@@ -3162,6 +3164,7 @@ class WsEmbyCover(_PluginBase):
                                                     animation_reduce_colors=self._animation_reduce_colors,
                                                     stop_event=self._event)
         elif self._cover_style == 'animated_1':
+            create_style_animated_1 = self.__load_style_creator("style_animated_1", "create_style_animated_1")
             # 动态封面强制使用 320x180 分辨率以保证性能
             anim_res = '320x180'
             logger.info(f"强制动图生成分辨率为: {anim_res}")
@@ -3195,6 +3198,7 @@ class WsEmbyCover(_PluginBase):
                                                     departure_type=self._animated_2_departure_type,
                                                     stop_event=self._event)
         elif self._cover_style == 'animated_2':
+            create_style_animated_2 = self.__load_style_creator("style_animated_2", "create_style_animated_2")
             # 动态封面强制使用 320x180 分辨率以保证性能
             anim_res = '320x180'
             logger.info(f"强制动图生成分辨率为: {anim_res}")
@@ -3224,6 +3228,7 @@ class WsEmbyCover(_PluginBase):
                                                     image_count=self.__get_animated_2_required_items(),
                                                     stop_event=self._event)
         elif self._cover_style == 'animated_4':
+            create_style_animated_4 = self.__load_style_creator("style_animated_4", "create_style_animated_4")
             anim_res = '320x180'
             logger.info(f"强制动图生成分辨率为: {anim_res}")
 
