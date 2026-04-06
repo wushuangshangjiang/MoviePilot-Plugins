@@ -1,7 +1,7 @@
 # MoviePilot-Plugins
 MoviePilot官方插件市场：https://github.com/jxxghp/MoviePilot-Plugins
 
-### [Emby封面](https://github.com/wushuangshangjiang/MoviePilot-Plugins/tree/main/plugins.v2/mediacovergenerator)
+### [无双Emby封面](https://github.com/wushuangshangjiang/MoviePilot-Plugins/tree/main/plugins.v2/wsembycover)
 > 参考项目：https://github.com/HappyQuQu/jellyfin-library-poster
 
 在现有第三方插件仓库中新增 Emby/Jellyfin 媒体库封面插件，支持静态/动态封面，并增加横幅背景 + 竖版海报展示风格。

@@ -5,7 +5,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
 
 from app.log import logger
-from app.plugins.mediacovergenerator.utils.color_helper import ColorHelper
+from app.plugins.wsembycover.utils.color_helper import ColorHelper
 
 
 def _draw_spaced_text(draw, position, text, font, fill, spacing):
