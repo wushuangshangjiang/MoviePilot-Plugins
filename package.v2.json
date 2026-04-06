@@ -36,11 +36,12 @@
         "name": "无双Emby封面",
         "description": "生成媒体库动态/静态封面，支持 Emby/Jellyfin",
         "labels": "Emby,动态封面,媒体库",
-        "version": "1.5",
+        "version": "1.6",
         "icon": "emby.png",
         "author": "wushuangshangjiang",
         "level": 1,
         "history": {
+            "v1.6": "调整风格5为同一水平海报布局，并改为淡鎏金文字与轻阴影悬浮效果",
             "v1.5": "优化风格5文字与卡片悬浮效果，并发布新版",
             "v1.4": "优化风格5背景与海报来源逻辑",
             "v1.3": "修复插件启动时对本地utils包的依赖，并替换风格5真实预览图",

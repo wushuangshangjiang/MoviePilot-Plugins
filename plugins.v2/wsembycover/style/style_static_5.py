@@ -31,8 +31,8 @@ def _build_poster_card(image_path, size, border_color):
     card_w, card_h = size
     radius = max(18, int(card_w * 0.075))
     border_width = max(4, int(card_w * 0.015))
-    shadow_offset = max(10, int(card_h * 0.02))
-    shadow_blur = max(14, int(card_w * 0.04))
+    shadow_offset = max(6, int(card_h * 0.012))
+    shadow_blur = max(16, int(card_w * 0.045))
 
     with Image.open(image_path).convert("RGB") as src:
         poster = ImageOps.fit(src, (card_w, card_h), method=Image.Resampling.LANCZOS)
@@ -76,7 +76,7 @@ def _build_poster_card(image_path, size, border_color):
         (card_w + shadow_blur * 2, card_h + shadow_blur * 2 + shadow_offset),
         (0, 0, 0, 0),
     )
-    shadow = _add_shadow(card, shadow_offset, shadow_blur, 115)
+    shadow = _add_shadow(card, shadow_offset, shadow_blur, 92)
     shadow_canvas.paste(shadow, (shadow_blur, shadow_blur), shadow)
     shadow_canvas.paste(card, (shadow_blur, shadow_blur), card)
     return shadow_canvas
@@ -129,8 +129,8 @@ def create_style_static_5(
 
         overlay_color = ColorHelper.darken_color(base_color, 0.68)
         frame_color = ColorHelper.lighten_color(base_color, 1.10)
-        text_color = ColorHelper.lighten_color(base_color, 1.28) + (242,)
-        text_shadow = ColorHelper.darken_color(base_color, 0.32) + (120,)
+        text_color = (232, 208, 150, 244)
+        text_shadow = (88, 56, 18, 96)
 
         ratio = min(1.0, max(0.0, float(color_ratio)))
         canvas = background.convert("RGBA")
@@ -217,9 +217,8 @@ def create_style_static_5(
         start_x = gap
         start_y = canvas_size[1] - max(card.size[1] for card in cards) - int(canvas_size[1] * 0.03)
 
-        float_offsets = [18, 6, 0, 10, 22]
         for idx, card in enumerate(cards):
-            card_y = start_y + (float_offsets[idx] if idx < len(float_offsets) else 0)
+            card_y = start_y
             canvas.paste(card, (start_x, card_y), card)
             start_x += card.size[0] + gap
 
