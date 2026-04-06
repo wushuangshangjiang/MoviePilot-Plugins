@@ -11,6 +11,7 @@ import threading
 import time
 import shutil
 import random
+import requests
 from pathlib import Path
 from urllib.parse import urlparse, quote, unquote
 from typing import Any, Dict, List, Optional, Tuple
@@ -44,7 +45,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -334,24 +335,53 @@ class WsEmbyCover(_PluginBase):
         )
         return int(self._animated_2_image_count)
 
-    def __load_utils_module(self, module_name: str):
-        return importlib.import_module(f"app.plugins.wsembycover.utils.{module_name}")
-
     def __load_style_creator(self, module_name: str, func_name: str):
         module = importlib.import_module(f"app.plugins.wsembycover.style.{module_name}")
         return getattr(module, func_name)
 
     def __new_resolution_config(self, resolution):
-        module = self.__load_utils_module("image_manager")
-        return getattr(module, "ResolutionConfig")(resolution)
+        class LocalResolutionConfig:
+            PRESETS = {
+                "1080p": (1920, 1080),
+                "720p": (1280, 720),
+                "480p": (854, 480),
+                "360p": (640, 360),
+                "4k": (3840, 2160),
+                "1440p": (2560, 1440),
+                "custom": None,
+            }
+
+            def __init__(self, value):
+                if isinstance(value, str):
+                    preset = self.PRESETS.get(value)
+                    self._resolution = preset or (1920, 1080)
+                    self._preset_name = value if preset else "1080p"
+                elif isinstance(value, (tuple, list)) and len(value) == 2:
+                    self._resolution = (int(value[0]), int(value[1]))
+                    self._preset_name = "custom"
+                else:
+                    self._resolution = (1920, 1080)
+                    self._preset_name = "1080p"
+
+            @property
+            def width(self):
+                return self._resolution[0]
+
+            @property
+            def height(self):
+                return self._resolution[1]
+
+            def get_font_size(self, base_size: int, scale_factor: float = 1.0) -> int:
+                height_scale = self.height / 1080.0
+                return int(base_size * height_scale * scale_factor)
+
+            def __str__(self):
+                return f"{self.width}x{self.height}"
+
+        return LocalResolutionConfig(resolution)
 
     def __validate_font_file(self, font_path: Path):
-        module = self.__load_utils_module("network_helper")
-        return getattr(module, "validate_font_file")(font_path)
-
-    def __new_network_helper(self, timeout: int, max_retries: int):
-        module = self.__load_utils_module("network_helper")
-        return getattr(module, "NetworkHelper")(timeout=timeout, max_retries=max_retries)
+        return self._validate_font_file(font_path)
 
     def __compose_cover_style(self, base_style: str, variant: str) -> str:
         base = base_style if base_style in ["static_1", "static_2", "static_3", "static_4", "static_5"] else "static_1"
@@ -4699,9 +4729,6 @@ class WsEmbyCover(_PluginBase):
                 logger.error(f"无法删除现有字体文件 {font_path}: {unlink_error}")
                 return False
         
-        # 使用优化的网络助手进行下载
-        network_helper = self.__new_network_helper(timeout=timeout, max_retries=retries)
-
         # 准备下载策略
         strategies = []
 
@@ -4724,20 +4751,26 @@ class WsEmbyCover(_PluginBase):
             temp_path = font_path.with_suffix('.temp')
 
             try:
-                # 使用网络助手下载
-                if network_helper.download_file_sync(target_url, temp_path):
-                    # 验证下载的字体文件
+                response = requests.get(
+                    target_url,
+                    timeout=timeout,
+                    headers={'User-Agent': 'MoviePilot-WsEmbyCover/1.3'},
+                    stream=True,
+                    verify=False if strategy_name == "GitHub镜像站" else True,
+                )
+                if response.status_code == 200:
+                    temp_path.parent.mkdir(parents=True, exist_ok=True)
+                    with open(temp_path, "wb") as f:
+                        f.write(response.content)
                     if self.__validate_font_file(temp_path):
-                        # 验证通过后，将临时文件移动到正确位置
                         temp_path.replace(font_path)
                         logger.info(f"字体下载成功: 使用策略 {strategy_name}")
                         return True
-                    else:
-                        logger.warning(f"下载的字体文件验证失败，可能已损坏")
-                        if temp_path.exists():
-                            temp_path.unlink()
+                    logger.warning("下载的字体文件验证失败，可能已损坏")
+                    if temp_path.exists():
+                        temp_path.unlink()
                 else:
-                    logger.warning(f"策略 {strategy_name} 下载失败")
+                    logger.warning(f"策略 {strategy_name} 下载失败，HTTP状态码: {response.status_code}")
 
             except Exception as e:
                 logger.warning(f"策略 {strategy_name} 下载出错: {e}")
