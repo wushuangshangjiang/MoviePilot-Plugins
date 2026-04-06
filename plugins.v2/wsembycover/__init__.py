@@ -1360,6 +1360,10 @@ class WsEmbyCover(_PluginBase):
             {
                 "value": "static_4",
                 "src": self.__style_preview_src(4)
+            },
+            {
+                "value": "static_5",
+                "src": self.__style_preview_src(5)
             }
         ]
 
@@ -1396,7 +1400,7 @@ class WsEmbyCover(_PluginBase):
                     'component': 'VCol',
                     'props': {
                         'cols': 12,
-                        'md': 3,
+                        'md': 4,
                     },
                     'content': [
                         {
@@ -2613,8 +2617,7 @@ class WsEmbyCover(_PluginBase):
     @staticmethod
     def __style_preview_src(index: int) -> str:
         safe_index = max(1, min(5, int(index)))
-        preview_index = safe_index if safe_index <= 4 else 4
-        return f"https://raw.githubusercontent.com/justzerock/MoviePilot-Plugins/main/images/style_{preview_index}.jpeg"
+        return f"https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/images/style_{safe_index}.jpeg"
 
     def __get_recent_generated_covers(self, limit: int = 20) -> List[Dict[str, Any]]:
         items: List[Dict[str, Any]] = []
