@@ -1,0 +1,22 @@
+{
+    "WebHook": {
+        "name": "Webhook-RefreshMedia",
+        "description": "转移完成时,发送webhook",
+        "version": "2.0",
+        "icon": "webhook.png",
+        "author": "wushuangshangjiang",
+        "level": 1
+    },
+    "RssSubscribe": {
+        "name": "自定义订阅-自用版",
+        "description": "定时刷新RSS报文,并对前N条进行处理",
+        "labels": "订阅",
+        "version": "2.0",
+        "icon": "rss.png",
+        "author": "wushuangshangjiang",
+        "level": 2,
+        "history": {
+            "v2.0": "自定义处理RSS的条数"
+        }
+    }
+}
