@@ -176,38 +176,44 @@ def _build_title_layers(canvas_size, title, font_path, font_size, font_offset):
 
 
 def _encode_apng_under_limit(frames, frame_duration, limit_bytes):
-    candidates = [
-        (1, 9),
-        (2, 9),
-        (3, 9),
-        (4, 9),
-        (5, 9),
-    ]
+    scale_candidates = [1.00, 0.85, 0.72, 0.60]
+    step_candidates = [1, 2, 3]
     best = None
+
     normalized = [f.convert("RGBA") for f in frames]
     base_size = normalized[0].size
     normalized = [f if f.size == base_size else f.resize(base_size, Image.Resampling.LANCZOS) for f in normalized]
 
-    for step, compress_level in candidates:
-        sampled = normalized[::step]
-        duration = frame_duration * step
-        buffer = BytesIO()
-        sampled[0].save(
-            buffer,
-            format="PNG",
-            save_all=True,
-            append_images=sampled[1:],
-            duration=duration,
-            loop=0,
-            optimize=True,
-            compress_level=compress_level,
-            disposal=2,
-        )
-        data = buffer.getvalue()
-        if best is None or len(data) < len(best):
-            best = data
-        if len(data) <= limit_bytes:
-            return data
+    for scale in scale_candidates:
+        if scale < 1.0:
+            target_size = (
+                max(1, int(base_size[0] * scale)),
+                max(1, int(base_size[1] * scale)),
+            )
+            scaled = [f.resize(target_size, Image.Resampling.LANCZOS) for f in normalized]
+        else:
+            scaled = normalized
+
+        for step in step_candidates:
+            sampled = scaled[::step]
+            duration = frame_duration * step
+            buffer = BytesIO()
+            sampled[0].save(
+                buffer,
+                format="PNG",
+                save_all=True,
+                append_images=sampled[1:],
+                duration=duration,
+                loop=0,
+                optimize=True,
+                compress_level=9,
+                disposal=2,
+            )
+            data = buffer.getvalue()
+            if best is None or len(data) < len(best):
+                best = data
+            if len(data) <= limit_bytes:
+                return data
     return best
 
 
@@ -271,11 +277,11 @@ def create_style_static_3(
         slot_width = cards[0].size[0] + gap
         strip_width = slot_width * len(cards)
         speed_px_s = (canvas_size[0] + cards[0].size[0]) / 8.0
-        cycle_distance = strip_width
-        cycle_seconds = max(8.0, cycle_distance / max(1.0, speed_px_s))
-        fps = 12
+        cycle_seconds = 8.0
+        cycle_distance = int(speed_px_s * cycle_seconds)
+        fps = 20
         frame_duration = int(1000 / fps)
-        frame_count = max(24, int(cycle_seconds * fps))
+        frame_count = max(80, int(cycle_seconds * fps))
 
         frames = []
         for frame_idx in range(frame_count):

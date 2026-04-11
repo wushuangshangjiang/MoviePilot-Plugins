@@ -48,7 +48,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -2288,6 +2288,16 @@ class WsEmbyCover(_PluginBase):
         if self._page_tab == "clean-tab":
             page_tab = "clean-tab"
 
+        selected_style_map = {
+            "static_1": 1,
+            "static_2": 2,
+            "static_3": 3,
+            "static_5": 2,
+            "static_6": 3,
+        }
+        selected_index = selected_style_map.get((self._cover_style or "static_1").strip(), 1)
+        style_preview_cards = self.__build_style_preview_cards(selected_index)
+
         return [
             {
                 "component": "VCard",
@@ -2490,10 +2500,11 @@ class WsEmbyCover(_PluginBase):
                 }
             ]
         )
+    def __build_style_preview_cards(self, selected_index: int) -> List[Dict[str, Any]]:
         styles = [
-            {"name": "??1", "index": 1, "src": self.__style_preview_src(1)},
-            {"name": "??2", "index": 2, "src": self.__style_preview_src(2)},
-            {"name": "??3", "index": 3, "src": self.__style_preview_src(3)},
+            {"name": "风格1", "index": 1, "src": self.__style_preview_src(1)},
+            {"name": "风格2", "index": 2, "src": self.__style_preview_src(2)},
+            {"name": "风格3", "index": 3, "src": self.__style_preview_src(3)},
         ]
         cards: List[Dict[str, Any]] = []
         for style in styles:
@@ -2528,6 +2539,7 @@ class WsEmbyCover(_PluginBase):
                                 {
                                     "component": "VCardText",
                                     "props": {"class": "py-2 text-center"},
+                                    "text": style["name"],
                                 },
                             ],
                         }
