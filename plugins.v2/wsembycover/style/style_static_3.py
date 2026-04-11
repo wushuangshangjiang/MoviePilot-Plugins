@@ -256,7 +256,7 @@ def create_style_static_3(
         slot_width = cards[0].size[0] + gap
         strip_width = slot_width * len(cards)
         speed_px_s = (canvas_size[0] + cards[0].size[0]) / 8.0
-        cycle_seconds = 15.0
+        cycle_seconds = 30.0
         cycle_distance = int(speed_px_s * cycle_seconds)
         fps = 30
         frame_duration = int(1000 / fps)
