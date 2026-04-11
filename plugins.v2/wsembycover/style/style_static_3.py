@@ -82,7 +82,7 @@ def _build_poster_card(image_path, size, border_color):
     return shadow_canvas
 
 
-def _fit_render_size(width, height, max_width=1280, max_height=720):
+def _fit_render_size(width, height, max_width=960, max_height=540):
     width = max(1, int(width))
     height = max(1, int(height))
     ratio = min(1.0, max_width / width, max_height / height)
@@ -145,8 +145,8 @@ def _build_title_layers(canvas_size, title, font_path, font_size, font_offset):
     draw = ImageDraw.Draw(text_layer)
     shadow_draw = ImageDraw.Draw(shadow_layer)
 
-    zh_font = ImageFont.truetype(zh_font_path, int(max(1, float(zh_font_size))))
-    en_font = ImageFont.truetype(en_font_path, int(max(1, float(en_font_size))))
+    zh_font = ImageFont.truetype(zh_font_path, int(max(1, float(zh_font_size) * 0.72)))
+    en_font = ImageFont.truetype(en_font_path, int(max(1, float(en_font_size) * 0.72)))
 
     title_x = int(canvas_size[0] * 0.04)
     title_y = int(canvas_size[1] * 0.13) + int(float(zh_font_offset))
@@ -175,30 +175,40 @@ def _build_title_layers(canvas_size, title, font_path, font_size, font_offset):
     return text_layer, shadow_layer
 
 
-def _encode_webp_under_limit(frames, frame_duration, limit_bytes):
-    quality_candidates = [65, 58, 52, 46, 40]
-    step_candidates = [1, 2, 3]
-    for step in step_candidates:
+def _encode_apng_under_limit(frames, frame_duration, limit_bytes):
+    candidates = [
+        (96, 1),
+        (64, 1),
+        (48, 1),
+        (48, 2),
+        (32, 2),
+        (24, 3),
+        (16, 4),
+        (12, 5),
+    ]
+    best = None
+    for colors, step in candidates:
         sampled = frames[::step]
         duration = frame_duration * step
-        for quality in quality_candidates:
-            buffer = BytesIO()
-            sampled[0].save(
-                buffer,
-                format="WEBP",
-                save_all=True,
-                append_images=sampled[1:],
-                duration=duration,
-                loop=0,
-                quality=quality,
-                method=6,
-                lossless=False,
-                minimize_size=True,
-            )
-            data = buffer.getvalue()
-            if len(data) <= limit_bytes:
-                return data
-    return None
+        paletted = [f.convert("P", palette=Image.ADAPTIVE, colors=colors) for f in sampled]
+        buffer = BytesIO()
+        paletted[0].save(
+            buffer,
+            format="PNG",
+            save_all=True,
+            append_images=paletted[1:],
+            duration=duration,
+            loop=0,
+            optimize=True,
+            compress_level=9,
+            disposal=2,
+        )
+        data = buffer.getvalue()
+        if best is None or len(data) < len(best):
+            best = data
+        if len(data) <= limit_bytes:
+            return data
+    return best
 
 
 def create_style_static_3(
@@ -223,7 +233,7 @@ def create_style_static_3(
         if resolution_config:
             width = int(getattr(resolution_config, "width", width))
             height = int(getattr(resolution_config, "height", height))
-        canvas_size = _fit_render_size(width, height, max_width=1280, max_height=720)
+        canvas_size = _fit_render_size(width, height, max_width=960, max_height=540)
         base_canvas, frame_color = _build_style2_background(
             image_path=image_path,
             canvas_size=canvas_size,
@@ -260,18 +270,21 @@ def create_style_static_3(
         start_y = canvas_size[1] - max_card_h - int(canvas_size[1] * 0.028)
         slot_width = cards[0].size[0] + gap
         strip_width = slot_width * len(cards)
-        frame_count = 24
-        frame_duration = 90
-        travel = strip_width + canvas_size[0] + cards[0].size[0]
+        speed_px_s = (canvas_size[0] + cards[0].size[0]) / 8.0
+        cycle_distance = strip_width
+        cycle_seconds = max(8.0, cycle_distance / max(1.0, speed_px_s))
+        fps = 12
+        frame_duration = int(1000 / fps)
+        frame_count = max(24, int(cycle_seconds * fps))
 
         frames = []
         for frame_idx in range(frame_count):
             canvas = base_canvas.copy()
-            progress = frame_idx / max(1, frame_count - 1)
-            shift = int(progress * travel)
-            x_anchor = -strip_width - cards[0].size[0] + shift
+            progress = frame_idx / max(1, frame_count)
+            shift = int(progress * cycle_distance)
+            x_anchor = canvas_size[0] + gap - shift
 
-            for loop_idx in range(3):
+            for loop_idx in range(-1, 3):
                 base_x = x_anchor + loop_idx * strip_width
                 for idx, card in enumerate(cards):
                     card_x = base_x + idx * slot_width
@@ -284,18 +297,15 @@ def create_style_static_3(
                 shadow_layer.filter(ImageFilter.GaussianBlur(radius=max(6, canvas_size[1] // 160))),
             )
             merged = Image.alpha_composite(merged, text_layer)
-            frames.append(merged.convert("RGB"))
+            frames.append(merged)
 
-        webp_bytes = _encode_webp_under_limit(frames, frame_duration, limit_bytes=2 * 1024 * 1024)
-        if webp_bytes is None:
-            buffer = BytesIO()
-            frames[0].save(buffer, format="JPEG", quality=84, optimize=True)
-            webp_bytes = buffer.getvalue()
-            logger.warning("static_3 动图超过 2MB，已降级输出为静态 JPEG")
-        else:
-            logger.info(f"static_3 动图体积: {len(webp_bytes) / 1024:.1f}KB")
-
-        return base64.b64encode(webp_bytes).decode("utf-8")
+        apng_bytes = _encode_apng_under_limit(frames, frame_duration, limit_bytes=2 * 1024 * 1024)
+        if apng_bytes:
+            logger.info(f"static_3 APNG体积: {len(apng_bytes) / 1024:.1f}KB")
+            if len(apng_bytes) > 2 * 1024 * 1024:
+                logger.warning("static_3 APNG 超过 2MB，已使用最小化压缩档")
+            return base64.b64encode(apng_bytes).decode("utf-8")
+        return False
     except Exception as e:
         logger.error(f"创建 static_3 封面时出错: {e}")
         return False
