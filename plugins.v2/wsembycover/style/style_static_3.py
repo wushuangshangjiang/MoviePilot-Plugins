@@ -2,9 +2,10 @@
 from io import BytesIO
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFilter, ImageFont, ImageOps
+from PIL import Image, ImageDraw, ImageEnhance, ImageFilter, ImageFont, ImageOps
 
 from app.log import logger
+from app.plugins.wsembycover.utils.color_helper import ColorHelper
 
 
 def _draw_spaced_text(draw, position, text, font, fill, spacing):
@@ -81,71 +82,123 @@ def _build_poster_card(image_path, size, border_color):
     return shadow_canvas
 
 
-def _build_tech_blue_background(canvas_size):
-    width, height = canvas_size
-    canvas = Image.new("RGBA", canvas_size, (0, 0, 0, 255))
-    draw = ImageDraw.Draw(canvas)
+def _fit_render_size(width, height, max_width=1280, max_height=720):
+    width = max(1, int(width))
+    height = max(1, int(height))
+    ratio = min(1.0, max_width / width, max_height / height)
+    return max(1, int(width * ratio)), max(1, int(height * ratio))
 
-    top_color = (10, 34, 88)
-    bottom_color = (7, 15, 40)
-    for y in range(height):
-        blend = y / max(1, height - 1)
-        color = tuple(
-            int(top_color[i] * (1 - blend) + bottom_color[i] * blend)
-            for i in range(3)
-        )
-        draw.line([(0, y), (width, y)], fill=color + (255,))
 
-    glow_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-    glow_draw = ImageDraw.Draw(glow_layer)
-    glow_draw.ellipse(
-        [
-            int(width * -0.08),
-            int(height * -0.10),
-            int(width * 0.46),
-            int(height * 0.42),
-        ],
-        fill=(70, 170, 255, 105),
-    )
-    glow_draw.ellipse(
-        [
-            int(width * 0.58),
-            int(height * 0.04),
-            int(width * 1.10),
-            int(height * 0.58),
-        ],
-        fill=(40, 125, 235, 82),
-    )
-    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(radius=max(30, height // 20)))
-    canvas = Image.alpha_composite(canvas, glow_layer)
+def _build_style2_background(image_path, canvas_size, color_ratio, bg_color_config):
+    with Image.open(image_path).convert("RGB") as bg_src:
+        background = ImageOps.fit(bg_src, canvas_size, method=Image.Resampling.LANCZOS)
+        background = ImageEnhance.Contrast(background).enhance(1.08)
+        background = ImageEnhance.Color(background).enhance(1.04)
+        background = background.filter(ImageFilter.GaussianBlur(radius=max(2, canvas_size[1] // 540)))
 
-    lines = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-    line_draw = ImageDraw.Draw(lines)
-    for idx in range(8):
-        y = int(height * (0.16 + idx * 0.08))
-        line_draw.rounded_rectangle(
-            [int(width * 0.08), y, int(width * 0.92), y + max(2, height // 420)],
-            radius=2,
-            fill=(90, 190, 255, 30),
-        )
-    for idx in range(9):
-        x = int(width * (0.12 + idx * 0.09))
-        line_draw.rounded_rectangle(
-            [x, int(height * 0.10), x + max(2, width // 700), int(height * 0.74)],
-            radius=2,
-            fill=(90, 190, 255, 26),
-        )
-    lines = lines.filter(ImageFilter.GaussianBlur(radius=1.5))
-    canvas = Image.alpha_composite(canvas, lines)
+        if bg_color_config:
+            base_color = ColorHelper.get_background_color(
+                bg_src,
+                color_mode=bg_color_config.get("mode", "auto"),
+                custom_color=bg_color_config.get("custom_color"),
+                config_color=bg_color_config.get("config_color"),
+            )
+        else:
+            base_color = ColorHelper.get_background_color(bg_src)
 
-    shade_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-    shade_draw = ImageDraw.Draw(shade_layer)
+    overlay_color = ColorHelper.darken_color(base_color, 0.66)
+    frame_color = ColorHelper.lighten_color(base_color, 1.08)
+    ratio = min(1.0, max(0.0, float(color_ratio)))
+    canvas = background.convert("RGBA")
+
+    left_gradient = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+    grad_px = left_gradient.load()
+    for x in range(canvas_size[0]):
+        strength = 1.0 - min(1.0, x / max(1, int(canvas_size[0] * 0.64)))
+        alpha = int((78 + 84 * ratio) * (strength ** 1.35))
+        color = overlay_color + (alpha,)
+        for y in range(canvas_size[1]):
+            grad_px[x, y] = color
+    canvas = Image.alpha_composite(canvas, left_gradient)
+
+    bottom_shade = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+    shade_draw = ImageDraw.Draw(bottom_shade)
     shade_draw.rectangle(
-        [(0, int(height * 0.72)), (width, height)],
-        fill=(6, 9, 20, 86),
+        [(0, int(canvas_size[1] * 0.72)), (canvas_size[0], canvas_size[1])],
+        fill=(18, 16, 12, 94),
     )
-    shade_layer = shade_layer.filter(ImageFilter.GaussianBlur(radius=max(18, height // 28)))
-    return Image.alpha_composite(canvas, shade_layer)
+    bottom_shade = bottom_shade.filter(ImageFilter.GaussianBlur(radius=max(16, canvas_size[1] // 36)))
+    return Image.alpha_composite(canvas, bottom_shade), frame_color
+
+
+def _build_title_layers(canvas_size, title, font_path, font_size, font_offset):
+    zh_font_path, en_font_path = font_path
+    title_zh, title_en = title
+    zh_font_size, en_font_size = font_size
+    zh_font_offset, title_spacing, _ = font_offset
+
+    text_color = (232, 208, 150, 244)
+    text_shadow = (88, 56, 18, 96)
+
+    text_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+    shadow_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+    draw = ImageDraw.Draw(text_layer)
+    shadow_draw = ImageDraw.Draw(shadow_layer)
+
+    zh_font = ImageFont.truetype(zh_font_path, int(max(1, float(zh_font_size))))
+    en_font = ImageFont.truetype(en_font_path, int(max(1, float(en_font_size))))
+
+    title_x = int(canvas_size[0] * 0.04)
+    title_y = int(canvas_size[1] * 0.13) + int(float(zh_font_offset))
+    zh_bbox = draw.textbbox((0, 0), title_zh, font=zh_font)
+    zh_h = zh_bbox[3] - zh_bbox[1]
+
+    for offset in range(4, 12, 2):
+        shadow_draw.text((title_x + offset, title_y + offset), title_zh, font=zh_font, fill=text_shadow)
+    draw.text((title_x, title_y), title_zh, font=zh_font, fill=text_color)
+
+    en_text = (title_en or "").upper()
+    if en_text:
+        en_spacing = max(4, int(float(en_font_size) * 0.16))
+        en_y = title_y + zh_h + int(float(title_spacing))
+        for offset in range(2, 8, 2):
+            _draw_spaced_text(
+                shadow_draw,
+                (title_x + offset, en_y + offset),
+                en_text,
+                en_font,
+                text_shadow,
+                en_spacing,
+            )
+        _draw_spaced_text(draw, (title_x, en_y), en_text, en_font, text_color, en_spacing)
+
+    return text_layer, shadow_layer
+
+
+def _encode_webp_under_limit(frames, frame_duration, limit_bytes):
+    quality_candidates = [65, 58, 52, 46, 40]
+    step_candidates = [1, 2, 3]
+    for step in step_candidates:
+        sampled = frames[::step]
+        duration = frame_duration * step
+        for quality in quality_candidates:
+            buffer = BytesIO()
+            sampled[0].save(
+                buffer,
+                format="WEBP",
+                save_all=True,
+                append_images=sampled[1:],
+                duration=duration,
+                loop=0,
+                quality=quality,
+                method=6,
+                lossless=False,
+                minimize_size=True,
+            )
+            data = buffer.getvalue()
+            if len(data) <= limit_bytes:
+                return data
+    return None
 
 
 def create_style_static_3(
@@ -161,58 +214,32 @@ def create_style_static_3(
     bg_color_config=None,
 ):
     try:
-        zh_font_path, en_font_path = font_path
-        title_zh, title_en = title
-        zh_font_size, en_font_size = font_size
-        zh_font_offset, title_spacing, _ = font_offset
+        if not image_path:
+            logger.warning("static_3 缺少背景图路径")
+            return False
 
         width = 1920
         height = 1080
         if resolution_config:
             width = int(getattr(resolution_config, "width", width))
             height = int(getattr(resolution_config, "height", height))
-        canvas_size = (max(1, width), max(1, height))
-
-        canvas = _build_tech_blue_background(canvas_size)
-
-        zh_font = ImageFont.truetype(zh_font_path, int(max(1, float(zh_font_size))))
-        en_font = ImageFont.truetype(en_font_path, int(max(1, float(en_font_size))))
-
-        # 鎏金色系
-        text_color = (232, 201, 120, 255)
-        text_shadow = (88, 56, 16, 128)
-
-        text_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-        shadow_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-        draw = ImageDraw.Draw(text_layer)
-        shadow_draw = ImageDraw.Draw(shadow_layer)
-
-        zh_bbox = draw.textbbox((0, 0), title_zh, font=zh_font)
-        zh_w = zh_bbox[2] - zh_bbox[0]
-        zh_h = zh_bbox[3] - zh_bbox[1]
-        title_x = (canvas_size[0] - zh_w) // 2
-        title_y = int(canvas_size[1] * 0.12) + int(float(zh_font_offset))
-
-        for offset in range(4, 12, 2):
-            shadow_draw.text((title_x + offset, title_y + offset), title_zh, font=zh_font, fill=text_shadow)
-        draw.text((title_x, title_y), title_zh, font=zh_font, fill=text_color)
-
-        en_text = (title_en or "").upper()
-        if en_text:
-            en_spacing = max(4, int(float(en_font_size) * 0.16))
-            en_width = 0
-            for idx, ch in enumerate(en_text):
-                cb = draw.textbbox((0, 0), ch, font=en_font)
-                en_width += (cb[2] - cb[0]) + (en_spacing if idx < len(en_text) - 1 else 0)
-            en_x = (canvas_size[0] - en_width) // 2
-            en_y = title_y + zh_h + int(float(title_spacing))
-
-            for offset in range(2, 8, 2):
-                _draw_spaced_text(shadow_draw, (en_x + offset, en_y + offset), en_text, en_font, text_shadow, en_spacing)
-            _draw_spaced_text(draw, (en_x, en_y), en_text, en_font, text_color, en_spacing)
+        canvas_size = _fit_render_size(width, height, max_width=1280, max_height=720)
+        base_canvas, frame_color = _build_style2_background(
+            image_path=image_path,
+            canvas_size=canvas_size,
+            color_ratio=color_ratio,
+            bg_color_config=bg_color_config,
+        )
+        text_layer, shadow_layer = _build_title_layers(
+            canvas_size=canvas_size,
+            title=title,
+            font_path=font_path,
+            font_size=font_size,
+            font_offset=font_offset,
+        )
 
         poster_paths = []
-        for index in range(1, 6):
+        for index in range(1, 21):
             candidate = Path(library_dir) / f"{index}.jpg"
             if candidate.exists():
                 poster_paths.append(candidate)
@@ -220,31 +247,55 @@ def create_style_static_3(
             logger.warning("static_3 未找到可用海报图")
             return False
 
-        available_width = int(canvas_size[0] * 0.90)
-        poster_width = int(available_width / 5.45)
-        poster_height = int(poster_width * 1.43)
-        frame_color = (214, 181, 106)
-        cards = [_build_poster_card(path, (poster_width, poster_height), frame_color) for path in poster_paths[:5]]
+        while len(poster_paths) < 20:
+            poster_paths.extend(poster_paths[: 20 - len(poster_paths)])
+        poster_paths = poster_paths[:20]
 
-        total_cards_width = sum(card.size[0] for card in cards)
-        gap = max(12, int((canvas_size[0] - total_cards_width) / 6))
-        start_x = gap
-        start_y = canvas_size[1] - max(card.size[1] for card in cards) - int(canvas_size[1] * 0.035)
+        poster_height = int(canvas_size[1] * 0.43)
+        poster_width = int(poster_height / 1.43)
+        gap = max(8, int(canvas_size[0] * 0.008))
+        cards = [_build_poster_card(path, (poster_width, poster_height), frame_color) for path in poster_paths]
 
-        for card in cards:
-            canvas.paste(card, (start_x, start_y), card)
-            start_x += card.size[0] + gap
+        max_card_h = max(card.size[1] for card in cards)
+        start_y = canvas_size[1] - max_card_h - int(canvas_size[1] * 0.028)
+        slot_width = cards[0].size[0] + gap
+        strip_width = slot_width * len(cards)
+        frame_count = 24
+        frame_duration = 90
+        travel = strip_width + canvas_size[0] + cards[0].size[0]
 
-        merged = Image.alpha_composite(
-            canvas,
-            shadow_layer.filter(ImageFilter.GaussianBlur(radius=max(8, canvas_size[1] // 135))),
-        )
-        merged = Image.alpha_composite(merged, text_layer)
+        frames = []
+        for frame_idx in range(frame_count):
+            canvas = base_canvas.copy()
+            progress = frame_idx / max(1, frame_count - 1)
+            shift = int(progress * travel)
+            x_anchor = -strip_width - cards[0].size[0] + shift
 
-        # 静态输出 JPEG，尽量减小上传体积
-        buffer = BytesIO()
-        merged.convert("RGB").save(buffer, format="JPEG", quality=88, optimize=True)
-        return base64.b64encode(buffer.getvalue()).decode("utf-8")
+            for loop_idx in range(3):
+                base_x = x_anchor + loop_idx * strip_width
+                for idx, card in enumerate(cards):
+                    card_x = base_x + idx * slot_width
+                    if card_x > canvas_size[0] or card_x + card.size[0] < 0:
+                        continue
+                    canvas.paste(card, (card_x, start_y), card)
+
+            merged = Image.alpha_composite(
+                canvas,
+                shadow_layer.filter(ImageFilter.GaussianBlur(radius=max(6, canvas_size[1] // 160))),
+            )
+            merged = Image.alpha_composite(merged, text_layer)
+            frames.append(merged.convert("RGB"))
+
+        webp_bytes = _encode_webp_under_limit(frames, frame_duration, limit_bytes=2 * 1024 * 1024)
+        if webp_bytes is None:
+            buffer = BytesIO()
+            frames[0].save(buffer, format="JPEG", quality=84, optimize=True)
+            webp_bytes = buffer.getvalue()
+            logger.warning("static_3 动图超过 2MB，已降级输出为静态 JPEG")
+        else:
+            logger.info(f"static_3 动图体积: {len(webp_bytes) / 1024:.1f}KB")
+
+        return base64.b64encode(webp_bytes).decode("utf-8")
     except Exception as e:
         logger.error(f"创建 static_3 封面时出错: {e}")
         return False
