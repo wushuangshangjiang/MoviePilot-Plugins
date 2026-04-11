@@ -145,8 +145,8 @@ def _build_title_layers(canvas_size, title, font_path, font_size, font_offset):
     draw = ImageDraw.Draw(text_layer)
     shadow_draw = ImageDraw.Draw(shadow_layer)
 
-    zh_font = ImageFont.truetype(zh_font_path, int(max(1, float(zh_font_size) * 0.56)))
-    en_font = ImageFont.truetype(en_font_path, int(max(1, float(en_font_size) * 0.56)))
+    zh_font = ImageFont.truetype(zh_font_path, int(max(1, float(zh_font_size) * 0.45)))
+    en_font = ImageFont.truetype(en_font_path, int(max(1, float(en_font_size) * 0.45)))
 
     title_x = int(canvas_size[0] * 0.04)
     title_y = int(canvas_size[1] * 0.13) + int(float(zh_font_offset))
@@ -176,9 +176,9 @@ def _build_title_layers(canvas_size, title, font_path, font_size, font_offset):
 
 
 def _encode_apng_under_limit(frames, frame_duration, limit_bytes):
-    scale_candidates = [1.00, 0.85, 0.72, 0.60, 0.50]
-    colors_candidates = [128, 96, 72, 56, 40]
-    step_candidates = [1, 2]
+    scale_candidates = [1.00, 0.90, 0.82, 0.74, 0.66]
+    step_candidates = [1, 2, 3]
+    quantize_candidates = [None, 224, 160]
     best = None
 
     normalized = [f.convert("RGB") for f in frames]
@@ -196,26 +196,29 @@ def _encode_apng_under_limit(frames, frame_duration, limit_bytes):
             scaled = normalized
 
         for step in step_candidates:
-            for colors in colors_candidates:
+            for colors in quantize_candidates:
                 sampled = scaled[::step]
                 duration = frame_duration * step
-                quantized = [
-                    frame.quantize(
-                        colors=colors,
-                        method=Image.Quantize.FASTOCTREE,
-                        dither=Image.Dither.NONE,
-                    )
-                    for frame in sampled
-                ]
+                if colors is None:
+                    encoded_frames = sampled
+                else:
+                    encoded_frames = [
+                        frame.quantize(
+                            colors=colors,
+                            method=Image.Quantize.FASTOCTREE,
+                            dither=Image.Dither.FLOYDSTEINBERG,
+                        )
+                        for frame in sampled
+                    ]
                 buffer = BytesIO()
-                quantized[0].save(
+                encoded_frames[0].save(
                     buffer,
                     format="PNG",
                     save_all=True,
-                    append_images=quantized[1:],
+                    append_images=encoded_frames[1:],
                     duration=duration,
                     loop=0,
-                    optimize=False,
+                    optimize=True,
                     compress_level=9,
                 )
                 data = buffer.getvalue()
