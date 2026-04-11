@@ -89,7 +89,6 @@ class WsEmbyCover(_PluginBase):
     _current_config = {}
     _cover_style = 'static_1'
     _cover_style_base = 'static_1'
-    _cover_style_variant = 'static'
     _font_path = ''
     _covers_path = ''
     _tab = 'style-tab'
@@ -112,14 +111,6 @@ class WsEmbyCover(_PluginBase):
     _custom_width = 1920
     _custom_height = 1080
     _resolution_config = None
-    _animation_duration = 8
-    _animation_scroll = 'alternate'
-    _animation_fps = 24
-    _animation_format = 'apng'
-    _animation_resolution = '320x180'
-    _animation_reduce_colors = 'medium'
-    _animated_2_image_count = 6
-    _animated_2_departure_type = 'fly'
     _style_naming_v2 = True
     _sanitize_log_cache = set()
     _clean_images = False
@@ -169,8 +160,6 @@ class WsEmbyCover(_PluginBase):
                     self._cover_style = 'static_3'
             default_base, default_variant = self.__resolve_cover_style_ui(self._cover_style)
             self._cover_style_base = config.get("cover_style_base", default_base)
-            self._cover_style_variant = config.get("cover_style_variant", default_variant)
-            self._cover_style = self.__compose_cover_style(self._cover_style_base, self._cover_style_variant)
             self._multi_1_blur = config.get("multi_1_blur", True)
             self._zh_font_size = config.get("zh_font_size", 170)
             self._en_font_size = config.get("en_font_size", 75)
@@ -197,31 +186,6 @@ class WsEmbyCover(_PluginBase):
             self._resolution = config.get("resolution", "480p")
             self._custom_width = config.get("custom_width", 1920)
             self._custom_height = config.get("custom_height", 1080)
-            try:
-                self._animation_duration = int(config.get("animation_duration", 12))
-            except (ValueError, TypeError):
-                self._animation_duration = 12
-            self._animation_scroll = config.get("animation_scroll", "alternate")
-            try:
-                self._animation_fps = int(config.get("animation_fps", 12))
-            except (ValueError, TypeError):
-                self._animation_fps = 12
-            self._animation_format = config.get("animation_format", "apng")
-            if self._animation_format == "webp":
-                self._animation_format = "gif"
-            if self._animation_format not in ["apng", "gif"]:
-                self._animation_format = "apng"
-            self._animation_resolution = config.get("animation_resolution", "320x180")
-            animation_reduce_colors = config.get("animation_reduce_colors", "medium")
-            if isinstance(animation_reduce_colors, bool):
-                self._animation_reduce_colors = "medium" if animation_reduce_colors else "off"
-            elif animation_reduce_colors in ["off", "medium", "strong"]:
-                self._animation_reduce_colors = animation_reduce_colors
-            else:
-                self._animation_reduce_colors = "medium"
-
-            self._animated_2_image_count = config.get("animated_2_image_count", 6)
-            self._animated_2_departure_type = config.get("animated_2_departure_type", "fly")
             self._clean_images = config.get("clean_images", False)
             self._clean_fonts = config.get("clean_fonts", False)
             self._save_recent_covers = config.get("save_recent_covers", True)
@@ -245,20 +209,7 @@ class WsEmbyCover(_PluginBase):
 
             if self._resolution not in ["1080p", "720p", "480p"]:
                 self._resolution = "480p"
-            self._animation_resolution = "320x180"
 
-        self._animated_2_image_count = self.__clamp_value(
-            self._animated_2_image_count,
-            3,
-            9,
-            5,
-            "animated_2 image_count[init_plugin]",
-            int,
-        )
-        if self._animated_2_departure_type not in ["fly", "fade", "crossfade"]:
-            self._animated_2_departure_type = "fly"
-        if self._animation_scroll not in ["down", "up", "alternate", "alternate_reverse"]:
-            self._animation_scroll = "alternate"
         self._bg_color_mode = (config or {}).get("bg_color_mode", "auto")
         self._custom_bg_color = (config or {}).get("custom_bg_color", "")
 
@@ -328,15 +279,7 @@ class WsEmbyCover(_PluginBase):
         return parsed
 
     def __get_animated_2_required_items(self) -> int:
-        self._animated_2_image_count = self.__clamp_value(
-            self._animated_2_image_count,
-            3,
-            9,
-            5,
-            "animated_2 image_count[runtime]",
-            int,
-        )
-        return int(self._animated_2_image_count)
+        return 5
 
     def __load_style_creator(self, module_name: str, func_name: str):
         module = importlib.import_module(f"app.plugins.wsembycover.style.{module_name}")
@@ -387,54 +330,51 @@ class WsEmbyCover(_PluginBase):
         return self._validate_font_file(font_path)
 
     def __compose_cover_style(self, base_style: str, variant: str) -> str:
-        base = base_style if base_style in ["static_1", "static_2", "static_3", "static_4", "static_5"] else "static_1"
-        mode = variant if variant in ["static", "animated"] else "static"
-        suffix = base.split("_")[-1]
-        if suffix == "5":
-            return "static_5"
-        return base if mode == "static" else f"animated_{suffix}"
+        mapping = {
+            "static_1": "static_1",
+            "static_2": "static_2",
+            "static_3": "static_3",
+            "static_5": "static_2",
+            "static_6": "static_3",
+        }
+        return mapping.get(base_style, "static_1")
 
     def __resolve_cover_style_ui(self, cover_style: str) -> Tuple[str, str]:
-        if cover_style in ["animated_1", "animated_2", "animated_3", "animated_4"]:
-            suffix = cover_style.split("_")[-1]
-            if suffix == "4":
-                return "static_4", "animated"
-            return f"static_{suffix}", "animated"
-        if cover_style in ["static_1", "static_2", "static_3", "static_4", "static_5"]:
-            return cover_style, "static"
-        return "static_1", "static"
+        mapping = {
+            "static_1": "static_1",
+            "static_2": "static_1",
+            "static_3": "static_1",
+            "static_4": "static_2",
+            "static_5": "static_2",
+            "static_6": "static_3",
+            "animated_1": "static_1",
+            "animated_2": "static_2",
+            "animated_3": "static_1",
+            "animated_4": "static_3",
+        }
+        return mapping.get(cover_style, "static_1"), "static"
 
     def __is_single_image_style(self) -> bool:
-        return self._cover_style in ["static_1", "static_2", "static_4"]
+        return False
 
     def __get_required_items(self) -> int:
-        if self._cover_style in ["static_3", "animated_3"]:
+        if self._cover_style == "static_1":
             return 9
-        if self._cover_style == "static_5":
+        if self._cover_style in ["static_2", "static_3"]:
             return 5
-        if self._cover_style in ["animated_1", "animated_2", "animated_4"]:
-            return self.__get_animated_2_required_items()
-        return 1
+        return 5
 
     def __get_fetch_target_count(self) -> int:
         required_items = self.__get_required_items()
-        if self._cover_style == "static_5":
+        if self._cover_style in ["static_2", "static_3"]:
             return required_items + 1
         return required_items
 
     def __update_config(self):
         """
-        更新配置
+        ??????
         """
-        self._cover_style = self.__compose_cover_style(self._cover_style_base, self._cover_style_variant)
-        self._animated_2_image_count = self.__clamp_value(
-            self._animated_2_image_count,
-            3,
-            9,
-            5,
-            "animated_2 image_count[save]",
-            int,
-        )
+        self._cover_style = self.__compose_cover_style(self._cover_style_base, "static")
         self.update_config({
             "enabled": self._enabled,
             "update_now": self._update_now,
@@ -454,7 +394,6 @@ class WsEmbyCover(_PluginBase):
             "en_font_path": str(self._en_font_path),
             "cover_style": self._cover_style,
             "cover_style_base": self._cover_style_base,
-            "cover_style_variant": self._cover_style_variant,
             "multi_1_blur": self._multi_1_blur,
             "zh_font_size": self._zh_font_size,
             "en_font_size": self._en_font_size,
@@ -472,14 +411,6 @@ class WsEmbyCover(_PluginBase):
             "resolution": self._resolution,
             "custom_width": self._custom_width,
             "custom_height": self._custom_height,
-            "animation_duration": self._animation_duration,
-            "animation_scroll": self._animation_scroll,
-            "animation_fps": self._animation_fps,
-            "animation_format": self._animation_format,
-            "animation_resolution": self._animation_resolution,
-            "animation_reduce_colors": self._animation_reduce_colors,
-            "animated_2_image_count": self._animated_2_image_count,
-            "animated_2_departure_type": self._animated_2_departure_type,
             "bg_color_mode": self._bg_color_mode,
             "custom_bg_color": self._custom_bg_color,
             "clean_images": self._clean_images,
@@ -729,18 +660,12 @@ class WsEmbyCover(_PluginBase):
                 "methods": ["POST", "GET"],
                 "summary": "保存封面风格选择(兼容无前导斜杠)",
             },
-            {"path": "/toggle_style_variant", "endpoint": self.api_toggle_style_variant, "auth": "bear", "methods": ["POST"], "summary": "切换静态/动态"},
-            {"path": "toggle_style_variant", "endpoint": self.api_toggle_style_variant, "auth": "bear", "methods": ["POST"], "summary": "切换静态/动态(兼容)"},
             {"path": "/select_style_1", "endpoint": self.api_select_style_1, "auth": "bear", "methods": ["POST"], "summary": "选择风格1"},
             {"path": "/select_style_2", "endpoint": self.api_select_style_2, "auth": "bear", "methods": ["POST"], "summary": "选择风格2"},
             {"path": "/select_style_3", "endpoint": self.api_select_style_3, "auth": "bear", "methods": ["POST"], "summary": "选择风格3"},
-            {"path": "/select_style_4", "endpoint": self.api_select_style_4, "auth": "bear", "methods": ["POST"], "summary": "选择风格4"},
-            {"path": "/select_style_5", "endpoint": self.api_select_style_5, "auth": "bear", "methods": ["POST"], "summary": "选择风格5"},
             {"path": "select_style_1", "endpoint": self.api_select_style_1, "auth": "bear", "methods": ["POST"], "summary": "选择风格1(兼容)"},
             {"path": "select_style_2", "endpoint": self.api_select_style_2, "auth": "bear", "methods": ["POST"], "summary": "选择风格2(兼容)"},
             {"path": "select_style_3", "endpoint": self.api_select_style_3, "auth": "bear", "methods": ["POST"], "summary": "选择风格3(兼容)"},
-            {"path": "select_style_4", "endpoint": self.api_select_style_4, "auth": "bear", "methods": ["POST"], "summary": "选择风格4(兼容)"},
-            {"path": "select_style_5", "endpoint": self.api_select_style_5, "auth": "bear", "methods": ["POST"], "summary": "选择风格5(兼容)"},
             {"path": "/set_page_tab_generate", "endpoint": self.api_set_page_tab_generate, "auth": "bear", "methods": ["POST"], "summary": "切换到生成页"},
             {"path": "/set_page_tab_history", "endpoint": self.api_set_page_tab_history, "auth": "bear", "methods": ["POST"], "summary": "切换到历史页"},
             {"path": "/set_page_tab_clean", "endpoint": self.api_set_page_tab_clean, "auth": "bear", "methods": ["POST"], "summary": "切换到清理页"},
@@ -802,8 +727,7 @@ class WsEmbyCover(_PluginBase):
 
             target_style = (style or "").strip()
             allowed_styles = {
-                "static_1", "static_2", "static_3", "static_4", "static_5",
-                "animated_1", "animated_2", "animated_3", "animated_4",
+                "static_1", "static_2", "static_3",
             }
             if target_style:
                 if target_style not in allowed_styles:
@@ -822,15 +746,13 @@ class WsEmbyCover(_PluginBase):
         try:
             target_style = (style or "").strip()
             allowed_styles = {
-                "static_1", "static_2", "static_3", "static_4", "static_5",
-                "animated_1", "animated_2", "animated_3", "animated_4",
+                "static_1", "static_2", "static_3",
             }
             if target_style not in allowed_styles:
                 return {"code": 1, "msg": f"不支持的风格: {target_style}"}
             self._cover_style = target_style
             base, variant = self.__resolve_cover_style_ui(target_style)
             self._cover_style_base = base
-            self._cover_style_variant = variant
             self.__update_config()
             logger.info(f"【WsEmbyCover】已保存封面风格: {target_style}")
             return {"code": 0, "msg": f"已保存风格: {target_style}"}
@@ -840,27 +762,21 @@ class WsEmbyCover(_PluginBase):
 
     def __get_cover_style_parts(self) -> Tuple[str, int]:
         style = (self._cover_style or "static_1").strip()
-        variant = "animated" if style.startswith("animated_") else "static"
         try:
             index = int(style.split("_")[-1])
         except Exception:
             index = 1
-        index = max(1, min(5, index))
-        return variant, index
+        index = max(1, min(3, index))
+        return "static", index
 
     def __set_cover_style_parts(self, variant: str, index: int):
-        safe_variant = "animated" if variant == "animated" else "static"
-        safe_index = max(1, min(5, int(index)))
-        if safe_index == 5:
-            safe_variant = "static"
-        target_style = f"{safe_variant}_{safe_index}"
+        safe_index = max(1, min(3, int(index)))
+        target_style = f"static_{safe_index}"
         self._cover_style = target_style
         self._cover_style_base = f"static_{safe_index}"
-        self._cover_style_variant = safe_variant
         self.__update_config()
         logger.info(f"【WsEmbyCover】已保存封面风格: {target_style}")
 
-    def api_toggle_style_variant(self):
         try:
             variant, index = self.__get_cover_style_parts()
             new_variant = "animated" if variant == "static" else "static"
@@ -890,11 +806,6 @@ class WsEmbyCover(_PluginBase):
     def api_select_style_3(self):
         return self.__api_select_style(3)
 
-    def api_select_style_4(self):
-        return self.__api_select_style(4)
-
-    def api_select_style_5(self):
-        return self.__api_select_style(5)
 
     def __set_page_tab(self, tab: str):
         self._page_tab = tab if tab in ["generate-tab", "history-tab", "clean-tab"] else "generate-tab"
@@ -1404,14 +1315,6 @@ class WsEmbyCover(_PluginBase):
                 "value": "static_3",
                 "src": self.__style_preview_src(3)
             },
-            {
-                "value": "static_4",
-                "src": self.__style_preview_src(4)
-            },
-            {
-                "value": "static_5",
-                "src": self.__style_preview_src(5)
-            }
         ]
 
         style_variant_items = [
@@ -1518,12 +1421,10 @@ class WsEmbyCover(_PluginBase):
             {
                 'component': 'VBtnToggle',
                 'props': {
-                    'model': 'cover_style_variant',
                     'mandatory': True,
                     'class': 'mt-3',
                     'divided': True
                 },
-                'content': style_variant_items
             },
             {
                 'component': 'VExpansionPanels',
@@ -1782,7 +1683,6 @@ class WsEmbyCover(_PluginBase):
                                                     {
                                                         'component': 'VTextField',
                                                         'props': {
-                                                            'model': 'animation_duration',
                                                             'label': '动画循环周期 (秒)',
                                                             'type': 'number',
                                                             'prependInnerIcon': 'mdi-clock-outline'
@@ -1797,7 +1697,6 @@ class WsEmbyCover(_PluginBase):
                                                     {
                                                         'component': 'VTextField',
                                                         'props': {
-                                                            'model': 'animation_fps',
                                                             'label': '帧率 (FPS)',
                                                             'type': 'number',
                                                             'prependInnerIcon': 'mdi-speedometer'
@@ -1812,7 +1711,6 @@ class WsEmbyCover(_PluginBase):
                                                     {
                                                         'component': 'VSelect',
                                                         'props': {
-                                                            'model': 'animation_format',
                                                             'label': '输出格式',
                                                             'items': [
                                                                 {'title': 'APNG', 'value': 'apng'},
@@ -1830,7 +1728,6 @@ class WsEmbyCover(_PluginBase):
                                                     {
                                                         'component': 'VSelect',
                                                         'props': {
-                                                            'model': 'animation_reduce_colors',
                                                             'label': '颜色压缩等级',
                                                             'items': [
                                                                 {'title': '关闭（保真优先）', 'value': 'off'},
@@ -1855,7 +1752,6 @@ class WsEmbyCover(_PluginBase):
                                                     {
                                                         'component': 'VTextField',
                                                         'props': {
-                                                            'model': 'animated_2_image_count',
                                                             'label': '样式1/2 图片数量 (3~9)',
                                                             'type': 'number',
                                                             'min': 3,
@@ -1874,7 +1770,6 @@ class WsEmbyCover(_PluginBase):
                                                     {
                                                         'component': 'VSelect',
                                                         'props': {
-                                                            'model': 'animated_2_departure_type',
                                                             'label': '样式1动画风格',
                                                             'hint': '仅样式1有效',
                                                             'persistentHint': True,
@@ -1895,7 +1790,6 @@ class WsEmbyCover(_PluginBase):
                                                     {
                                                         'component': 'VSelect',
                                                         'props': {
-                                                            'model': 'animation_scroll',
                                                             'label': '样式3滚动方向',
                                                             'hint': '仅样式3有效',
                                                             'persistentHint': True,
@@ -2243,7 +2137,6 @@ class WsEmbyCover(_PluginBase):
             "tab": "style-tab",
             "cover_style": "static_1",
             "cover_style_base": "static_1",
-            "cover_style_variant": "static",
             "multi_1_blur": True,
             "zh_font_preset": "chaohei",
             "en_font_preset": "EmblemaOne",
@@ -2260,14 +2153,6 @@ class WsEmbyCover(_PluginBase):
             "custom_height": 1080,
             "bg_color_mode": "auto",
             "custom_bg_color": "",
-            "animation_duration": 8,
-            "animation_scroll": "alternate",
-            "animation_fps": 24,
-            "animation_format": "apng",
-            "animation_resolution": "320x180",
-            "animation_reduce_colors": "medium",
-            "animated_2_image_count": 6,
-            "animated_2_departure_type": "fly",
             "clean_images": False,
             "clean_fonts": False,
             "save_recent_covers": True,
@@ -2286,8 +2171,6 @@ class WsEmbyCover(_PluginBase):
             "covers_page_history_limit[get_page]",
             int,
         )
-        style_variant, style_index = self.__get_cover_style_parts()
-        style_preview_cards = self.__build_page_style_cards(style_variant=style_variant, selected_index=style_index)
         setup_warnings: List[str] = []
         if not self._enabled:
             setup_warnings.append("插件未启用，请先在设置页启用插件并保存。")
@@ -2473,8 +2356,6 @@ class WsEmbyCover(_PluginBase):
                                                                     "class": "text-none mr-2 mb-2",
                                                                     "prepend-icon": "mdi-swap-horizontal",
                                                                 },
-                                                    "text": f"切换到{'动态' if style_variant == 'static' else '静态'}",
-                                                    "events": {"click": {"api": "plugin/WsEmbyCover/toggle_style_variant", "method": "post"}},
                                                 },
                                                             {
                                                                 "component": "VBtn",
@@ -2528,8 +2409,6 @@ class WsEmbyCover(_PluginBase):
                                                                     "class": "text-none mr-2 mb-2",
                                                                     "prepend-icon": "mdi-swap-horizontal",
                                                                 },
-                                                    "text": f"切换到{'动态' if style_variant == 'static' else '静态'}",
-                                                    "events": {"click": {"api": "plugin/WsEmbyCover/toggle_style_variant", "method": "post"}},
                                                 },
                                                             {
                                                                 "component": "VBtn",
@@ -2609,16 +2488,11 @@ class WsEmbyCover(_PluginBase):
                 }
             ]
         )
-    def __build_page_style_cards(self, style_variant: str, selected_index: int) -> List[Dict[str, Any]]:
         styles = [
-            {"name": "风格1", "index": 1, "src": self.__style_preview_src(1)},
-            {"name": "风格2", "index": 2, "src": self.__style_preview_src(2)},
-            {"name": "风格3", "index": 3, "src": self.__style_preview_src(3)},
-            {"name": "风格4", "index": 4, "src": self.__style_preview_src(4)},
-            {"name": "风格5", "index": 5, "src": self.__style_preview_src(5)},
+            {"name": "??1", "index": 1, "src": self.__style_preview_src(1)},
+            {"name": "??2", "index": 2, "src": self.__style_preview_src(2)},
+            {"name": "??3", "index": 3, "src": self.__style_preview_src(3)},
         ]
-        if style_variant == "animated":
-            styles = [style for style in styles if style["index"] <= 4]
         cards: List[Dict[str, Any]] = []
         for style in styles:
             cards.append(
@@ -2652,7 +2526,6 @@ class WsEmbyCover(_PluginBase):
                                 {
                                     "component": "VCardText",
                                     "props": {"class": "py-2 text-center"},
-                                    "text": f"{style['name']}（{'静态' if style_variant == 'static' else '动态'}{style['index']}）" if style["index"] == selected_index else style["name"],
                                 },
                             ],
                         }
@@ -2663,10 +2536,13 @@ class WsEmbyCover(_PluginBase):
 
     @staticmethod
     def __style_preview_src(index: int) -> str:
-        safe_index = max(1, min(5, int(index)))
-        if safe_index == 5:
-            return "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/images/style_5_preview.jpg?v=20260407-248"
-        return f"https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/images/style_{safe_index}.jpeg?v=20260407-130"
+        safe_index = max(1, min(3, int(index)))
+        preview_map = {
+            1: "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/images/style_3.jpeg?v=20260407-130",
+            2: "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/images/style_5_preview.jpg?v=20260407-248",
+            3: "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/images/style_5_preview.jpg?v=20260407-248",
+        }
+        return preview_map.get(safe_index, preview_map[1])
 
     def __get_recent_generated_covers(self, limit: int = 20) -> List[Dict[str, Any]]:
         items: List[Dict[str, Any]] = []
@@ -3115,49 +2991,42 @@ class WsEmbyCover(_PluginBase):
 
         # 传递分辨率配置给图像生成函数
         if self._cover_style == 'static_1':
-            create_style_static_1 = self.__load_style_creator("style_static_1", "create_style_static_1")
-            image_data = create_style_static_1(image_path, title, font_path,
-                                                font_size=font_size,
-                                                font_offset=font_offset,
-                                                blur_size=blur_size,
-                                                color_ratio=color_ratio,
-                                                resolution_config=self._resolution_config,
-                                                bg_color_config=bg_color_config)
+            create_style_static_1 = self.__load_style_creator("style_static_1", "create_style_static_3")
+            safe_library_name = self.__sanitize_filename(library_name)
+            if image_path:
+                library_dir = Path(self._covers_input) / safe_library_name
+            else:
+                library_dir = Path(self._covers_path) / safe_library_name
+            logger.info(f"static_1: ?????? {library_dir}")
+            if self.prepare_library_images(library_dir, required_items=9):
+                logger.info("static_1: ???????????????")
+                image_data = create_style_static_1(
+                    library_dir, title, font_path,
+                    font_size=font_size,
+                    font_offset=font_offset,
+                    is_blur=self._multi_1_blur,
+                    blur_size=blur_size,
+                    color_ratio=color_ratio,
+                    resolution_config=self._resolution_config,
+                    bg_color_config=bg_color_config)
+            else:
+                logger.warning(f"static_1: ???????? {library_dir}")
         elif self._cover_style == 'static_2':
-            create_style_static_2 = self.__load_style_creator("style_static_2", "create_style_static_2")
-            image_data = create_style_static_2(image_path, title, font_path,
-                                                font_size=font_size,
-                                                font_offset=font_offset,
-                                                blur_size=blur_size,
-                                                color_ratio=color_ratio,
-                                                resolution_config=self._resolution_config,
-                                                bg_color_config=bg_color_config)
-        elif self._cover_style == 'static_4':
-            create_style_static_4 = self.__load_style_creator("style_static_4", "create_style_static_4")
-            image_data = create_style_static_4(image_path, title, font_path,
-                                                font_size=font_size,
-                                                font_offset=font_offset,
-                                                blur_size=blur_size,
-                                                color_ratio=color_ratio,
-                                                resolution_config=self._resolution_config,
-                                                bg_color_config=bg_color_config)
-        elif self._cover_style == 'static_5':
-            create_style_static_5 = self.__load_style_creator("style_static_5", "create_style_static_5")
+            create_style_static_2 = self.__load_style_creator("style_static_2", "create_style_static_5")
             safe_library_name = self.__sanitize_filename(library_name)
             cache_library_dir = Path(self._covers_path) / safe_library_name
             custom_library_dir = Path(self._covers_input) / safe_library_name if self._covers_input else None
             numbered_posters = [cache_library_dir / f"{index}.jpg" for index in range(1, 6)]
-
             if all(path.exists() for path in numbered_posters):
                 library_dir = cache_library_dir
             elif custom_library_dir and custom_library_dir.exists():
                 library_dir = custom_library_dir
             else:
                 library_dir = cache_library_dir
-            logger.info(f"static_5: 准备图片目录 {library_dir}")
+            logger.info(f"static_2: ?????? {library_dir}")
             if self.prepare_library_images(library_dir, required_items=5):
-                logger.info("static_5: 图片目录准备完成，开始生成封面")
-                image_data = create_style_static_5(
+                logger.info("static_2: ???????????????")
+                image_data = create_style_static_2(
                     image_path=image_path,
                     library_dir=library_dir,
                     title=title,
@@ -3170,154 +3039,36 @@ class WsEmbyCover(_PluginBase):
                     bg_color_config=bg_color_config,
                 )
             else:
-                logger.warning(f"static_5: 图片目录准备失败 {library_dir}")
+                logger.warning(f"static_2: ???????? {library_dir}")
         elif self._cover_style == 'static_3':
-            create_style_static_3 = self.__load_style_creator("style_static_3", "create_style_static_3")
-            # 使用安全的文件名
+            create_style_static_3 = self.__load_style_creator("style_static_3", "create_style_static_6")
             safe_library_name = self.__sanitize_filename(library_name)
-            if image_path:
-                library_dir = Path(self._covers_input) / safe_library_name
+            cache_library_dir = Path(self._covers_path) / safe_library_name
+            custom_library_dir = Path(self._covers_input) / safe_library_name if self._covers_input else None
+            numbered_posters = [cache_library_dir / f"{index}.jpg" for index in range(1, 6)]
+            if all(path.exists() for path in numbered_posters):
+                library_dir = cache_library_dir
+            elif custom_library_dir and custom_library_dir.exists():
+                library_dir = custom_library_dir
             else:
-                library_dir = Path(self._covers_path) / safe_library_name
-            logger.info(f"static_3: 准备图片目录 {library_dir}")
-            if self.prepare_library_images(library_dir, required_items=9):
-                logger.info("static_3: 图片目录准备完成，开始生成封面")
-                image_data = create_style_static_3(library_dir, title, font_path,
-                                                    font_size=font_size,
-                                                    font_offset=font_offset,
-                                                    is_blur=self._multi_1_blur,
-                                                    blur_size=blur_size,
-                                                    color_ratio=color_ratio,
-                                                    resolution_config=self._resolution_config,
-                                                    bg_color_config=bg_color_config)
+                library_dir = cache_library_dir
+            logger.info(f"static_3: ?????? {library_dir}")
+            if self.prepare_library_images(library_dir, required_items=5):
+                logger.info("static_3: ???????????????")
+                image_data = create_style_static_3(
+                    image_path=image_path,
+                    library_dir=library_dir,
+                    title=title,
+                    font_path=font_path,
+                    font_size=font_size,
+                    font_offset=font_offset,
+                    blur_size=blur_size,
+                    color_ratio=color_ratio,
+                    resolution_config=self._resolution_config,
+                    bg_color_config=bg_color_config,
+                )
             else:
-                logger.warning(f"static_3: 图片目录准备失败 {library_dir}")
-        elif self._cover_style == 'animated_3':
-            create_style_animated_3 = self.__load_style_creator("style_animated_3", "create_style_animated_3")
-            # 动态封面强制使用 320x180 分辨率以保证性能
-            anim_res = '320x180'
-            logger.info(f"强制动图生成分辨率为: {anim_res}")
-            
-            # 动态封面逻辑，类似于 multi_1
-            safe_library_name = self.__sanitize_filename(library_name)
-            if image_path:
-                library_dir = Path(self._covers_input) / safe_library_name
-            else:
-                library_dir = Path(self._covers_path) / safe_library_name
-            
-            logger.info(f"正在准备库图片目录: {library_dir}")
-            if self.prepare_library_images(library_dir, required_items=9):
-                logger.info("库图片准备完成，开始调用 create_style_animated_3")
-                image_data = create_style_animated_3(library_dir, title, font_path,
-                                                    font_size=font_size,
-                                                    font_offset=font_offset,
-                                                    is_blur=self._multi_1_blur,
-                                                    blur_size=blur_size,
-                                                    color_ratio=color_ratio,
-                                                    resolution_config=self._resolution_config,
-                                                    bg_color_config=bg_color_config,
-                                                    animation_duration=self._animation_duration,
-                                                    animation_scroll=self._animation_scroll,
-                                                    animation_fps=self._animation_fps,
-                                                    animation_format=self._animation_format,
-                                                    animation_resolution=anim_res,
-                                                    animation_reduce_colors=self._animation_reduce_colors,
-                                                    stop_event=self._event)
-        elif self._cover_style == 'animated_1':
-            create_style_animated_1 = self.__load_style_creator("style_animated_1", "create_style_animated_1")
-            # 动态封面强制使用 320x180 分辨率以保证性能
-            anim_res = '320x180'
-            logger.info(f"强制动图生成分辨率为: {anim_res}")
-
-            animated_2_image_count = self.__get_animated_2_required_items()
-
-            # 动态封面逻辑，类似于 multi_1
-            safe_library_name = self.__sanitize_filename(library_name)
-            if image_path:
-                library_dir = Path(self._covers_input) / safe_library_name
-            else:
-                library_dir = Path(self._covers_path) / safe_library_name
-
-            logger.info(f"正在准备库图片目录: {library_dir}")
-            if self.prepare_library_images(library_dir, required_items=animated_2_image_count):
-                logger.info("库图片准备完成，开始调用 create_style_animated_1")
-                image_data = create_style_animated_1(library_dir, title, font_path,
-                                                    font_size=font_size,
-                                                    font_offset=font_offset,
-                                                    is_blur=self._multi_1_blur,
-                                                    blur_size=blur_size,
-                                                    color_ratio=color_ratio,
-                                                    resolution_config=self._resolution_config,
-                                                    bg_color_config=bg_color_config,
-                                                    animation_duration=self._animation_duration,
-                                                    animation_fps=self._animation_fps,
-                                                    animation_format=self._animation_format,
-                                                    animation_resolution=anim_res,
-                                                    animation_reduce_colors=self._animation_reduce_colors,
-                                                    image_count=animated_2_image_count,
-                                                    departure_type=self._animated_2_departure_type,
-                                                    stop_event=self._event)
-        elif self._cover_style == 'animated_2':
-            create_style_animated_2 = self.__load_style_creator("style_animated_2", "create_style_animated_2")
-            # 动态封面强制使用 320x180 分辨率以保证性能
-            anim_res = '320x180'
-            logger.info(f"强制动图生成分辨率为: {anim_res}")
-
-            safe_library_name = self.__sanitize_filename(library_name)
-            if image_path:
-                library_dir = Path(self._covers_input) / safe_library_name
-            else:
-                library_dir = Path(self._covers_path) / safe_library_name
-
-            logger.info(f"正在准备库图片目录: {library_dir}")
-            if self.prepare_library_images(library_dir, required_items=9):
-                logger.info("库图片准备完成，开始调用 create_style_animated_2")
-                image_data = create_style_animated_2(library_dir, title, font_path,
-                                                    font_size=font_size,
-                                                    font_offset=font_offset,
-                                                    is_blur=self._multi_1_blur,
-                                                    blur_size=blur_size,
-                                                    color_ratio=color_ratio,
-                                                    resolution_config=self._resolution_config,
-                                                    bg_color_config=bg_color_config,
-                                                    animation_duration=self._animation_duration,
-                                                    animation_fps=self._animation_fps,
-                                                    animation_format=self._animation_format,
-                                                    animation_resolution=anim_res,
-                                                    animation_reduce_colors=self._animation_reduce_colors,
-                                                    image_count=self.__get_animated_2_required_items(),
-                                                    stop_event=self._event)
-        elif self._cover_style == 'animated_4':
-            create_style_animated_4 = self.__load_style_creator("style_animated_4", "create_style_animated_4")
-            anim_res = '320x180'
-            logger.info(f"强制动图生成分辨率为: {anim_res}")
-
-            animated_2_image_count = self.__get_animated_2_required_items()
-
-            safe_library_name = self.__sanitize_filename(library_name)
-            if image_path:
-                library_dir = Path(self._covers_input) / safe_library_name
-            else:
-                library_dir = Path(self._covers_path) / safe_library_name
-
-            logger.info(f"正在准备库图片目录: {library_dir}")
-            if self.prepare_library_images(library_dir, required_items=animated_2_image_count):
-                logger.info("库图片准备完成，开始调用 create_style_animated_4")
-                image_data = create_style_animated_4(library_dir, title, font_path,
-                                                    font_size=font_size,
-                                                    font_offset=font_offset,
-                                                    is_blur=self._multi_1_blur,
-                                                    blur_size=blur_size,
-                                                    color_ratio=color_ratio,
-                                                    resolution_config=self._resolution_config,
-                                                    bg_color_config=bg_color_config,
-                                                    animation_duration=self._animation_duration,
-                                                    animation_fps=self._animation_fps,
-                                                    animation_format=self._animation_format,
-                                                    animation_resolution=anim_res,
-                                                    animation_reduce_colors=self._animation_reduce_colors,
-                                                    image_count=animated_2_image_count,
-                                                    stop_event=self._event)
+                logger.warning(f"static_3: ???????? {library_dir}")
         gc.collect()
         return image_data
     
@@ -3391,7 +3142,7 @@ class WsEmbyCover(_PluginBase):
             logger.info(f"媒体库 {service.name}：{library['Name']} 找到 {len(items)} 个有效项目")
             if self.__is_single_image_style():
                 return self.__update_single_image(service, library, title, items[0])
-            elif self._cover_style == "static_5":
+            elif self._cover_style in ["static_2", "static_3"]:
                 return self.__update_showcase_image(service, library, title, items[:target_items])
             else:
                 return self.__update_grid_image(service, library, title, items[:required_items])
@@ -3441,7 +3192,7 @@ class WsEmbyCover(_PluginBase):
         if len(valid_items) > 0:
             if self.__is_single_image_style():
                 return self.__update_single_image(service, library, title, valid_items[0])
-            elif self._cover_style == "static_5":
+            elif self._cover_style in ["static_2", "static_3"]:
                 return self.__update_showcase_image(service, library, title, valid_items[:target_items])
             else:
                 return self.__update_grid_image(service, library, title, valid_items[:required_items])
@@ -3493,7 +3244,7 @@ class WsEmbyCover(_PluginBase):
         if len(valid_items) > 0:
             if self.__is_single_image_style():
                 return self.__update_single_image(service, library, title, valid_items[0])
-            elif self._cover_style == "static_5":
+            elif self._cover_style in ["static_2", "static_3"]:
                 return self.__update_showcase_image(service, library, title, valid_items[:target_items])
             else:
                 return self.__update_grid_image(service, library, title, valid_items[:required_items])
@@ -4007,10 +3758,10 @@ class WsEmbyCover(_PluginBase):
                 tag = item.get("AlbumPrimaryImageTag")
                 return f'[HOST]emby/Items/{item_id}/Images/Primary?tag={tag}&api_key=[APIKEY]'
 
-        elif self._cover_style == 'static_5':
+        elif self._cover_style in ['static_2', 'static_3']:
             return self.__get_showcase_poster_url(item)
 
-        elif self._cover_style == 'static_3' or self._cover_style in ['animated_1', 'animated_2', 'animated_3', 'animated_4']:
+        elif False:
             if self._use_primary:
                 if item.get("Type") == 'Episode':
                     if item.get("SeriesPrimaryImageTag"):
@@ -4115,13 +3866,13 @@ class WsEmbyCover(_PluginBase):
             elif item.get("AlbumPrimaryImageTag"):
                 item_id = item.get("AlbumId")
 
-        elif self._cover_style == 'static_5':
+        elif self._cover_style in ['static_2', 'static_3']:
             if item.get("Type") == "Episode" and item.get("SeriesId"):
                 item_id = item.get("SeriesId")
             else:
                 item_id = item.get("Id") or item.get("PrimaryImageItemId") or item.get("ParentBackdropItemId")
 
-        elif self._cover_style == 'static_3' or self._cover_style in ['animated_1', 'animated_2', 'animated_3', 'animated_4']:
+        elif False:
             if self._use_primary:
                 if (item.get("ImageTags") and item.get("ImageTags").get("Primary")) \
                     or (item.get("BackdropImageTags") and len(item["BackdropImageTags"]) > 0):
