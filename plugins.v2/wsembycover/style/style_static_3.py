@@ -145,8 +145,8 @@ def _build_title_layers(canvas_size, title, font_path, font_size, font_offset):
     draw = ImageDraw.Draw(text_layer)
     shadow_draw = ImageDraw.Draw(shadow_layer)
 
-    zh_font = ImageFont.truetype(zh_font_path, int(max(1, float(zh_font_size) * 0.72)))
-    en_font = ImageFont.truetype(en_font_path, int(max(1, float(en_font_size) * 0.72)))
+    zh_font = ImageFont.truetype(zh_font_path, int(max(1, float(zh_font_size) * 0.56)))
+    en_font = ImageFont.truetype(en_font_path, int(max(1, float(en_font_size) * 0.56)))
 
     title_x = int(canvas_size[0] * 0.04)
     title_y = int(canvas_size[1] * 0.13) + int(float(zh_font_offset))
@@ -176,11 +176,12 @@ def _build_title_layers(canvas_size, title, font_path, font_size, font_offset):
 
 
 def _encode_apng_under_limit(frames, frame_duration, limit_bytes):
-    scale_candidates = [1.00, 0.85, 0.72, 0.60]
-    step_candidates = [1, 2, 3]
+    scale_candidates = [1.00, 0.85, 0.72, 0.60, 0.50]
+    colors_candidates = [128, 96, 72, 56, 40]
+    step_candidates = [1, 2]
     best = None
 
-    normalized = [f.convert("RGBA") for f in frames]
+    normalized = [f.convert("RGB") for f in frames]
     base_size = normalized[0].size
     normalized = [f if f.size == base_size else f.resize(base_size, Image.Resampling.LANCZOS) for f in normalized]
 
@@ -195,25 +196,33 @@ def _encode_apng_under_limit(frames, frame_duration, limit_bytes):
             scaled = normalized
 
         for step in step_candidates:
-            sampled = scaled[::step]
-            duration = frame_duration * step
-            buffer = BytesIO()
-            sampled[0].save(
-                buffer,
-                format="PNG",
-                save_all=True,
-                append_images=sampled[1:],
-                duration=duration,
-                loop=0,
-                optimize=True,
-                compress_level=9,
-                disposal=2,
-            )
-            data = buffer.getvalue()
-            if best is None or len(data) < len(best):
-                best = data
-            if len(data) <= limit_bytes:
-                return data
+            for colors in colors_candidates:
+                sampled = scaled[::step]
+                duration = frame_duration * step
+                quantized = [
+                    frame.quantize(
+                        colors=colors,
+                        method=Image.Quantize.FASTOCTREE,
+                        dither=Image.Dither.NONE,
+                    )
+                    for frame in sampled
+                ]
+                buffer = BytesIO()
+                quantized[0].save(
+                    buffer,
+                    format="PNG",
+                    save_all=True,
+                    append_images=quantized[1:],
+                    duration=duration,
+                    loop=0,
+                    optimize=False,
+                    compress_level=9,
+                )
+                data = buffer.getvalue()
+                if best is None or len(data) < len(best):
+                    best = data
+                if len(data) <= limit_bytes:
+                    return data
     return best
 
 
@@ -279,7 +288,7 @@ def create_style_static_3(
         speed_px_s = (canvas_size[0] + cards[0].size[0]) / 8.0
         cycle_seconds = 8.0
         cycle_distance = int(speed_px_s * cycle_seconds)
-        fps = 20
+        fps = 30
         frame_duration = int(1000 / fps)
         frame_count = max(80, int(cycle_seconds * fps))
 
