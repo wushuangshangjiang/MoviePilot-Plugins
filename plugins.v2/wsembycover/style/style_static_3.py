@@ -175,25 +175,53 @@ def _build_title_layers(canvas_size, title, font_path, font_size, font_offset):
     return text_layer, shadow_layer
 
 
-def _encode_apng_under_limit(frames, frame_duration, limit_bytes):
+def _encode_webp_under_limit(frames, frame_duration, limit_bytes):
     normalized = [f.convert("RGB") for f in frames]
     base_size = normalized[0].size
     normalized = [f if f.size == base_size else f.resize(base_size, Image.Resampling.LANCZOS) for f in normalized]
-    buffer = BytesIO()
-    normalized[0].save(
-        buffer,
-        format="PNG",
-        save_all=True,
-        append_images=normalized[1:],
-        duration=frame_duration,
-        loop=0,
-        optimize=True,
-        compress_level=9,
-    )
-    data = buffer.getvalue()
-    if len(data) > limit_bytes:
-        logger.warning(f"static_3 APNG 超过体积限制: {len(data) / 1024 / 1024:.2f}MB > {limit_bytes / 1024 / 1024:.0f}MB")
-    return data
+
+    # 高压缩优先：抽帧 + 有损质量 + 轻度缩放，按档位逐步尝试
+    candidates = [
+        (2, 44, 0.90),
+        (2, 38, 0.84),
+        (3, 34, 0.78),
+        (4, 30, 0.72),
+    ]
+    best = None
+    for step, quality, scale in candidates:
+        if scale < 1.0:
+            target_size = (
+                max(1, int(base_size[0] * scale)),
+                max(1, int(base_size[1] * scale)),
+            )
+            scaled = [f.resize(target_size, Image.Resampling.LANCZOS) for f in normalized]
+        else:
+            scaled = normalized
+
+        sampled = scaled[::step]
+        duration = frame_duration * step
+        buffer = BytesIO()
+        sampled[0].save(
+            buffer,
+            format="WEBP",
+            save_all=True,
+            append_images=sampled[1:],
+            duration=duration,
+            loop=0,
+            quality=quality,
+            method=6,
+            lossless=False,
+            minimize_size=True,
+        )
+        data = buffer.getvalue()
+        if best is None or len(data) < len(best):
+            best = data
+        if len(data) <= limit_bytes:
+            return data
+
+    if best and len(best) > limit_bytes:
+        logger.warning(f"static_3 WEBP 超过体积限制: {len(best) / 1024 / 1024:.2f}MB > {limit_bytes / 1024 / 1024:.0f}MB")
+    return best
 
 
 def create_style_static_3(
@@ -286,12 +314,10 @@ def create_style_static_3(
             merged = Image.alpha_composite(merged, text_layer)
             frames.append(merged)
 
-        apng_bytes = _encode_apng_under_limit(frames, frame_duration, limit_bytes=20 * 1024 * 1024)
-        if apng_bytes:
-            logger.info(f"static_3 APNG体积: {len(apng_bytes) / 1024:.1f}KB")
-            if len(apng_bytes) > 2 * 1024 * 1024:
-                logger.warning("static_3 APNG 超过 2MB，已使用最小化压缩档")
-            return base64.b64encode(apng_bytes).decode("utf-8")
+        webp_bytes = _encode_webp_under_limit(frames, frame_duration, limit_bytes=20 * 1024 * 1024)
+        if webp_bytes:
+            logger.info(f"static_3 WEBP体积: {len(webp_bytes) / 1024:.1f}KB")
+            return base64.b64encode(webp_bytes).decode("utf-8")
         return False
     except Exception as e:
         logger.error(f"创建 static_3 封面时出错: {e}")
