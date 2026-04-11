@@ -177,30 +177,30 @@ def _build_title_layers(canvas_size, title, font_path, font_size, font_offset):
 
 def _encode_apng_under_limit(frames, frame_duration, limit_bytes):
     candidates = [
-        (96, 1),
-        (64, 1),
-        (48, 1),
-        (48, 2),
-        (32, 2),
-        (24, 3),
-        (16, 4),
-        (12, 5),
+        (1, 9),
+        (2, 9),
+        (3, 9),
+        (4, 9),
+        (5, 9),
     ]
     best = None
-    for colors, step in candidates:
-        sampled = frames[::step]
+    normalized = [f.convert("RGBA") for f in frames]
+    base_size = normalized[0].size
+    normalized = [f if f.size == base_size else f.resize(base_size, Image.Resampling.LANCZOS) for f in normalized]
+
+    for step, compress_level in candidates:
+        sampled = normalized[::step]
         duration = frame_duration * step
-        paletted = [f.convert("P", palette=Image.ADAPTIVE, colors=colors) for f in sampled]
         buffer = BytesIO()
-        paletted[0].save(
+        sampled[0].save(
             buffer,
             format="PNG",
             save_all=True,
-            append_images=paletted[1:],
+            append_images=sampled[1:],
             duration=duration,
             loop=0,
             optimize=True,
-            compress_level=9,
+            compress_level=compress_level,
             disposal=2,
         )
         data = buffer.getvalue()
