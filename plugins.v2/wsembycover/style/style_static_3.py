@@ -234,7 +234,7 @@ def create_style_static_3(
         )
 
         poster_paths = []
-        for index in range(1, 21):
+        for index in range(1, 7):
             candidate = Path(library_dir) / f"{index}.jpg"
             if candidate.exists():
                 poster_paths.append(candidate)
@@ -242,9 +242,9 @@ def create_style_static_3(
             logger.warning("static_3 未找到可用海报图")
             return False
 
-        while len(poster_paths) < 20:
-            poster_paths.extend(poster_paths[: 20 - len(poster_paths)])
-        poster_paths = poster_paths[:20]
+        while len(poster_paths) < 6:
+            poster_paths.extend(poster_paths[: 6 - len(poster_paths)])
+        poster_paths = poster_paths[:6]
 
         poster_height = int(canvas_size[1] * 0.43)
         poster_width = int(poster_height / 1.43)
@@ -255,12 +255,14 @@ def create_style_static_3(
         start_y = canvas_size[1] - max_card_h - int(canvas_size[1] * 0.028)
         slot_width = cards[0].size[0] + gap
         strip_width = slot_width * len(cards)
-        speed_px_s = (canvas_size[0] + cards[0].size[0]) / 8.0
-        cycle_seconds = 30.0
-        cycle_distance = int(speed_px_s * cycle_seconds)
+        # 按“单张图从出现到消失=30秒”计算速度
+        item_visibility_seconds = 30.0
+        speed_px_s = (canvas_size[0] + cards[0].size[0]) / item_visibility_seconds
+        cycle_distance = strip_width
+        cycle_seconds = cycle_distance / max(1.0, speed_px_s)
         fps = 30
         frame_duration = int(1000 / fps)
-        frame_count = max(80, int(cycle_seconds * fps))
+        frame_count = max(120, int(cycle_seconds * fps))
 
         frames = []
         for frame_idx in range(frame_count):
