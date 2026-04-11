@@ -82,7 +82,7 @@ def _build_poster_card(image_path, size, border_color):
     return shadow_canvas
 
 
-def _fit_render_size(width, height, max_width=960, max_height=540):
+def _fit_render_size(width, height, max_width=1920, max_height=1080):
     width = max(1, int(width))
     height = max(1, int(height))
     ratio = min(1.0, max_width / width, max_height / height)
@@ -175,53 +175,30 @@ def _build_title_layers(canvas_size, title, font_path, font_size, font_offset):
     return text_layer, shadow_layer
 
 
-def _encode_webp_under_limit(frames, frame_duration, limit_bytes):
-    normalized = [f.convert("RGB") for f in frames]
-    base_size = normalized[0].size
+def _encode_apng_diff_under_limit(base_frame, diff_frames, frame_duration, limit_bytes):
+    base_rgba = base_frame.convert("RGBA")
+    normalized = [f.convert("RGBA") for f in diff_frames]
+    base_size = base_rgba.size
     normalized = [f if f.size == base_size else f.resize(base_size, Image.Resampling.LANCZOS) for f in normalized]
 
-    # 高压缩优先：抽帧 + 有损质量 + 轻度缩放，按档位逐步尝试
-    candidates = [
-        (2, 44, 0.90),
-        (2, 38, 0.84),
-        (3, 34, 0.78),
-        (4, 30, 0.72),
-    ]
-    best = None
-    for step, quality, scale in candidates:
-        if scale < 1.0:
-            target_size = (
-                max(1, int(base_size[0] * scale)),
-                max(1, int(base_size[1] * scale)),
-            )
-            scaled = [f.resize(target_size, Image.Resampling.LANCZOS) for f in normalized]
-        else:
-            scaled = normalized
-
-        sampled = scaled[::step]
-        duration = frame_duration * step
-        buffer = BytesIO()
-        sampled[0].save(
-            buffer,
-            format="WEBP",
-            save_all=True,
-            append_images=sampled[1:],
-            duration=duration,
-            loop=0,
-            quality=quality,
-            method=6,
-            lossless=False,
-            minimize_size=True,
-        )
-        data = buffer.getvalue()
-        if best is None or len(data) < len(best):
-            best = data
-        if len(data) <= limit_bytes:
-            return data
-
-    if best and len(best) > limit_bytes:
-        logger.warning(f"static_3 WEBP 超过体积限制: {len(best) / 1024 / 1024:.2f}MB > {limit_bytes / 1024 / 1024:.0f}MB")
-    return best
+    buffer = BytesIO()
+    base_rgba.save(
+        buffer,
+        format="PNG",
+        save_all=True,
+        default_image=True,
+        append_images=normalized,
+        duration=frame_duration,
+        loop=0,
+        disposal=1,
+        blend=1,
+        optimize=True,
+        compress_level=9,
+    )
+    data = buffer.getvalue()
+    if len(data) > limit_bytes:
+        logger.warning(f"static_3 APNG 超过体积限制: {len(data) / 1024 / 1024:.2f}MB > {limit_bytes / 1024 / 1024:.0f}MB")
+    return data
 
 
 def create_style_static_3(
@@ -246,7 +223,7 @@ def create_style_static_3(
         if resolution_config:
             width = int(getattr(resolution_config, "width", width))
             height = int(getattr(resolution_config, "height", height))
-        canvas_size = _fit_render_size(width, height, max_width=960, max_height=540)
+        canvas_size = _fit_render_size(width, height, max_width=1920, max_height=1080)
         base_canvas, frame_color = _build_style2_background(
             image_path=image_path,
             canvas_size=canvas_size,
@@ -274,7 +251,7 @@ def create_style_static_3(
             poster_paths.extend(poster_paths[: 6 - len(poster_paths)])
         poster_paths = poster_paths[:6]
 
-        poster_height = int(canvas_size[1] * 0.43)
+        poster_height = min(720, max(180, int(canvas_size[1] * 0.67)))
         poster_width = int(poster_height / 1.43)
         gap = max(8, int(canvas_size[0] * 0.008))
         cards = [_build_poster_card(path, (poster_width, poster_height), frame_color) for path in poster_paths]
@@ -288,16 +265,22 @@ def create_style_static_3(
         speed_px_s = (canvas_size[0] + cards[0].size[0]) / item_visibility_seconds
         cycle_distance = strip_width
         cycle_seconds = cycle_distance / max(1.0, speed_px_s)
-        fps = 30
+        fps = 60
         frame_duration = int(1000 / fps)
-        frame_count = max(120, int(cycle_seconds * fps))
+        frame_count = max(240, int(cycle_seconds * fps))
 
-        frames = []
+        static_frame = Image.alpha_composite(
+            base_canvas,
+            shadow_layer.filter(ImageFilter.GaussianBlur(radius=max(6, canvas_size[1] // 160))),
+        )
+        static_frame = Image.alpha_composite(static_frame, text_layer)
+
+        diff_frames = []
         for frame_idx in range(frame_count):
-            canvas = base_canvas.copy()
             progress = frame_idx / max(1, frame_count)
             shift = int(progress * cycle_distance)
             x_anchor = canvas_size[0] + gap - shift
+            moving_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
 
             for loop_idx in range(-1, 3):
                 base_x = x_anchor + loop_idx * strip_width
@@ -305,19 +288,13 @@ def create_style_static_3(
                     card_x = base_x + idx * slot_width
                     if card_x > canvas_size[0] or card_x + card.size[0] < 0:
                         continue
-                    canvas.paste(card, (card_x, start_y), card)
+                    moving_layer.paste(card, (card_x, start_y), card)
+            diff_frames.append(moving_layer)
 
-            merged = Image.alpha_composite(
-                canvas,
-                shadow_layer.filter(ImageFilter.GaussianBlur(radius=max(6, canvas_size[1] // 160))),
-            )
-            merged = Image.alpha_composite(merged, text_layer)
-            frames.append(merged)
-
-        webp_bytes = _encode_webp_under_limit(frames, frame_duration, limit_bytes=20 * 1024 * 1024)
-        if webp_bytes:
-            logger.info(f"static_3 WEBP体积: {len(webp_bytes) / 1024:.1f}KB")
-            return base64.b64encode(webp_bytes).decode("utf-8")
+        apng_bytes = _encode_apng_diff_under_limit(static_frame, diff_frames, frame_duration, limit_bytes=20 * 1024 * 1024)
+        if apng_bytes:
+            logger.info(f"static_3 APNG体积: {len(apng_bytes) / 1024:.1f}KB")
+            return base64.b64encode(apng_bytes).decode("utf-8")
         return False
     except Exception as e:
         logger.error(f"创建 static_3 封面时出错: {e}")

@@ -48,7 +48,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.13"
+    plugin_version = "1.14"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -363,7 +363,7 @@ class WsEmbyCover(_PluginBase):
         if self._cover_style == "static_2":
             return 5
         if self._cover_style == "static_3":
-            return 20
+            return 6
         return 5
 
     def __get_fetch_target_count(self) -> int:
