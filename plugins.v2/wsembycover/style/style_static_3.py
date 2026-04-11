@@ -1,5 +1,4 @@
-import base64
-import math
+﻿import base64
 from io import BytesIO
 from pathlib import Path
 
@@ -14,20 +13,6 @@ def _draw_spaced_text(draw, position, text, font, fill, spacing):
         draw.text((x, y), char, font=font, fill=fill)
         bbox = draw.textbbox((x, y), char, font=font)
         x += (bbox[2] - bbox[0]) + spacing
-
-
-def _measure_spaced_text(draw, text, font, spacing):
-    width = 0
-    height = 0
-    for index, char in enumerate(text):
-        bbox = draw.textbbox((0, 0), char, font=font)
-        char_w = bbox[2] - bbox[0]
-        char_h = bbox[3] - bbox[1]
-        width += char_w
-        if index < len(text) - 1:
-            width += spacing
-        height = max(height, char_h)
-    return width, height
 
 
 def _add_shadow(image, offset_y, blur_radius, alpha):
@@ -90,24 +75,19 @@ def _build_poster_card(image_path, size, border_color):
         (card_w + shadow_blur * 2, card_h + shadow_blur * 2 + shadow_offset),
         (0, 0, 0, 0),
     )
-    shadow = _add_shadow(card, shadow_offset, shadow_blur, 98)
+    shadow = _add_shadow(card, shadow_offset, shadow_blur, 92)
     shadow_canvas.paste(shadow, (shadow_blur, shadow_blur), shadow)
     shadow_canvas.paste(card, (shadow_blur, shadow_blur), card)
     return shadow_canvas
 
 
-def _ease_in_out(progress):
-    progress = max(0.0, min(1.0, progress))
-    return 0.5 - 0.5 * math.cos(math.pi * progress)
-
-
-def _build_background(canvas_size, frame_index, frame_count):
+def _build_tech_blue_background(canvas_size):
     width, height = canvas_size
-    background = Image.new("RGBA", canvas_size, (0, 0, 0, 255))
-    draw = ImageDraw.Draw(background)
+    canvas = Image.new("RGBA", canvas_size, (0, 0, 0, 255))
+    draw = ImageDraw.Draw(canvas)
 
-    top_color = (230, 245, 255)
-    bottom_color = (117, 194, 255)
+    top_color = (10, 34, 88)
+    bottom_color = (7, 15, 40)
     for y in range(height):
         blend = y / max(1, height - 1)
         color = tuple(
@@ -116,64 +96,59 @@ def _build_background(canvas_size, frame_index, frame_count):
         )
         draw.line([(0, y), (width, y)], fill=color + (255,))
 
-    progress = frame_index / max(1, frame_count - 1)
-
     glow_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
     glow_draw = ImageDraw.Draw(glow_layer)
-    for idx, alpha in enumerate((74, 60, 48), start=1):
-        center_x = int(width * (0.15 + 0.28 * idx) + math.sin(progress * math.pi * 2 + idx) * width * 0.16)
-        center_y = int(height * (0.12 + 0.18 * idx))
-        radius_x = int(width * (0.18 + idx * 0.03))
-        radius_y = int(height * (0.11 + idx * 0.025))
-        glow_draw.ellipse(
-            [
-                center_x - radius_x,
-                center_y - radius_y,
-                center_x + radius_x,
-                center_y + radius_y,
-            ],
-            fill=(255, 255, 255, alpha),
-        )
-    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(radius=max(24, height // 18)))
-    background = Image.alpha_composite(background, glow_layer)
-
-    streak_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-    streak_draw = ImageDraw.Draw(streak_layer)
-    streak_specs = [
-        (0.18, 0.10, 0.22, 0.42, (240, 251, 255, 88), 0.0),
-        (0.44, 0.20, 0.26, 0.48, (196, 236, 255, 78), 0.9),
-        (0.72, 0.08, 0.22, 0.40, (255, 255, 255, 72), 1.8),
-    ]
-    for center_ratio, top_ratio, width_ratio, height_ratio, color, phase in streak_specs:
-        offset = math.sin(progress * math.pi * 2 + phase) * width * 0.12
-        center_x = int(width * center_ratio + offset)
-        top_y = int(height * top_ratio)
-        streak_w = int(width * width_ratio)
-        streak_h = int(height * height_ratio)
-        streak_draw.rounded_rectangle(
-            [
-                center_x - streak_w // 2,
-                top_y,
-                center_x + streak_w // 2,
-                top_y + streak_h,
-            ],
-            radius=max(24, streak_w // 3),
-            fill=color,
-        )
-    streak_layer = streak_layer.filter(ImageFilter.GaussianBlur(radius=max(30, height // 20)))
-    background = Image.alpha_composite(background, streak_layer)
-
-    bottom_glow = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-    bottom_draw = ImageDraw.Draw(bottom_glow)
-    bottom_draw.rectangle(
-        [(0, int(height * 0.72)), (width, height)],
-        fill=(36, 84, 128, 62),
+    glow_draw.ellipse(
+        [
+            int(width * -0.08),
+            int(height * -0.10),
+            int(width * 0.46),
+            int(height * 0.42),
+        ],
+        fill=(70, 170, 255, 105),
     )
-    bottom_glow = bottom_glow.filter(ImageFilter.GaussianBlur(radius=max(20, height // 24)))
-    return Image.alpha_composite(background, bottom_glow)
+    glow_draw.ellipse(
+        [
+            int(width * 0.58),
+            int(height * 0.04),
+            int(width * 1.10),
+            int(height * 0.58),
+        ],
+        fill=(40, 125, 235, 82),
+    )
+    glow_layer = glow_layer.filter(ImageFilter.GaussianBlur(radius=max(30, height // 20)))
+    canvas = Image.alpha_composite(canvas, glow_layer)
+
+    lines = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+    line_draw = ImageDraw.Draw(lines)
+    for idx in range(8):
+        y = int(height * (0.16 + idx * 0.08))
+        line_draw.rounded_rectangle(
+            [int(width * 0.08), y, int(width * 0.92), y + max(2, height // 420)],
+            radius=2,
+            fill=(90, 190, 255, 30),
+        )
+    for idx in range(9):
+        x = int(width * (0.12 + idx * 0.09))
+        line_draw.rounded_rectangle(
+            [x, int(height * 0.10), x + max(2, width // 700), int(height * 0.74)],
+            radius=2,
+            fill=(90, 190, 255, 26),
+        )
+    lines = lines.filter(ImageFilter.GaussianBlur(radius=1.5))
+    canvas = Image.alpha_composite(canvas, lines)
+
+    shade_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+    shade_draw = ImageDraw.Draw(shade_layer)
+    shade_draw.rectangle(
+        [(0, int(height * 0.72)), (width, height)],
+        fill=(6, 9, 20, 86),
+    )
+    shade_layer = shade_layer.filter(ImageFilter.GaussianBlur(radius=max(18, height // 28)))
+    return Image.alpha_composite(canvas, shade_layer)
 
 
-def create_style_static_6(
+def create_style_static_3(
     image_path,
     library_dir,
     title,
@@ -198,8 +173,43 @@ def create_style_static_6(
             height = int(getattr(resolution_config, "height", height))
         canvas_size = (max(1, width), max(1, height))
 
+        canvas = _build_tech_blue_background(canvas_size)
+
         zh_font = ImageFont.truetype(zh_font_path, int(max(1, float(zh_font_size))))
         en_font = ImageFont.truetype(en_font_path, int(max(1, float(en_font_size))))
+
+        # 鎏金色系
+        text_color = (232, 201, 120, 255)
+        text_shadow = (88, 56, 16, 128)
+
+        text_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+        shadow_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+        draw = ImageDraw.Draw(text_layer)
+        shadow_draw = ImageDraw.Draw(shadow_layer)
+
+        zh_bbox = draw.textbbox((0, 0), title_zh, font=zh_font)
+        zh_w = zh_bbox[2] - zh_bbox[0]
+        zh_h = zh_bbox[3] - zh_bbox[1]
+        title_x = (canvas_size[0] - zh_w) // 2
+        title_y = int(canvas_size[1] * 0.12) + int(float(zh_font_offset))
+
+        for offset in range(4, 12, 2):
+            shadow_draw.text((title_x + offset, title_y + offset), title_zh, font=zh_font, fill=text_shadow)
+        draw.text((title_x, title_y), title_zh, font=zh_font, fill=text_color)
+
+        en_text = (title_en or "").upper()
+        if en_text:
+            en_spacing = max(4, int(float(en_font_size) * 0.16))
+            en_width = 0
+            for idx, ch in enumerate(en_text):
+                cb = draw.textbbox((0, 0), ch, font=en_font)
+                en_width += (cb[2] - cb[0]) + (en_spacing if idx < len(en_text) - 1 else 0)
+            en_x = (canvas_size[0] - en_width) // 2
+            en_y = title_y + zh_h + int(float(title_spacing))
+
+            for offset in range(2, 8, 2):
+                _draw_spaced_text(shadow_draw, (en_x + offset, en_y + offset), en_text, en_font, text_shadow, en_spacing)
+            _draw_spaced_text(draw, (en_x, en_y), en_text, en_font, text_color, en_spacing)
 
         poster_paths = []
         for index in range(1, 6):
@@ -207,123 +217,34 @@ def create_style_static_6(
             if candidate.exists():
                 poster_paths.append(candidate)
         if not poster_paths:
-            logger.warning("static_6 未找到可用海报图")
+            logger.warning("static_3 未找到可用海报图")
             return False
 
         available_width = int(canvas_size[0] * 0.90)
         poster_width = int(available_width / 5.45)
         poster_height = int(poster_width * 1.43)
-        frame_color = (224, 245, 255)
+        frame_color = (214, 181, 106)
         cards = [_build_poster_card(path, (poster_width, poster_height), frame_color) for path in poster_paths[:5]]
 
         total_cards_width = sum(card.size[0] for card in cards)
         gap = max(12, int((canvas_size[0] - total_cards_width) / 6))
-        base_start_x = gap
+        start_x = gap
         start_y = canvas_size[1] - max(card.size[1] for card in cards) - int(canvas_size[1] * 0.035)
-        move_distance = max(36, int(canvas_size[0] * 0.045))
 
-        text_color = (248, 252, 255, 255)
-        text_shadow = (32, 74, 116, 130)
-        accent_line = (255, 255, 255, 110)
+        for card in cards:
+            canvas.paste(card, (start_x, start_y), card)
+            start_x += card.size[0] + gap
 
-        measure_image = Image.new("RGBA", (10, 10), (0, 0, 0, 0))
-        measure_draw = ImageDraw.Draw(measure_image)
-
-        zh_bbox = measure_draw.textbbox((0, 0), title_zh, font=zh_font)
-        zh_w = zh_bbox[2] - zh_bbox[0]
-        zh_h = zh_bbox[3] - zh_bbox[1]
-        en_text = title_en.upper()
-        en_spacing = max(4, int(float(en_font_size) * 0.16))
-        en_w, en_h = _measure_spaced_text(measure_draw, en_text, en_font, en_spacing)
-
-        title_x = (canvas_size[0] - zh_w) // 2
-        title_y = int(canvas_size[1] * 0.12) + int(float(zh_font_offset))
-        en_x = (canvas_size[0] - en_w) // 2
-        en_y = title_y + zh_h + int(float(title_spacing))
-
-        frame_count = 120
-        frame_duration = int(round(1000 / 30))
-        frames = []
-
-        for frame_index in range(frame_count):
-            progress = frame_index / max(1, frame_count - 1)
-            canvas = _build_background(canvas_size, frame_index, frame_count)
-
-            deco_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-            deco_draw = ImageDraw.Draw(deco_layer)
-            deco_draw.rounded_rectangle(
-                [
-                    int(canvas_size[0] * 0.18),
-                    int(canvas_size[1] * 0.09),
-                    int(canvas_size[0] * 0.82),
-                    int(canvas_size[1] * 0.11),
-                ],
-                radius=max(8, canvas_size[1] // 120),
-                fill=accent_line,
-            )
-            deco_layer = deco_layer.filter(ImageFilter.GaussianBlur(radius=max(10, canvas_size[1] // 90)))
-            canvas = Image.alpha_composite(canvas, deco_layer)
-
-            shadow_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-            shadow_draw = ImageDraw.Draw(shadow_layer)
-            text_layer = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-            text_draw = ImageDraw.Draw(text_layer)
-
-            for offset in range(4, 12, 2):
-                shadow_draw.text(
-                    (title_x + offset, title_y + offset),
-                    title_zh,
-                    font=zh_font,
-                    fill=text_shadow,
-                )
-            text_draw.text((title_x, title_y), title_zh, font=zh_font, fill=text_color)
-
-            for offset in range(2, 8, 2):
-                _draw_spaced_text(
-                    shadow_draw,
-                    (en_x + offset, en_y + offset),
-                    en_text,
-                    en_font,
-                    text_shadow,
-                    en_spacing,
-                )
-            _draw_spaced_text(text_draw, (en_x, en_y), en_text, en_font, text_color, en_spacing)
-
-            start_x = base_start_x
-            max_delay = 0.32
-            delay_step = max_delay / max(1, len(cards) - 1)
-            for idx, card in enumerate(cards):
-                delay = (len(cards) - 1 - idx) * delay_step
-                local_progress = 0.0
-                if progress > delay:
-                    local_progress = (progress - delay) / max(0.001, 1.0 - max_delay)
-                card_shift = int(move_distance * _ease_in_out(local_progress))
-                card_y = start_y
-                canvas.paste(card, (start_x - card_shift, card_y), card)
-                start_x += card.size[0] + gap
-
-            merged = Image.alpha_composite(
-                canvas,
-                shadow_layer.filter(ImageFilter.GaussianBlur(radius=max(8, canvas_size[1] // 135))),
-            )
-            merged = Image.alpha_composite(merged, text_layer)
-            frames.append(merged)
-
-        if not frames:
-            return False
-
-        buffer = BytesIO()
-        frames[0].save(
-            buffer,
-            format="PNG",
-            save_all=True,
-            append_images=frames[1:],
-            duration=frame_duration,
-            loop=0,
-            optimize=False,
-            disposal=2,
+        merged = Image.alpha_composite(
+            canvas,
+            shadow_layer.filter(ImageFilter.GaussianBlur(radius=max(8, canvas_size[1] // 135))),
         )
+        merged = Image.alpha_composite(merged, text_layer)
+
+        # 静态输出 JPEG，尽量减小上传体积
+        buffer = BytesIO()
+        merged.convert("RGB").save(buffer, format="JPEG", quality=88, optimize=True)
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
     except Exception as e:
-        logger.error(f"创建 static_6 封面时出错: {e}")
+        logger.error(f"创建 static_3 封面时出错: {e}")
         return False

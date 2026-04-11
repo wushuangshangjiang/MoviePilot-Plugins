@@ -48,7 +48,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.1"
+    plugin_version = "1.3"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -3039,9 +3039,9 @@ class WsEmbyCover(_PluginBase):
                     bg_color_config=bg_color_config,
                 )
             else:
-                logger.warning(f"static_2: ???????? {library_dir}")
+                logger.warning(f"static_2: 图片目录准备失败 {library_dir}")
         elif self._cover_style == 'static_3':
-            create_style_static_3 = self.__load_style_creator("style_static_3", "create_style_static_6")
+            create_style_static_3 = self.__load_style_creator("style_static_3", "create_style_static_3")
             safe_library_name = self.__sanitize_filename(library_name)
             cache_library_dir = Path(self._covers_path) / safe_library_name
             custom_library_dir = Path(self._covers_input) / safe_library_name if self._covers_input else None
@@ -3052,9 +3052,9 @@ class WsEmbyCover(_PluginBase):
                 library_dir = custom_library_dir
             else:
                 library_dir = cache_library_dir
-            logger.info(f"static_3: ?????? {library_dir}")
+            logger.info(f"static_3: 准备图片目录 {library_dir}")
             if self.prepare_library_images(library_dir, required_items=5):
-                logger.info("static_3: ???????????????")
+                logger.info("static_3: 图片目录准备完成，开始生成封面")
                 image_data = create_style_static_3(
                     image_path=image_path,
                     library_dir=library_dir,
@@ -3068,7 +3068,7 @@ class WsEmbyCover(_PluginBase):
                     bg_color_config=bg_color_config,
                 )
             else:
-                logger.warning(f"static_3: ???????? {library_dir}")
+                logger.warning(f"static_3: 图片目录准备失败 {library_dir}")
         gc.collect()
         return image_data
     
@@ -4049,16 +4049,25 @@ class WsEmbyCover(_PluginBase):
                 extension = "jpg"
 
             # 在发送前保存一份图片到本地
+            try:
+                image_bytes = base64.b64decode(image_base64)
+            except Exception as decode_err:
+                logger.error(f"封面数据解码失败: {decode_err}")
+                return False
+
             if self._save_recent_covers:
                 try:
-                    image_bytes = base64.b64decode(image_base64)
                     self.__save_image_to_local(image_bytes, service.name, library['Name'], extension)
                 except Exception as save_err:
                     logger.error(f"保存发送前图片失败: {str(save_err)}")
+
+            logger.info(
+                f"准备上传封面: {library['Name']} 格式={content_type} 大小={len(image_bytes) / 1024:.1f}KB"
+            )
             
             res = service.instance.post_data(
                 url=url,
-                data=image_base64,
+                data=image_bytes,
                 headers={
                     "Content-Type": content_type
                 }
