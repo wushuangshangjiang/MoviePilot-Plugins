@@ -176,57 +176,24 @@ def _build_title_layers(canvas_size, title, font_path, font_size, font_offset):
 
 
 def _encode_apng_under_limit(frames, frame_duration, limit_bytes):
-    scale_candidates = [1.00, 0.90, 0.82, 0.74, 0.66]
-    step_candidates = [1, 2, 3]
-    quantize_candidates = [None, 224, 160]
-    best = None
-
     normalized = [f.convert("RGB") for f in frames]
     base_size = normalized[0].size
     normalized = [f if f.size == base_size else f.resize(base_size, Image.Resampling.LANCZOS) for f in normalized]
-
-    for scale in scale_candidates:
-        if scale < 1.0:
-            target_size = (
-                max(1, int(base_size[0] * scale)),
-                max(1, int(base_size[1] * scale)),
-            )
-            scaled = [f.resize(target_size, Image.Resampling.LANCZOS) for f in normalized]
-        else:
-            scaled = normalized
-
-        for step in step_candidates:
-            for colors in quantize_candidates:
-                sampled = scaled[::step]
-                duration = frame_duration * step
-                if colors is None:
-                    encoded_frames = sampled
-                else:
-                    encoded_frames = [
-                        frame.quantize(
-                            colors=colors,
-                            method=Image.Quantize.FASTOCTREE,
-                            dither=Image.Dither.FLOYDSTEINBERG,
-                        )
-                        for frame in sampled
-                    ]
-                buffer = BytesIO()
-                encoded_frames[0].save(
-                    buffer,
-                    format="PNG",
-                    save_all=True,
-                    append_images=encoded_frames[1:],
-                    duration=duration,
-                    loop=0,
-                    optimize=True,
-                    compress_level=9,
-                )
-                data = buffer.getvalue()
-                if best is None or len(data) < len(best):
-                    best = data
-                if len(data) <= limit_bytes:
-                    return data
-    return best
+    buffer = BytesIO()
+    normalized[0].save(
+        buffer,
+        format="PNG",
+        save_all=True,
+        append_images=normalized[1:],
+        duration=frame_duration,
+        loop=0,
+        optimize=True,
+        compress_level=9,
+    )
+    data = buffer.getvalue()
+    if len(data) > limit_bytes:
+        logger.warning(f"static_3 APNG 超过体积限制: {len(data) / 1024 / 1024:.2f}MB > {limit_bytes / 1024 / 1024:.0f}MB")
+    return data
 
 
 def create_style_static_3(
@@ -289,7 +256,7 @@ def create_style_static_3(
         slot_width = cards[0].size[0] + gap
         strip_width = slot_width * len(cards)
         speed_px_s = (canvas_size[0] + cards[0].size[0]) / 8.0
-        cycle_seconds = 8.0
+        cycle_seconds = 15.0
         cycle_distance = int(speed_px_s * cycle_seconds)
         fps = 30
         frame_duration = int(1000 / fps)
@@ -317,7 +284,7 @@ def create_style_static_3(
             merged = Image.alpha_composite(merged, text_layer)
             frames.append(merged)
 
-        apng_bytes = _encode_apng_under_limit(frames, frame_duration, limit_bytes=2 * 1024 * 1024)
+        apng_bytes = _encode_apng_under_limit(frames, frame_duration, limit_bytes=20 * 1024 * 1024)
         if apng_bytes:
             logger.info(f"static_3 APNG体积: {len(apng_bytes) / 1024:.1f}KB")
             if len(apng_bytes) > 2 * 1024 * 1024:
