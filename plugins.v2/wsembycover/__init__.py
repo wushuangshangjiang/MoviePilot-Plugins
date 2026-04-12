@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.23"
+    plugin_version = "1.24"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
