@@ -177,6 +177,7 @@ class WsEmbyCover(_PluginBase):
             self._selected_servers = []
             self._servers_config = config.get("servers_config", "")
             self._manual_servers = self.__parse_manual_servers_from_config(config)
+            self._server_profiles = self.__parse_server_profiles_from_config(config)
             self._include_libraries = config.get("include_libraries")
             self._sort_by = config.get("sort_by")
             self._covers_output = config.get("covers_output")
@@ -249,6 +250,11 @@ class WsEmbyCover(_PluginBase):
                 int,
             )
             self._page_tab = config.get("page_tab", "generate-tab")
+            self._active_server_name = str(config.get("active_server_name", "") or "").strip()
+            self._active_server_new_name = str(config.get("active_server_new_name", "") or "").strip()
+            self._active_server_host = str(config.get("active_server_host", "") or "").strip()
+            self._active_server_api_key = str(config.get("active_server_api_key", "") or "").strip()
+            self._active_server_style = str(config.get("active_server_style", "static_1") or "static_1").strip() or "static_1"
 
             if self._resolution not in ["1080p", "720p", "480p"]:
                 self._resolution = "480p"
@@ -266,6 +272,11 @@ class WsEmbyCover(_PluginBase):
         self._servers = {}
         self._server_style_map = {}
         self._all_libraries = []
+        if not self._server_profiles:
+            self._server_profiles = self.__build_server_profiles_from_legacy(config or {})
+        self.__upsert_active_server_profile(config or {})
+        self._manual_servers = self.__profiles_to_manual_servers()
+        self.__sync_active_server_editor()
         parsed_servers = self._manual_servers or self.__parse_servers_config(self._servers_config)
         for server_item in parsed_servers:
             server_name = server_item.get("name")
@@ -439,6 +450,217 @@ class WsEmbyCover(_PluginBase):
             return default
         return str(self._manual_servers[pos].get(key, default))
 
+    @staticmethod
+    def __default_title_config_template() -> str:
+        return '''# 配置封面标题（按媒体库名称对应）
+# 支持两种格式：
+#
+# 格式1 - 两行配置（主标题+副标题）：
+# 媒体库名称:
+#   - 主标题
+#   - 副标题
+#
+# 格式2 - 三行配置（主标题+副标题+背景颜色）：
+# 媒体库名称:
+#   - 主标题
+#   - 副标题
+#   - "#FF5722"  # 背景颜色（可选，必须加引号）
+#
+'''
+
+    def __profile_from_runtime(self, name: str, host: str, api_key: str, style: str) -> Dict[str, Any]:
+        safe_style = "static_2" if style == "static_2" else "static_1"
+        normalized_host = (host or "").strip()
+        if normalized_host and not normalized_host.startswith(("http://", "https://")):
+            normalized_host = f"http://{normalized_host}"
+        if normalized_host:
+            normalized_host = normalized_host.rstrip("/") + "/"
+        return {
+            "name": (name or "").strip(),
+            "host": normalized_host,
+            "api_key": (api_key or "").strip(),
+            "style": safe_style,
+            "title_config": self._title_config or self.__default_title_config_template(),
+            "sort_by": self._sort_by or "Random",
+            "covers_input": self._covers_input or "",
+            "covers_output": self._covers_output or "",
+            "use_primary": bool(self._use_primary),
+            "multi_1_blur": bool(self._multi_1_blur),
+            "resolution": self._resolution or "480p",
+            "custom_width": self._custom_width,
+            "custom_height": self._custom_height,
+            "bg_color_mode": self._bg_color_mode or "auto",
+            "custom_bg_color": self._custom_bg_color or "",
+            "zh_font_preset": self._zh_font_preset or "chaohei",
+            "en_font_preset": self._en_font_preset or "EmblemaOne",
+            "zh_font_custom": self._zh_font_custom or "",
+            "en_font_custom": self._en_font_custom or "",
+            "zh_font_size": self._zh_font_size,
+            "en_font_size": self._en_font_size,
+            "blur_size": self._blur_size,
+            "color_ratio": self._color_ratio,
+            "title_scale": self._title_scale,
+            "zh_font_offset": self._zh_font_offset,
+            "title_spacing": self._title_spacing,
+            "en_line_spacing": self._en_line_spacing,
+        }
+
+    def __normalize_server_profile(self, name: str, raw: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        if not isinstance(raw, dict):
+            return None
+        safe_name = (name or raw.get("name") or "").strip()
+        host = str(raw.get("host", "")).strip()
+        api_key = str(raw.get("api_key", "")).strip()
+        if not safe_name or not host or not api_key:
+            return None
+        if not host.startswith(("http://", "https://")):
+            host = f"http://{host}"
+        host = host.rstrip("/") + "/"
+        style = "static_2" if str(raw.get("style", "static_1")).strip() == "static_2" else "static_1"
+        profile = {
+            "name": safe_name,
+            "host": host,
+            "api_key": api_key,
+            "style": style,
+        }
+        for key in [
+            "title_config", "sort_by", "covers_input", "covers_output", "use_primary", "multi_1_blur",
+            "resolution", "custom_width", "custom_height", "bg_color_mode", "custom_bg_color",
+            "zh_font_preset", "en_font_preset", "zh_font_custom", "en_font_custom",
+            "zh_font_size", "en_font_size", "blur_size", "color_ratio", "title_scale",
+            "zh_font_offset", "title_spacing", "en_line_spacing"
+        ]:
+            if key in raw:
+                profile[key] = raw.get(key)
+        return profile
+
+    def __parse_server_profiles_from_config(self, config: dict) -> Dict[str, Dict[str, Any]]:
+        cfg = config or {}
+        raw_profiles = cfg.get("server_profiles")
+        profiles: Dict[str, Dict[str, Any]] = {}
+        if isinstance(raw_profiles, dict):
+            for key, value in raw_profiles.items():
+                normalized = self.__normalize_server_profile(str(key), value if isinstance(value, dict) else {})
+                if normalized:
+                    profiles[normalized["name"]] = normalized
+        return profiles
+
+    def __build_server_profiles_from_legacy(self, config: dict) -> Dict[str, Dict[str, Any]]:
+        cfg = config or {}
+        legacy_servers = self.__parse_manual_servers_from_config(cfg)
+        if not legacy_servers:
+            legacy_servers = self.__parse_servers_config(str(cfg.get("servers_config", "") or ""))
+        profiles: Dict[str, Dict[str, Any]] = {}
+        for item in legacy_servers:
+            name = item.get("name")
+            if not name:
+                continue
+            profile = self.__profile_from_runtime(
+                name=name,
+                host=item.get("host", ""),
+                api_key=item.get("api_key", ""),
+                style=item.get("style", "static_1"),
+            )
+            profiles[name] = profile
+        return profiles
+
+    def __profiles_to_manual_servers(self) -> List[Dict[str, str]]:
+        servers: List[Dict[str, str]] = []
+        for name in sorted(self._server_profiles.keys()):
+            profile = self._server_profiles.get(name) or {}
+            normalized = self.__normalize_server_profile(name, profile)
+            if not normalized:
+                continue
+            servers.append({
+                "name": normalized["name"],
+                "host": normalized["host"],
+                "api_key": normalized["api_key"],
+                "style": normalized.get("style", "static_1"),
+            })
+        return servers
+
+    def __apply_server_profile_values(self, profile: Dict[str, Any]):
+        if not profile:
+            return
+        self._cover_style = "static_2" if str(profile.get("style", "static_1")) == "static_2" else "static_1"
+        self._cover_style_base = self._cover_style
+        self._title_config = profile.get("title_config") or self.__default_title_config_template()
+        self._sort_by = profile.get("sort_by") or "Random"
+        self._covers_input = profile.get("covers_input") or ""
+        self._covers_output = profile.get("covers_output") or ""
+        self._use_primary = bool(profile.get("use_primary", self._use_primary))
+        self._multi_1_blur = bool(profile.get("multi_1_blur", self._multi_1_blur))
+        self._resolution = str(profile.get("resolution", self._resolution or "480p"))
+        self._custom_width = profile.get("custom_width", self._custom_width)
+        self._custom_height = profile.get("custom_height", self._custom_height)
+        self._bg_color_mode = profile.get("bg_color_mode", self._bg_color_mode or "auto")
+        self._custom_bg_color = profile.get("custom_bg_color", self._custom_bg_color or "")
+        self._zh_font_preset = profile.get("zh_font_preset", self._zh_font_preset or "chaohei")
+        self._en_font_preset = profile.get("en_font_preset", self._en_font_preset or "EmblemaOne")
+        self._zh_font_custom = profile.get("zh_font_custom", self._zh_font_custom or "")
+        self._en_font_custom = profile.get("en_font_custom", self._en_font_custom or "")
+        self._zh_font_size = profile.get("zh_font_size", self._zh_font_size)
+        self._en_font_size = profile.get("en_font_size", self._en_font_size)
+        self._blur_size = profile.get("blur_size", self._blur_size)
+        self._color_ratio = profile.get("color_ratio", self._color_ratio)
+        self._title_scale = profile.get("title_scale", self._title_scale)
+        self._zh_font_offset = profile.get("zh_font_offset", self._zh_font_offset)
+        self._title_spacing = profile.get("title_spacing", self._title_spacing)
+        self._en_line_spacing = profile.get("en_line_spacing", self._en_line_spacing)
+        if self._resolution not in ["1080p", "720p", "480p"]:
+            self._resolution = "480p"
+        try:
+            self._resolution_config = self.__new_resolution_config(self._resolution)
+        except Exception:
+            self._resolution_config = self.__new_resolution_config("480p")
+
+    def __upsert_active_server_profile(self, config: dict):
+        cfg = config or {}
+        selected_name = str(cfg.get("active_server_name", self._active_server_name or "")).strip()
+        rename_to = str(cfg.get("active_server_new_name", "")).strip()
+        host = str(cfg.get("active_server_host", "")).strip()
+        api_key = str(cfg.get("active_server_api_key", "")).strip()
+        style = str(cfg.get("active_server_style", self._active_server_style or "static_1")).strip() or "static_1"
+        target_name = rename_to or selected_name
+        if not target_name:
+            return
+        if selected_name and rename_to and selected_name != rename_to and selected_name in self._server_profiles:
+            self._server_profiles.pop(selected_name, None)
+        if not host or not api_key:
+            self._active_server_name = target_name
+            self._active_server_style = "static_2" if style == "static_2" else "static_1"
+            return
+        profile = self.__profile_from_runtime(
+            name=target_name,
+            host=host,
+            api_key=api_key,
+            style=style,
+        )
+        self._server_profiles[target_name] = profile
+        self._active_server_name = target_name
+        self._active_server_new_name = ""
+        self._active_server_host = profile.get("host", "")
+        self._active_server_api_key = profile.get("api_key", "")
+        self._active_server_style = profile.get("style", "static_1")
+
+    def __sync_active_server_editor(self):
+        if not self._server_profiles:
+            return
+        if not self._active_server_name or self._active_server_name not in self._server_profiles:
+            self._active_server_name = sorted(self._server_profiles.keys())[0]
+        profile = self._server_profiles.get(self._active_server_name) or {}
+        self._active_server_host = str(profile.get("host", "")).strip()
+        self._active_server_api_key = str(profile.get("api_key", "")).strip()
+        self._active_server_style = "static_2" if str(profile.get("style", "static_1")) == "static_2" else "static_1"
+        self.__apply_server_profile_values(profile)
+
+    def __apply_server_profile(self, server_name: str):
+        profile = self._server_profiles.get(server_name) or {}
+        if not profile:
+            self._cover_style = self._server_style_map.get(server_name, "static_1")
+            return
+        self.__apply_server_profile_values(profile)
+
     def __compose_cover_style(self, base_style: str, variant: str) -> str:
         mapping = {
             "static_1": "static_1",
@@ -491,6 +713,12 @@ class WsEmbyCover(_PluginBase):
             "delay": self._delay,
             "selected_servers": [],
             "servers_config": self._servers_config,
+            "server_profiles": self._server_profiles,
+            "active_server_name": self._active_server_name,
+            "active_server_new_name": "",
+            "active_server_host": self._active_server_host,
+            "active_server_api_key": self._active_server_api_key,
+            "active_server_style": self._active_server_style,
             "server_1_name": self.__manual_server_slot_value(1, "name", ""),
             "server_1_host": self.__manual_server_slot_value(1, "host", ""),
             "server_1_api_key": self.__manual_server_slot_value(1, "api_key", ""),
@@ -516,7 +744,7 @@ class WsEmbyCover(_PluginBase):
             "sort_by": self._sort_by,
             "covers_output": self._covers_output,
             "covers_input": self._covers_input,
-            "title_config": self._title_config,
+            "title_config": self._title_config or self.__default_title_config_template(),
             "zh_font_url": str(self._zh_font_url),
             "en_font_url": str(self._en_font_url),
             "zh_font_path": str(self._zh_font_path),
@@ -1353,6 +1581,7 @@ class WsEmbyCover(_PluginBase):
                 "src": self.__style_preview_src(2)
             },
         ]
+        server_profile_items = [{"title": name, "value": name} for name in sorted(self._server_profiles.keys())]
 
         style_variant_items = [
             {
@@ -2000,19 +2229,19 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 6
+                                                    'md': 4
                                                 },
                                                 'content': [
                                                     {
-                                                        'component': 'VTextarea',
+                                                        'component': 'VCombobox',
                                                         'props': {
-                                                            'model': 'servers_config',
-                                                            'label': '媒体服务器配置（手动输入）',
-                                                            'rows': 7,
-                                                            'autoGrow': True,
-                                                            'hint': 'YAML 列表，每台服务器填 name/host/api_key/style；style 仅支持 static_1 或 static_2（默认 static_1）',
+                                                            'model': 'active_server_name',
+                                                            'label': '媒体服务器（下拉选择或直接输入新增）',
+                                                            'items': server_profile_items,
+                                                            'clearable': True,
+                                                            'hint': '切换后请点保存，下面标题和参数会按当前服务器独立生效',
                                                             'persistentHint': True,
-                                                            'placeholder': '- name: emby_1\\n  host: http://127.0.0.1:8096\\n  api_key: xxxxx\\n  style: static_1\\n- name: emby_2\\n  host: http://192.168.1.10:8096\\n  api_key: yyyyy\\n  style: static_2'
+                                                            'placeholder': '例如：物语云'
                                                         }
                                                     }
                                                 ]
@@ -2021,7 +2250,126 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 3
+                                                    'md': 4
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VTextField',
+                                                        'props': {
+                                                            'model': 'active_server_new_name',
+                                                            'label': '重命名当前服务器（可选）',
+                                                            'placeholder': '留空不改名',
+                                                            'hint': '若填写新名称，保存后会替换当前服务器名称',
+                                                            'persistentHint': True,
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                    'md': 4
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VCronField',
+                                                        'props': {
+                                                            'model': 'cron',
+                                                            'label': '定时更新封面',
+                                                            'placeholder': '5位cron表达式'
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                        ]
+                                    },
+                                    {
+                                        'component': 'VRow',
+                                        'content': [
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VTextField',
+                                                        'props': {
+                                                            'model': 'active_server_host',
+                                                            'label': '当前服务器地址',
+                                                            'placeholder': 'http://127.0.0.1:8096',
+                                                            'hint': '编辑现有服务器或新增服务器地址',
+                                                            'persistentHint': True
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VTextField',
+                                                        'props': {
+                                                            'model': 'active_server_api_key',
+                                                            'label': '当前服务器 API Key',
+                                                            'hint': '编辑现有服务器或新增服务器 API Key',
+                                                            'persistentHint': True
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                        ]
+                                    },
+                                    {
+                                        'component': 'VRow',
+                                        'content': [
+                                            {
+                                                'component': 'VCol',
+                                                'props': {'cols': 12},
+                                                'content': [
+                                                    {
+                                                        'component': 'VAlert',
+                                                        'props': {
+                                                            'type': 'info',
+                                                            'variant': 'tonal',
+                                                            'text': '服务器风格预览（当前服务器独立）'
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {'cols': 12},
+                                                'content': [
+                                                    {
+                                                        'component': 'VRadioGroup',
+                                                        'props': {
+                                                            'model': 'active_server_style',
+                                                            'inline': True
+                                                        },
+                                                        'content': [
+                                                            {
+                                                                'component': 'VRow',
+                                                                'content': preview_style_content
+                                                            }
+                                                        ]
+                                                    }
+                                                ]
+                                            },
+                                        ]
+                                    },
+                                    {
+                                        'component': 'VRow',
+                                        'content': [
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                    'md': 6
                                                 },
                                                 'content': [
                                                     {
@@ -2035,7 +2383,7 @@ class WsEmbyCover(_PluginBase):
                                                                 {"title": "随机", "value": "Random"},
                                                                 {"title": "最新入库", "value": "DateCreated"},
                                                                 {"title": "最新发行", "value": "PremiereDate"}
-                                                                ]
+                                                            ]
                                                         }
                                                     }
                                                 ]
@@ -2044,29 +2392,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 3
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VCronField',
-                                                        'props': {
-                                                            'model': 'cron',
-                                                            'label': '定时更新封面',
-                                                            'placeholder': '5位cron表达式'
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            
-                                        ]
-                                    },
-                                    {
-                                        'component': 'VRow',
-                                        'content': [
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
+                                                    'md': 6
                                                 },
                                                 'content': [
                                                     {
@@ -2191,7 +2517,13 @@ class WsEmbyCover(_PluginBase):
             "cron": "",
             "delay": 60,
             "selected_servers": [],
-            "servers_config": "",
+            "servers_config": self._servers_config or "",
+            "server_profiles": self._server_profiles,
+            "active_server_name": self._active_server_name,
+            "active_server_new_name": "",
+            "active_server_host": self._active_server_host,
+            "active_server_api_key": self._active_server_api_key,
+            "active_server_style": self._active_server_style or "static_1",
             "server_1_name": self.__manual_server_slot_value(1, "name", ""),
             "server_1_host": self.__manual_server_slot_value(1, "host", ""),
             "server_1_api_key": self.__manual_server_slot_value(1, "api_key", ""),
@@ -2212,47 +2544,33 @@ class WsEmbyCover(_PluginBase):
             "server_5_host": self.__manual_server_slot_value(5, "host", ""),
             "server_5_api_key": self.__manual_server_slot_value(5, "api_key", ""),
             "server_5_style": self.__manual_server_slot_value(5, "style", "static_1"),
-            "include_libraries": [],
-            "sort_by": "Random",
-            "title_config": '''# 配置封面标题（按媒体库名称对应）
-# 支持两种格式：
-#
-# 格式1 - 两行配置（主标题+副标题）：
-# 媒体库名称:
-#   - 主标题
-#   - 副标题
-#
-# 格式2 - 三行配置（主标题+副标题+背景颜色）：
-# 媒体库名称:
-#   - 主标题
-#   - 副标题
-#   - "#FF5722"  # 背景颜色（可选，必须加引号）
-#
-''',
+            "include_libraries": self._include_libraries or [],
+            "sort_by": self._sort_by or "Random",
+            "title_config": self._title_config or self.__default_title_config_template(),
             "tab": "title-tab",
-            "cover_style": "static_1",
-            "cover_style_base": "static_1",
-            "multi_1_blur": True,
-            "zh_font_preset": "chaohei",
-            "en_font_preset": "EmblemaOne",
-            "zh_font_custom": "",
-            "en_font_custom": "",
-            "zh_font_size": None,
-            "en_font_size": None,
-            "blur_size": 50,
-            "color_ratio": 0.8,
-            "title_scale": 1.0,
-            "use_primary": False,
-            "resolution": "480p",
-            "custom_width": 1920,
-            "custom_height": 1080,
-            "bg_color_mode": "auto",
-            "custom_bg_color": "",
-            "clean_images": False,
-            "clean_fonts": False,
-            "save_recent_covers": True,
-            "covers_history_limit_per_library": 10,
-            "covers_page_history_limit": 50,
+            "cover_style": self._cover_style or "static_1",
+            "cover_style_base": self._cover_style_base or "static_1",
+            "multi_1_blur": self._multi_1_blur,
+            "zh_font_preset": self._zh_font_preset or "chaohei",
+            "en_font_preset": self._en_font_preset or "EmblemaOne",
+            "zh_font_custom": self._zh_font_custom or "",
+            "en_font_custom": self._en_font_custom or "",
+            "zh_font_size": self._zh_font_size,
+            "en_font_size": self._en_font_size,
+            "blur_size": self._blur_size,
+            "color_ratio": self._color_ratio,
+            "title_scale": self._title_scale,
+            "use_primary": self._use_primary,
+            "resolution": self._resolution or "480p",
+            "custom_width": self._custom_width,
+            "custom_height": self._custom_height,
+            "bg_color_mode": self._bg_color_mode or "auto",
+            "custom_bg_color": self._custom_bg_color or "",
+            "clean_images": self._clean_images,
+            "clean_fonts": self._clean_fonts,
+            "save_recent_covers": self._save_recent_covers,
+            "covers_history_limit_per_library": self._covers_history_limit_per_library,
+            "covers_page_history_limit": self._covers_page_history_limit,
             "page_tab": "generate-tab",
             "style_naming_v2": True,
         }
@@ -2718,6 +3036,7 @@ class WsEmbyCover(_PluginBase):
         item_id = existsinfo.itemid
         server = existsinfo.server
         service = self._servers.get(server)
+        self.__apply_server_profile(server)
         if service:
             libraries = self.__get_server_libraries(service)
         if libraries and not library_id:
@@ -2795,7 +3114,7 @@ class WsEmbyCover(_PluginBase):
         self._event.clear()
         global_style = self._cover_style
         for server, service in self._servers.items():
-            self._cover_style = self._server_style_map.get(server, "static_1")
+            self.__apply_server_profile(server)
             # 扫描所有媒体库
             logger.info(f"当前服务器 {server}")
             cover_style = {
