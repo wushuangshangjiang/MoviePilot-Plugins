@@ -82,7 +82,7 @@ def _build_poster_card(image_path, size, border_color):
     return shadow_canvas
 
 
-def _fit_render_size(width, height, max_width=1920, max_height=1080):
+def _fit_render_size(width, height, max_width=1280, max_height=720):
     width = max(1, int(width))
     height = max(1, int(height))
     ratio = min(1.0, max_width / width, max_height / height)
@@ -223,7 +223,7 @@ def create_style_static_3(
         if resolution_config:
             width = int(getattr(resolution_config, "width", width))
             height = int(getattr(resolution_config, "height", height))
-        canvas_size = _fit_render_size(width, height, max_width=1920, max_height=1080)
+        canvas_size = _fit_render_size(width, height, max_width=1280, max_height=720)
         base_canvas, frame_color = _build_style2_background(
             image_path=image_path,
             canvas_size=canvas_size,
@@ -260,14 +260,14 @@ def create_style_static_3(
         start_y = canvas_size[1] - max_card_h - int(canvas_size[1] * 0.028)
         slot_width = cards[0].size[0] + gap
         strip_width = slot_width * len(cards)
-        # 按“单张图从出现到消失=30秒”计算速度
-        item_visibility_seconds = 30.0
+        # 按“单张图从出现到消失=15秒”计算速度
+        item_visibility_seconds = 15.0
         speed_px_s = (canvas_size[0] + cards[0].size[0]) / item_visibility_seconds
         cycle_distance = strip_width
         cycle_seconds = cycle_distance / max(1.0, speed_px_s)
-        fps = 60
+        fps = 30
         frame_duration = int(1000 / fps)
-        frame_count = max(240, int(cycle_seconds * fps))
+        frame_count = max(120, int(cycle_seconds * fps))
 
         static_frame = Image.alpha_composite(
             base_canvas,

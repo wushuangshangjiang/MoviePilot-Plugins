@@ -48,7 +48,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.17"
+    plugin_version = "1.18"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -3059,7 +3059,7 @@ class WsEmbyCover(_PluginBase):
             safe_library_name = self.__sanitize_filename(library_name)
             cache_library_dir = Path(self._covers_path) / safe_library_name
             custom_library_dir = Path(self._covers_input) / safe_library_name if self._covers_input else None
-            numbered_posters = [cache_library_dir / f"{index}.jpg" for index in range(1, 6)]
+            numbered_posters = [cache_library_dir / f"{index}.jpg" for index in range(1, 7)]
             if all(path.exists() for path in numbered_posters):
                 library_dir = cache_library_dir
             elif custom_library_dir and custom_library_dir.exists():
@@ -3067,7 +3067,7 @@ class WsEmbyCover(_PluginBase):
             else:
                 library_dir = cache_library_dir
             logger.info(f"static_3: 准备图片目录 {library_dir}")
-            if self.prepare_library_images(library_dir, required_items=5):
+            if self.prepare_library_images(library_dir, required_items=6):
                 logger.info("static_3: 图片目录准备完成，开始生成封面")
                 image_data = create_style_static_3(
                     image_path=image_path,
