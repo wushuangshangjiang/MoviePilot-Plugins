@@ -13,14 +13,12 @@ import time
 import shutil
 import random
 import requests
-from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlparse, quote, unquote
 from typing import Any, Dict, List, Optional, Tuple
 from collections import defaultdict
 import pytz
 import yaml
-from PIL import Image
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -50,7 +48,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.15"
+    plugin_version = "1.16"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -4081,50 +4079,21 @@ class WsEmbyCover(_PluginBase):
                 f"准备上传封面: {library['Name']} 格式={content_type} 大小={len(image_bytes) / 1024:.1f}KB"
             )
 
-            def _post_cover(data_bytes, data_content_type):
+            def _post_cover(data_text):
                 return service.instance.post_data(
                     url=url,
-                    data=data_bytes,
-                    headers={"Content-Type": data_content_type},
+                    data=data_text,
+                    headers={"Content-Type": "text/plain; charset=utf-8"},
                 )
 
-            res = _post_cover(image_bytes, content_type)
+            res = _post_cover(image_base64)
             if not res:
                 logger.warning(f"设置「{library['Name']}」封面首次上传无响应，准备重试")
                 time.sleep(1)
-                res = _post_cover(image_bytes, content_type)
+                res = _post_cover(image_base64)
 
             if res and res.status_code in [200, 204]:
                 return True
-
-            # PNG 上传失败时，自动回退 JPEG 再试一次，提升兼容性
-            if content_type == "image/png":
-                try:
-                    with Image.open(BytesIO(image_bytes)).convert("RGB") as img:
-                        jpeg_buffer = BytesIO()
-                        img.save(jpeg_buffer, format="JPEG", quality=90, optimize=True)
-                        jpeg_bytes = jpeg_buffer.getvalue()
-                    logger.warning(
-                        f"设置「{library['Name']}」PNG 上传失败，回退 JPEG 重试，大小={len(jpeg_bytes) / 1024:.1f}KB"
-                    )
-                    res_jpeg = _post_cover(jpeg_bytes, "image/jpeg")
-                    if res_jpeg and res_jpeg.status_code in [200, 204]:
-                        return True
-                    if res_jpeg is not None:
-                        err_text = ""
-                        try:
-                            err_text = (res_jpeg.text or "").strip()
-                        except Exception:
-                            err_text = ""
-                        if err_text:
-                            logger.error(
-                                f"设置「{library['Name']}」封面失败，错误码：{res_jpeg.status_code}，响应：{err_text[:300]}"
-                            )
-                        else:
-                            logger.error(f"设置「{library['Name']}」封面失败，错误码：{res_jpeg.status_code}")
-                        return False
-                except Exception as jpeg_err:
-                    logger.error(f"设置「{library['Name']}」PNG 回退 JPEG 失败：{jpeg_err}")
 
             if res is not None:
                 err_text = ""
