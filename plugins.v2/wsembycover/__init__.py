@@ -106,6 +106,12 @@ class WsEmbyCover(_PluginBase):
     _servers_config = ''
     _server_style_map = {}
     _manual_servers = []
+    _server_profiles = {}
+    _active_server_name = ""
+    _active_server_new_name = ""
+    _active_server_host = ""
+    _active_server_api_key = ""
+    _active_server_style = "static_1"
     _all_libraries = []
     _include_libraries = []
     _sort_by = 'Random'
@@ -769,24 +775,6 @@ class WsEmbyCover(_PluginBase):
                 "methods": ["POST", "GET"],
                 "summary": "立即生成媒体库封面(兼容无前导斜杠)",
             },
-            {
-                "path": "/set_cover_style",
-                "endpoint": self.api_set_cover_style,
-                "auth": "bear",
-                "methods": ["POST", "GET"],
-                "summary": "保存封面风格选择",
-            },
-            {
-                "path": "set_cover_style",
-                "endpoint": self.api_set_cover_style,
-                "auth": "bear",
-                "methods": ["POST", "GET"],
-                "summary": "保存封面风格选择(兼容无前导斜杠)",
-            },
-            {"path": "/select_style_1", "endpoint": self.api_select_style_1, "auth": "bear", "methods": ["POST"], "summary": "选择风格1"},
-            {"path": "/select_style_2", "endpoint": self.api_select_style_2, "auth": "bear", "methods": ["POST"], "summary": "选择风格2"},
-            {"path": "select_style_1", "endpoint": self.api_select_style_1, "auth": "bear", "methods": ["POST"], "summary": "选择风格1(兼容)"},
-            {"path": "select_style_2", "endpoint": self.api_select_style_2, "auth": "bear", "methods": ["POST"], "summary": "选择风格2(兼容)"},
             {"path": "/set_page_tab_generate", "endpoint": self.api_set_page_tab_generate, "auth": "bear", "methods": ["POST"], "summary": "切换到生成页"},
             {"path": "/set_page_tab_history", "endpoint": self.api_set_page_tab_history, "auth": "bear", "methods": ["POST"], "summary": "切换到历史页"},
             {"path": "/set_page_tab_clean", "endpoint": self.api_set_page_tab_clean, "auth": "bear", "methods": ["POST"], "summary": "切换到清理页"},
@@ -859,68 +847,6 @@ class WsEmbyCover(_PluginBase):
             return {"code": 1, "msg": f"封面生成失败: {e}"}
         finally:
             self._cover_style = old_style
-
-    def api_set_cover_style(self, style: str = ""):
-        try:
-            target_style = (style or "").strip()
-            allowed_styles = {
-                "static_1", "static_2",
-            }
-            if target_style not in allowed_styles:
-                return {"code": 1, "msg": f"不支持的风格: {target_style}"}
-            self._cover_style = target_style
-            base, variant = self.__resolve_cover_style_ui(target_style)
-            self._cover_style_base = base
-            self.__update_config()
-            logger.info(f"【WsEmbyCover】已保存封面风格: {target_style}")
-            return {"code": 0, "msg": f"已保存风格: {target_style}"}
-        except Exception as e:
-            logger.error(f"【WsEmbyCover】保存封面风格失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"保存风格失败: {e}"}
-
-    def __get_cover_style_parts(self) -> Tuple[str, int]:
-        style = (self._cover_style or "static_1").strip()
-        try:
-            index = int(style.split("_")[-1])
-        except Exception:
-            index = 1
-        index = max(1, min(2, index))
-        return "static", index
-
-    def __set_cover_style_parts(self, variant: str, index: int):
-        safe_index = max(1, min(2, int(index)))
-        target_style = f"static_{safe_index}"
-        self._cover_style = target_style
-        self._cover_style_base = f"static_{safe_index}"
-        self.__update_config()
-        logger.info(f"【WsEmbyCover】已保存封面风格: {target_style}")
-
-        try:
-            variant, index = self.__get_cover_style_parts()
-            new_variant = "animated" if variant == "static" else "static"
-            self.__set_cover_style_parts(new_variant, index)
-            current_variant, current_index = self.__get_cover_style_parts()
-            return {"code": 0, "msg": f"已切换为{current_variant}风格{current_index}"}
-        except Exception as e:
-            logger.error(f"【WsEmbyCover】切换静态/动态失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"切换失败: {e}"}
-
-    def __api_select_style(self, index: int):
-        try:
-            variant, _ = self.__get_cover_style_parts()
-            self.__set_cover_style_parts(variant, index)
-            current_variant, current_index = self.__get_cover_style_parts()
-            return {"code": 0, "msg": f"已选择{current_variant}风格{current_index}"}
-        except Exception as e:
-            logger.error(f"【WsEmbyCover】选择风格失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"选择风格失败: {e}"}
-
-    def api_select_style_1(self):
-        return self.__api_select_style(1)
-
-    def api_select_style_2(self):
-        return self.__api_select_style(2)
-
 
     def __set_page_tab(self, tab: str):
         self._page_tab = tab if tab in ["generate-tab", "history-tab", "clean-tab"] else "generate-tab"
@@ -2453,265 +2379,135 @@ class WsEmbyCover(_PluginBase):
         if self._page_tab == "clean-tab":
             page_tab = "clean-tab"
 
-        selected_style_map = {
-            "static_1": 1,
-            "static_2": 2,
-            "static_5": 2,
-            "static_6": 2,
-        }
-        selected_index = selected_style_map.get((self._cover_style or "static_1").strip(), 1)
-        style_preview_cards = self.__build_style_preview_cards(selected_index)
-
-        return [
-            {
-                "component": "VCard",
-                "content": [
-                    {
-                        "component": "VTabs",
-                        "props": {"grow": True, "modelValue": page_tab},
-                        "content": [
-                            {
-                                "component": "VTab",
-                                "props": {"value": "generate-tab"},
-                                "text": "封面生成",
-                                "events": {"click": {"api": "plugin/WsEmbyCover/set_page_tab_generate", "method": "post"}},
-                            },
-                            {
-                                "component": "VTab",
-                                "props": {"value": "history-tab"},
-                                "text": "历史封面",
-                                "events": {"click": {"api": "plugin/WsEmbyCover/set_page_tab_history", "method": "post"}},
-                            },
-                            {
-                                "component": "VTab",
-                                "props": {"value": "clean-tab"},
-                                "text": "清理缓存",
-                                "events": {"click": {"api": "plugin/WsEmbyCover/set_page_tab_clean", "method": "post"}},
-                            },
-                        ],
-                    },
-                    {"component": "VDivider"},
-                ],
-            },
-        ] + (
-            [
+        header_card = {
+            "component": "VCard",
+            "content": [
                 {
-                    "component": "VCard",
-                    "props": {"variant": "outlined", "class": "mt-3"},
-                    "content": [
-                                    {
-                                        "component": "VCardText",
-                                        "content": [
-                                            {
-                                                "component": "VAlert",
-                                                "props": {
-                                                    "type": "warning",
-                                                    "variant": "tonal",
-                                                    "density": "compact",
-                                                    "class": "mb-3",
-                                                },
-                                                "text": "首次运行请先完成设置",
-                                            },
-                                            {
-                                                "component": "div",
-                                                "props": {"class": "text-caption text-medium-emphasis mb-2"},
-                                                "text": "；".join(setup_warnings),
-                                            },
-                                            {
-                                                "component": "VRow",
-                                                "content": [
-                                                    {
-                                                        "component": "VCol",
-                                            "props": {"cols": 12, "md": 9},
-                                            "content": [
-                                                            {
-                                                                "component": "VBtn",
-                                                                "props": {
-                                                                    "variant": "flat",
-                                                                    "color": "primary",
-                                                                    "class": "text-none mr-2 mb-2",
-                                                                    "prepend-icon": "mdi-swap-horizontal",
-                                                                },
-                                                },
-                                                            {
-                                                                "component": "VBtn",
-                                                                "props": {
-                                                                    "variant": "flat",
-                                                                    "color": "primary",
-                                                                    "class": "text-none mb-2",
-                                                                    "prepend-icon": "mdi-play-circle-outline",
-                                                                },
-                                                    "text": "立即生成当前风格",
-                                                    "events": {"click": {"api": "plugin/WsEmbyCover/generate_now", "method": "post"}},
-                                                },
-                                                {
-                                                    "component": "div",
-                                                    "props": {"class": "text-caption text-medium-emphasis ml-2 mb-2 d-inline-block"},
-                                                    "text": "更多参数请点击右下角齿轮设置",
-                                                },
-                                            ],
-                                        }
-                                    ],
-                                },
-                                {
-                                    "component": "VRow",
-                                    "content": style_preview_cards,
-                                },
-                            ],
-                        }
-                    ],
-                }
-            ] if page_tab == "generate-tab" and setup_warnings else
-            [
-                {
-                    "component": "VCard",
-                    "props": {"variant": "outlined", "class": "mt-3"},
-                    "content": [
-                                    {
-                                        "component": "VCardText",
-                                        "content": [
-                                            {
-                                                "component": "VRow",
-                                                "content": [
-                                                    {
-                                                        "component": "VCol",
-                                            "props": {"cols": 12, "md": 9},
-                                            "content": [
-                                                            {
-                                                                "component": "VBtn",
-                                                                "props": {
-                                                                    "variant": "flat",
-                                                                    "color": "primary",
-                                                                    "class": "text-none mr-2 mb-2",
-                                                                    "prepend-icon": "mdi-swap-horizontal",
-                                                                },
-                                                },
-                                                            {
-                                                                "component": "VBtn",
-                                                                "props": {
-                                                                    "variant": "flat",
-                                                                    "color": "primary",
-                                                                    "class": "text-none mb-2",
-                                                                    "prepend-icon": "mdi-play-circle-outline",
-                                                                },
-                                                    "text": "立即生成当前风格",
-                                                    "events": {"click": {"api": "plugin/WsEmbyCover/generate_now", "method": "post"}},
-                                                }
-                                            ],
-                                        }
-                                    ],
-                                },
-                                {
-                                    "component": "VRow",
-                                    "content": style_preview_cards,
-                                },
-                            ],
-                        }
-                    ],
-                }
-            ] if page_tab == "generate-tab" else
-            [
-                {
-                    "component": "VCard",
-                    "props": {"variant": "outlined", "class": "mt-3"},
-                    "content": [
-                        {"component": "VCardTitle", "text": f"最近生成的封面（最多 {limit} 条）"},
-                        {"component": "VCardText", "content": [{"component": "VRow", "content": cover_rows}]},
-                    ],
-                }
-            ] if page_tab == "history-tab" else
-            [
-                {
-                    "component": "VCard",
-                    "props": {"variant": "outlined", "class": "mt-3"},
+                    "component": "VTabs",
+                    "props": {"grow": True, "modelValue": page_tab},
                     "content": [
                         {
-                            "component": "VCardText",
-                            "props": {"class": "pa-6 d-flex flex-column align-center"},
+                            "component": "VTab",
+                            "props": {"value": "generate-tab"},
+                            "text": "封面生成",
+                            "events": {"click": {"api": "plugin/WsEmbyCover/set_page_tab_generate", "method": "post"}},
+                        },
+                        {
+                            "component": "VTab",
+                            "props": {"value": "history-tab"},
+                            "text": "历史封面",
+                            "events": {"click": {"api": "plugin/WsEmbyCover/set_page_tab_history", "method": "post"}},
+                        },
+                        {
+                            "component": "VTab",
+                            "props": {"value": "clean-tab"},
+                            "text": "清理缓存",
+                            "events": {"click": {"api": "plugin/WsEmbyCover/set_page_tab_clean", "method": "post"}},
+                        },
+                    ],
+                },
+                {"component": "VDivider"},
+            ],
+        }
+
+        if page_tab == "generate-tab":
+            generate_content: List[Dict[str, Any]] = []
+            if setup_warnings:
+                generate_content.extend(
+                    [
+                        {
+                            "component": "VAlert",
+                            "props": {
+                                "type": "warning",
+                                "variant": "tonal",
+                                "density": "compact",
+                                "class": "mb-3",
+                            },
+                            "text": "首次运行请先完成设置",
+                        },
+                        {
+                            "component": "div",
+                            "props": {"class": "text-caption text-medium-emphasis mb-2"},
+                            "text": "；".join(setup_warnings),
+                        },
+                    ]
+                )
+            generate_content.append(
+                {
+                    "component": "VRow",
+                    "content": [
+                        {
+                            "component": "VCol",
+                            "props": {"cols": 12},
                             "content": [
-                                            {
-                                                "component": "VBtn",
-                                                "props": {
-                                                    "color": "error",
-                                                    "variant": "flat",
-                                                    "size": "large",
-                                                    "prepend-icon": "mdi-image-remove",
-                                                    "class": "mb-3 text-none",
-                                                },
-                                    "text": "立即清理图片缓存",
-                                    "events": {"click": {"api": "plugin/WsEmbyCover/clean_images", "method": "post"}},
-                                },
-                                            {
-                                                "component": "VBtn",
-                                                "props": {
-                                                    "color": "error",
-                                                    "variant": "flat",
-                                                    "size": "large",
-                                                    "prepend-icon": "mdi-format-font",
-                                                    "class": "mb-3 text-none",
-                                                },
-                                    "text": "立即清理字体缓存",
-                                    "events": {"click": {"api": "plugin/WsEmbyCover/clean_fonts", "method": "post"}},
-                                },
                                 {
                                     "component": "div",
-                                    "props": {"class": "text-caption text-medium-emphasis"},
-                                    "text": "点击后立即执行，无需保存配置。",
-                                },
-                            ],
-                        }
-                    ],
-                }
-            ]
-        )
-    def __build_style_preview_cards(self, selected_index: int) -> List[Dict[str, Any]]:
-        styles = [
-            {"name": "风格1", "index": 1, "src": self.__style_preview_src(1)},
-            {"name": "风格2", "index": 2, "src": self.__style_preview_src(2)},
-        ]
-        cards: List[Dict[str, Any]] = []
-        for style in styles:
-            cards.append(
-                {
-                    "component": "VCol",
-                    "props": {"cols": 12, "sm": 6, "md": 4},
-                    "content": [
-                        {
-                            "component": "VCard",
-                            "props": {
-                                "variant": "flat",
-                                "elevation": 3 if style["index"] == selected_index else 1,
-                                "color": "primary" if style["index"] == selected_index else None,
-                                "class": "cursor-pointer",
-                            },
-                            "events": {
-                                "click": {
-                                    "api": f"plugin/WsEmbyCover/select_style_{style['index']}",
-                                    "method": "post",
-                                }
-                            },
-                            "content": [
-                                {
-                                    "component": "VImg",
-                                    "props": {
-                                        "src": style["src"],
-                                        "aspect-ratio": "16/9",
-                                        "cover": True,
-                                    },
-                                },
-                                {
-                                    "component": "VCardText",
-                                    "props": {"class": "py-2 text-center"},
-                                    "text": style["name"],
+                                    "props": {"class": "text-caption text-medium-emphasis mb-2"},
+                                    "text": "更多参数请点击右下角齿轮设置",
                                 },
                             ],
                         }
                     ],
                 }
             )
-        return cards
+            body_card = {
+                "component": "VCard",
+                "props": {"variant": "outlined", "class": "mt-3"},
+                "content": [{"component": "VCardText", "content": generate_content}],
+            }
+        elif page_tab == "history-tab":
+            body_card = {
+                "component": "VCard",
+                "props": {"variant": "outlined", "class": "mt-3"},
+                "content": [
+                    {"component": "VCardTitle", "text": f"最近生成的封面（最多 {limit} 条）"},
+                    {"component": "VCardText", "content": [{"component": "VRow", "content": cover_rows}]},
+                ],
+            }
+        else:
+            body_card = {
+                "component": "VCard",
+                "props": {"variant": "outlined", "class": "mt-3"},
+                "content": [
+                    {
+                        "component": "VCardText",
+                        "props": {"class": "pa-6 d-flex flex-column align-center"},
+                        "content": [
+                            {
+                                "component": "VBtn",
+                                "props": {
+                                    "color": "error",
+                                    "variant": "flat",
+                                    "size": "large",
+                                    "prepend-icon": "mdi-image-remove",
+                                    "class": "mb-3 text-none",
+                                },
+                                "text": "立即清理图片缓存",
+                                "events": {"click": {"api": "plugin/WsEmbyCover/clean_images", "method": "post"}},
+                            },
+                            {
+                                "component": "VBtn",
+                                "props": {
+                                    "color": "error",
+                                    "variant": "flat",
+                                    "size": "large",
+                                    "prepend-icon": "mdi-format-font",
+                                    "class": "mb-3 text-none",
+                                },
+                                "text": "立即清理字体缓存",
+                                "events": {"click": {"api": "plugin/WsEmbyCover/clean_fonts", "method": "post"}},
+                            },
+                            {
+                                "component": "div",
+                                "props": {"class": "text-caption text-medium-emphasis"},
+                                "text": "点击后立即执行，无需保存配置。",
+                            },
+                        ],
+                    }
+                ],
+            }
 
-
+        return [header_card, body_card]
     @staticmethod
     def __style_preview_src(index: int) -> str:
 
