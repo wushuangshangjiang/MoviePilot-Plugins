@@ -108,7 +108,6 @@ class WsEmbyCover(_PluginBase):
     _manual_servers = []
     _server_profiles = {}
     _active_server_name = ""
-    _active_server_new_name = ""
     _active_server_host = ""
     _active_server_api_key = ""
     _active_server_style = "static_1"
@@ -251,7 +250,6 @@ class WsEmbyCover(_PluginBase):
             )
             self._page_tab = config.get("page_tab", "generate-tab")
             self._active_server_name = str(config.get("active_server_name", "") or "").strip()
-            self._active_server_new_name = str(config.get("active_server_new_name", "") or "").strip()
             self._active_server_host = str(config.get("active_server_host", "") or "").strip()
             self._active_server_api_key = str(config.get("active_server_api_key", "") or "").strip()
             self._active_server_style = str(config.get("active_server_style", "static_1") or "static_1").strip() or "static_1"
@@ -614,22 +612,60 @@ class WsEmbyCover(_PluginBase):
         except Exception:
             self._resolution_config = self.__new_resolution_config("480p")
 
+    @staticmethod
+    def __fetch_emby_server_name(host: str, api_key: str) -> Optional[str]:
+        safe_host = (host or "").strip().rstrip("/")
+        safe_key = (api_key or "").strip()
+        if not safe_host or not safe_key:
+            return None
+        candidates = [
+            f"{safe_host}/emby/System/Info/Public?api_key={safe_key}",
+            f"{safe_host}/System/Info/Public?api_key={safe_key}",
+            f"{safe_host}/emby/System/Info?api_key={safe_key}",
+            f"{safe_host}/System/Info?api_key={safe_key}",
+        ]
+        for url in candidates:
+            try:
+                resp = requests.get(url, timeout=10, verify=False)
+                if not resp or resp.status_code >= 400:
+                    continue
+                data = resp.json() if resp.content else {}
+                if not isinstance(data, dict):
+                    continue
+                name = str(data.get("ServerName") or data.get("Name") or "").strip()
+                if name:
+                    return name
+            except Exception:
+                continue
+        return None
+
+    def __make_unique_server_name(self, base_name: str) -> str:
+        raw = (base_name or "").strip() or "Emby"
+        if raw not in self._server_profiles:
+            return raw
+        idx = 2
+        while f"{raw}_{idx}" in self._server_profiles:
+            idx += 1
+        return f"{raw}_{idx}"
+
     def __upsert_active_server_profile(self, config: dict):
         cfg = config or {}
         selected_name = str(cfg.get("active_server_name", self._active_server_name or "")).strip()
-        rename_to = str(cfg.get("active_server_new_name", "")).strip()
         host = str(cfg.get("active_server_host", "")).strip()
         api_key = str(cfg.get("active_server_api_key", "")).strip()
         style = str(cfg.get("active_server_style", self._active_server_style or "static_1")).strip() or "static_1"
-        target_name = rename_to or selected_name
-        if not target_name:
+        if not selected_name:
             return
-        if selected_name and rename_to and selected_name != rename_to and selected_name in self._server_profiles:
-            self._server_profiles.pop(selected_name, None)
+        if selected_name != "__new__" and selected_name not in self._server_profiles:
+            return
         if not host or not api_key:
-            self._active_server_name = target_name
+            self._active_server_name = selected_name
             self._active_server_style = "static_2" if style == "static_2" else "static_1"
             return
+        target_name = selected_name
+        if selected_name == "__new__":
+            fetched_name = self.__fetch_emby_server_name(host=host, api_key=api_key) or "Emby"
+            target_name = self.__make_unique_server_name(fetched_name)
         profile = self.__profile_from_runtime(
             name=target_name,
             host=host,
@@ -638,16 +674,24 @@ class WsEmbyCover(_PluginBase):
         )
         self._server_profiles[target_name] = profile
         self._active_server_name = target_name
-        self._active_server_new_name = ""
         self._active_server_host = profile.get("host", "")
         self._active_server_api_key = profile.get("api_key", "")
         self._active_server_style = profile.get("style", "static_1")
 
     def __sync_active_server_editor(self):
-        if not self._server_profiles:
+        if self._active_server_name == "__new__":
+            self._active_server_host = ""
+            self._active_server_api_key = ""
+            self._active_server_style = "static_1"
             return
-        if not self._active_server_name or self._active_server_name not in self._server_profiles:
+        if self._server_profiles and (not self._active_server_name or self._active_server_name not in self._server_profiles):
             self._active_server_name = sorted(self._server_profiles.keys())[0]
+        if not self._active_server_name or self._active_server_name not in self._server_profiles:
+            self._active_server_name = "__new__"
+            self._active_server_host = ""
+            self._active_server_api_key = ""
+            self._active_server_style = "static_1"
+            return
         profile = self._server_profiles.get(self._active_server_name) or {}
         self._active_server_host = str(profile.get("host", "")).strip()
         self._active_server_api_key = str(profile.get("api_key", "")).strip()
@@ -715,7 +759,6 @@ class WsEmbyCover(_PluginBase):
             "servers_config": self._servers_config,
             "server_profiles": self._server_profiles,
             "active_server_name": self._active_server_name,
-            "active_server_new_name": "",
             "active_server_host": self._active_server_host,
             "active_server_api_key": self._active_server_api_key,
             "active_server_style": self._active_server_style,
@@ -1582,6 +1625,7 @@ class WsEmbyCover(_PluginBase):
             },
         ]
         server_profile_items = [{"title": name, "value": name} for name in sorted(self._server_profiles.keys())]
+        server_profile_items.append({"title": "新增服务器", "value": "__new__"})
 
         style_variant_items = [
             {
@@ -2233,15 +2277,13 @@ class WsEmbyCover(_PluginBase):
                                                 },
                                                 'content': [
                                                     {
-                                                        'component': 'VCombobox',
+                                                        'component': 'VSelect',
                                                         'props': {
                                                             'model': 'active_server_name',
-                                                            'label': '媒体服务器（下拉选择或直接输入新增）',
+                                                            'label': '媒体服务器',
                                                             'items': server_profile_items,
-                                                            'clearable': True,
-                                                            'hint': '切换后请点保存，下面标题和参数会按当前服务器独立生效',
+                                                            'hint': '只能下拉选择；选择“新增服务器”后填写地址和 API Key 保存即可自动识别服务器名',
                                                             'persistentHint': True,
-                                                            'placeholder': '例如：物语云'
                                                         }
                                                     }
                                                 ]
@@ -2256,10 +2298,10 @@ class WsEmbyCover(_PluginBase):
                                                     {
                                                         'component': 'VTextField',
                                                         'props': {
-                                                            'model': 'active_server_new_name',
-                                                            'label': '重命名当前服务器（可选）',
-                                                            'placeholder': '留空不改名',
-                                                            'hint': '若填写新名称，保存后会替换当前服务器名称',
+                                                            'model': 'active_server_host',
+                                                            'label': '当前服务器地址',
+                                                            'placeholder': 'http://127.0.0.1:8096',
+                                                            'hint': '选择已有服务器时可编辑；选择“新增服务器”时用于新增',
                                                             'persistentHint': True,
                                                         }
                                                     }
@@ -2273,11 +2315,12 @@ class WsEmbyCover(_PluginBase):
                                                 },
                                                 'content': [
                                                     {
-                                                        'component': 'VCronField',
+                                                        'component': 'VTextField',
                                                         'props': {
-                                                            'model': 'cron',
-                                                            'label': '定时更新封面',
-                                                            'placeholder': '5位cron表达式'
+                                                            'model': 'active_server_api_key',
+                                                            'label': '当前服务器 API Key',
+                                                            'hint': '选择已有服务器时可编辑；选择“新增服务器”时用于新增',
+                                                            'persistentHint': True
                                                         }
                                                     }
                                                 ]
@@ -2294,30 +2337,11 @@ class WsEmbyCover(_PluginBase):
                                                 },
                                                 'content': [
                                                     {
-                                                        'component': 'VTextField',
+                                                        'component': 'VCronField',
                                                         'props': {
-                                                            'model': 'active_server_host',
-                                                            'label': '当前服务器地址',
-                                                            'placeholder': 'http://127.0.0.1:8096',
-                                                            'hint': '编辑现有服务器或新增服务器地址',
-                                                            'persistentHint': True
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VTextField',
-                                                        'props': {
-                                                            'model': 'active_server_api_key',
-                                                            'label': '当前服务器 API Key',
-                                                            'hint': '编辑现有服务器或新增服务器 API Key',
-                                                            'persistentHint': True
+                                                            'model': 'cron',
+                                                            'label': '定时更新封面',
+                                                            'placeholder': '5位cron表达式'
                                                         }
                                                     }
                                                 ]
@@ -2519,8 +2543,7 @@ class WsEmbyCover(_PluginBase):
             "selected_servers": [],
             "servers_config": self._servers_config or "",
             "server_profiles": self._server_profiles,
-            "active_server_name": self._active_server_name,
-            "active_server_new_name": "",
+            "active_server_name": self._active_server_name or "__new__",
             "active_server_host": self._active_server_host,
             "active_server_api_key": self._active_server_api_key,
             "active_server_style": self._active_server_style or "static_1",
