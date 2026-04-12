@@ -115,7 +115,6 @@ def create_style_static_5(
         background = ImageOps.fit(bg_src, canvas_size, method=Image.Resampling.LANCZOS)
         background = ImageEnhance.Contrast(background).enhance(1.08)
         background = ImageEnhance.Color(background).enhance(1.04)
-        background = background.filter(ImageFilter.GaussianBlur(radius=max(2, canvas_size[1] // 540)))
 
         if bg_color_config:
             base_color = ColorHelper.get_background_color(
@@ -127,7 +126,7 @@ def create_style_static_5(
         else:
             base_color = ColorHelper.get_background_color(bg_src)
 
-        overlay_color = ColorHelper.darken_color(base_color, 0.68)
+        overlay_color = ColorHelper.darken_color(base_color, 0.72)
         frame_color = ColorHelper.lighten_color(base_color, 1.10)
         text_color = (232, 208, 150, 244)
         text_shadow = (88, 56, 18, 96)
@@ -138,12 +137,23 @@ def create_style_static_5(
         left_gradient = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
         grad_px = left_gradient.load()
         for x in range(canvas_size[0]):
-            strength = 1.0 - min(1.0, x / max(1, int(canvas_size[0] * 0.62)))
-            alpha = int((70 + 95 * ratio) * (strength ** 1.45))
+            strength = 1.0 - min(1.0, x / max(1, int(canvas_size[0] * 0.56)))
+            alpha = int((88 + 120 * ratio) * (strength ** 1.38))
             color = overlay_color + (alpha,)
             for y in range(canvas_size[1]):
                 grad_px[x, y] = color
         canvas = Image.alpha_composite(canvas, left_gradient)
+
+        # Keep background sharp while softening only the left title area.
+        title_fade = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+        fade_px = title_fade.load()
+        for x in range(canvas_size[0]):
+            strength = 1.0 - min(1.0, x / max(1, int(canvas_size[0] * 0.42)))
+            alpha = int((48 + 66 * ratio) * (strength ** 1.12))
+            color = (20, 36, 58, alpha)
+            for y in range(canvas_size[1]):
+                fade_px[x, y] = color
+        canvas = Image.alpha_composite(canvas, title_fade)
 
         warm_haze = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
         haze_draw = ImageDraw.Draw(warm_haze)

@@ -91,7 +91,7 @@ class WsEmbyCover(_PluginBase):
     _cover_style_base = 'static_1'
     _font_path = ''
     _covers_path = ''
-    _tab = 'style-tab'
+    _tab = 'title-tab'
     _multi_1_blur = True
     _zh_font_size = None
     _en_font_size = None
@@ -157,9 +157,13 @@ class WsEmbyCover(_PluginBase):
                 elif self._cover_style == 'single_2':
                     self._cover_style = 'static_2'
                 elif self._cover_style == 'multi_1':
-                    self._cover_style = 'static_3'
+                    self._cover_style = 'static_2'
+            if self._cover_style in {"static_6"}:
+                self._cover_style = "static_2"
             default_base, default_variant = self.__resolve_cover_style_ui(self._cover_style)
             self._cover_style_base = config.get("cover_style_base", default_base)
+            if self._cover_style_base in {"static_6"}:
+                self._cover_style_base = "static_2"
             self._multi_1_blur = config.get("multi_1_blur", True)
             self._zh_font_size = config.get("zh_font_size", 170)
             self._en_font_size = config.get("en_font_size", 75)
@@ -333,9 +337,8 @@ class WsEmbyCover(_PluginBase):
         mapping = {
             "static_1": "static_1",
             "static_2": "static_2",
-            "static_3": "static_3",
             "static_5": "static_2",
-            "static_6": "static_3",
+            "static_6": "static_2",
         }
         return mapping.get(base_style, "static_1")
 
@@ -343,14 +346,13 @@ class WsEmbyCover(_PluginBase):
         mapping = {
             "static_1": "static_1",
             "static_2": "static_1",
-            "static_3": "static_1",
             "static_4": "static_2",
             "static_5": "static_2",
-            "static_6": "static_3",
+            "static_6": "static_2",
             "animated_1": "static_1",
             "animated_2": "static_2",
             "animated_3": "static_1",
-            "animated_4": "static_3",
+            "animated_4": "static_2",
         }
         return mapping.get(cover_style, "static_1"), "static"
 
@@ -362,13 +364,11 @@ class WsEmbyCover(_PluginBase):
             return 9
         if self._cover_style == "static_2":
             return 5
-        if self._cover_style == "static_3":
-            return 6
         return 5
 
     def __get_fetch_target_count(self) -> int:
         required_items = self.__get_required_items()
-        if self._cover_style in ["static_2", "static_3"]:
+        if self._cover_style == "static_2":
             return required_items + 1
         return required_items
 
@@ -664,10 +664,8 @@ class WsEmbyCover(_PluginBase):
             },
             {"path": "/select_style_1", "endpoint": self.api_select_style_1, "auth": "bear", "methods": ["POST"], "summary": "选择风格1"},
             {"path": "/select_style_2", "endpoint": self.api_select_style_2, "auth": "bear", "methods": ["POST"], "summary": "选择风格2"},
-            {"path": "/select_style_3", "endpoint": self.api_select_style_3, "auth": "bear", "methods": ["POST"], "summary": "选择风格3"},
             {"path": "select_style_1", "endpoint": self.api_select_style_1, "auth": "bear", "methods": ["POST"], "summary": "选择风格1(兼容)"},
             {"path": "select_style_2", "endpoint": self.api_select_style_2, "auth": "bear", "methods": ["POST"], "summary": "选择风格2(兼容)"},
-            {"path": "select_style_3", "endpoint": self.api_select_style_3, "auth": "bear", "methods": ["POST"], "summary": "选择风格3(兼容)"},
             {"path": "/set_page_tab_generate", "endpoint": self.api_set_page_tab_generate, "auth": "bear", "methods": ["POST"], "summary": "切换到生成页"},
             {"path": "/set_page_tab_history", "endpoint": self.api_set_page_tab_history, "auth": "bear", "methods": ["POST"], "summary": "切换到历史页"},
             {"path": "/set_page_tab_clean", "endpoint": self.api_set_page_tab_clean, "auth": "bear", "methods": ["POST"], "summary": "切换到清理页"},
@@ -729,7 +727,7 @@ class WsEmbyCover(_PluginBase):
 
             target_style = (style or "").strip()
             allowed_styles = {
-                "static_1", "static_2", "static_3",
+                "static_1", "static_2",
             }
             if target_style:
                 if target_style not in allowed_styles:
@@ -748,7 +746,7 @@ class WsEmbyCover(_PluginBase):
         try:
             target_style = (style or "").strip()
             allowed_styles = {
-                "static_1", "static_2", "static_3",
+                "static_1", "static_2",
             }
             if target_style not in allowed_styles:
                 return {"code": 1, "msg": f"不支持的风格: {target_style}"}
@@ -768,11 +766,11 @@ class WsEmbyCover(_PluginBase):
             index = int(style.split("_")[-1])
         except Exception:
             index = 1
-        index = max(1, min(3, index))
+        index = max(1, min(2, index))
         return "static", index
 
     def __set_cover_style_parts(self, variant: str, index: int):
-        safe_index = max(1, min(3, int(index)))
+        safe_index = max(1, min(2, int(index)))
         target_style = f"static_{safe_index}"
         self._cover_style = target_style
         self._cover_style_base = f"static_{safe_index}"
@@ -804,9 +802,6 @@ class WsEmbyCover(_PluginBase):
 
     def api_select_style_2(self):
         return self.__api_select_style(2)
-
-    def api_select_style_3(self):
-        return self.__api_select_style(3)
 
 
     def __set_page_tab(self, tab: str):
@@ -1312,10 +1307,6 @@ class WsEmbyCover(_PluginBase):
             {
                 "value": "static_2",
                 "src": self.__style_preview_src(2)
-            },
-            {
-                "value": "static_3",
-                "src": self.__style_preview_src(3)
             },
         ]
 
@@ -2034,7 +2025,7 @@ class WsEmbyCover(_PluginBase):
                         "content": [
                             {
                                 "component": "VTab",
-                                "props": {"value": "style-tab"},
+                                "props": {"value": "__removed__", "style": "display:none"},
                                 "content": [
                                     {
                                         "component": "VIcon",
@@ -2086,9 +2077,9 @@ class WsEmbyCover(_PluginBase):
                         "content": [
                             {
                                 "component": "VWindowItem",
-                                "props": {"value": "style-tab"},
+                                "props": {"value": "__removed__", "style": "display:none"},
                                 "content": [
-                                    {"component": "VCardText", "content": style_tab}
+                                    {"component": "VCardText", "content": []}
                                 ],
                             },
                             {
@@ -2136,7 +2127,7 @@ class WsEmbyCover(_PluginBase):
 #   - "#FF5722"  # 背景颜色（可选，必须加引号）
 #
 ''',
-            "tab": "style-tab",
+            "tab": "title-tab",
             "cover_style": "static_1",
             "cover_style_base": "static_1",
             "multi_1_blur": True,
@@ -2291,9 +2282,8 @@ class WsEmbyCover(_PluginBase):
         selected_style_map = {
             "static_1": 1,
             "static_2": 2,
-            "static_3": 3,
             "static_5": 2,
-            "static_6": 3,
+            "static_6": 2,
         }
         selected_index = selected_style_map.get((self._cover_style or "static_1").strip(), 1)
         style_preview_cards = self.__build_style_preview_cards(selected_index)
@@ -2504,14 +2494,13 @@ class WsEmbyCover(_PluginBase):
         styles = [
             {"name": "风格1", "index": 1, "src": self.__style_preview_src(1)},
             {"name": "风格2", "index": 2, "src": self.__style_preview_src(2)},
-            {"name": "风格3", "index": 3, "src": self.__style_preview_src(3)},
         ]
         cards: List[Dict[str, Any]] = []
         for style in styles:
             cards.append(
                 {
                     "component": "VCol",
-                    "props": {"cols": 12, "sm": 6, "md": 3},
+                    "props": {"cols": 12, "sm": 6, "md": 4},
                     "content": [
                         {
                             "component": "VCard",
@@ -2548,13 +2537,14 @@ class WsEmbyCover(_PluginBase):
             )
         return cards
 
+
     @staticmethod
     def __style_preview_src(index: int) -> str:
-        safe_index = max(1, min(3, int(index)))
+
+        safe_index = max(1, min(2, int(index)))
         preview_map = {
             1: "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/images/style_3.jpeg?v=20260407-130",
             2: "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/images/style_5_preview.jpg?v=20260407-248",
-            3: "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/images/style_5_preview.jpg?v=20260407-248",
         }
         return preview_map.get(safe_index, preview_map[1])
 
@@ -2839,7 +2829,7 @@ class WsEmbyCover(_PluginBase):
             cover_style = {
                 "static_1": "静态 1",
                 "static_2": "静态 2",
-                "static_3": "静态 3",
+                "legacy_static": "静态 2",
                 "static_4": "静态 4（全屏模糊）",
                 "static_5": "静态 5（横幅+海报）",
                 "animated_1": "卡片翻转动画",
@@ -3005,7 +2995,7 @@ class WsEmbyCover(_PluginBase):
 
         # 传递分辨率配置给图像生成函数
         if self._cover_style == 'static_1':
-            create_style_static_1 = self.__load_style_creator("style_static_1", "create_style_static_3")
+            create_style_static_1 = self.__load_style_creator("style_static_1", "create_style_static_1")
             safe_library_name = self.__sanitize_filename(library_name)
             if image_path:
                 library_dir = Path(self._covers_input) / safe_library_name
@@ -3054,22 +3044,22 @@ class WsEmbyCover(_PluginBase):
                 )
             else:
                 logger.warning(f"static_2: 图片目录准备失败 {library_dir}")
-        elif self._cover_style == 'static_3':
-            create_style_static_3 = self.__load_style_creator("style_static_3", "create_style_static_3")
+        elif False:
+            create_style_legacy = self.__load_style_creator("style_static_2", "create_style_static_5")
             safe_library_name = self.__sanitize_filename(library_name)
             cache_library_dir = Path(self._covers_path) / safe_library_name
             custom_library_dir = Path(self._covers_input) / safe_library_name if self._covers_input else None
-            numbered_posters = [cache_library_dir / f"{index}.jpg" for index in range(1, 7)]
+            numbered_posters = [cache_library_dir / f"{index}.jpg" for index in range(1, 11)]
             if all(path.exists() for path in numbered_posters):
                 library_dir = cache_library_dir
             elif custom_library_dir and custom_library_dir.exists():
                 library_dir = custom_library_dir
             else:
                 library_dir = cache_library_dir
-            logger.info(f"static_3: 准备图片目录 {library_dir}")
-            if self.prepare_library_images(library_dir, required_items=6):
-                logger.info("static_3: 图片目录准备完成，开始生成封面")
-                image_data = create_style_static_3(
+            logger.info(f"legacy_style: 准备图片目录 {library_dir}")
+            if self.prepare_library_images(library_dir, required_items=10):
+                logger.info("legacy_style: 图片目录准备完成，开始生成封面")
+                image_data = create_style_legacy(
                     image_path=image_path,
                     library_dir=library_dir,
                     title=title,
@@ -3082,7 +3072,7 @@ class WsEmbyCover(_PluginBase):
                     bg_color_config=bg_color_config,
                 )
             else:
-                logger.warning(f"static_3: 图片目录准备失败 {library_dir}")
+                logger.warning(f"legacy_style: 图片目录准备失败 {library_dir}")
         gc.collect()
         return image_data
     
@@ -3156,7 +3146,7 @@ class WsEmbyCover(_PluginBase):
             logger.info(f"媒体库 {service.name}：{library['Name']} 找到 {len(items)} 个有效项目")
             if self.__is_single_image_style():
                 return self.__update_single_image(service, library, title, items[0])
-            elif self._cover_style in ["static_2", "static_3"]:
+            elif self._cover_style == "static_2":
                 return self.__update_showcase_image(service, library, title, items[:target_items])
             else:
                 return self.__update_grid_image(service, library, title, items[:required_items])
@@ -3206,7 +3196,7 @@ class WsEmbyCover(_PluginBase):
         if len(valid_items) > 0:
             if self.__is_single_image_style():
                 return self.__update_single_image(service, library, title, valid_items[0])
-            elif self._cover_style in ["static_2", "static_3"]:
+            elif self._cover_style == "static_2":
                 return self.__update_showcase_image(service, library, title, valid_items[:target_items])
             else:
                 return self.__update_grid_image(service, library, title, valid_items[:required_items])
@@ -3258,7 +3248,7 @@ class WsEmbyCover(_PluginBase):
         if len(valid_items) > 0:
             if self.__is_single_image_style():
                 return self.__update_single_image(service, library, title, valid_items[0])
-            elif self._cover_style in ["static_2", "static_3"]:
+            elif self._cover_style == "static_2":
                 return self.__update_showcase_image(service, library, title, valid_items[:target_items])
             else:
                 return self.__update_grid_image(service, library, title, valid_items[:required_items])
@@ -3772,7 +3762,7 @@ class WsEmbyCover(_PluginBase):
                 tag = item.get("AlbumPrimaryImageTag")
                 return f'[HOST]emby/Items/{item_id}/Images/Primary?tag={tag}&api_key=[APIKEY]'
 
-        elif self._cover_style in ['static_2', 'static_3']:
+        elif self._cover_style == 'static_2':
             return self.__get_showcase_poster_url(item)
 
         elif False:
@@ -3880,7 +3870,7 @@ class WsEmbyCover(_PluginBase):
             elif item.get("AlbumPrimaryImageTag"):
                 item_id = item.get("AlbumId")
 
-        elif self._cover_style in ['static_2', 'static_3']:
+        elif self._cover_style == 'static_2':
             if item.get("Type") == "Episode" and item.get("SeriesId"):
                 item_id = item.get("SeriesId")
             else:
