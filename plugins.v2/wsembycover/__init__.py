@@ -13,12 +13,14 @@ import time
 import shutil
 import random
 import requests
+from io import BytesIO
 from pathlib import Path
 from urllib.parse import urlparse, quote, unquote
 from typing import Any, Dict, List, Optional, Tuple
 from collections import defaultdict
 import pytz
 import yaml
+from PIL import Image
 
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
@@ -48,7 +50,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.14"
+    plugin_version = "1.15"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -3011,9 +3013,9 @@ class WsEmbyCover(_PluginBase):
                 library_dir = Path(self._covers_input) / safe_library_name
             else:
                 library_dir = Path(self._covers_path) / safe_library_name
-            logger.info(f"static_1: ?????? {library_dir}")
+            logger.info(f"static_1: 准备图片目录 {library_dir}")
             if self.prepare_library_images(library_dir, required_items=9):
-                logger.info("static_1: ???????????????")
+                logger.info("static_1: 图片目录准备完成，开始生成封面")
                 image_data = create_style_static_1(
                     library_dir, title, font_path,
                     font_size=font_size,
@@ -3024,7 +3026,7 @@ class WsEmbyCover(_PluginBase):
                     resolution_config=self._resolution_config,
                     bg_color_config=bg_color_config)
             else:
-                logger.warning(f"static_1: ???????? {library_dir}")
+                logger.warning(f"static_1: 图片目录准备失败 {library_dir}")
         elif self._cover_style == 'static_2':
             create_style_static_2 = self.__load_style_creator("style_static_2", "create_style_static_5")
             safe_library_name = self.__sanitize_filename(library_name)
@@ -3037,9 +3039,9 @@ class WsEmbyCover(_PluginBase):
                 library_dir = custom_library_dir
             else:
                 library_dir = cache_library_dir
-            logger.info(f"static_2: ?????? {library_dir}")
+            logger.info(f"static_2: 准备图片目录 {library_dir}")
             if self.prepare_library_images(library_dir, required_items=5):
-                logger.info("static_2: ???????????????")
+                logger.info("static_2: 图片目录准备完成，开始生成封面")
                 image_data = create_style_static_2(
                     image_path=image_path,
                     library_dir=library_dir,
@@ -4078,20 +4080,67 @@ class WsEmbyCover(_PluginBase):
             logger.info(
                 f"准备上传封面: {library['Name']} 格式={content_type} 大小={len(image_bytes) / 1024:.1f}KB"
             )
-            
-            res = service.instance.post_data(
-                url=url,
-                data=image_bytes,
-                headers={
-                    "Content-Type": content_type
-                }
-            )
-            
+
+            def _post_cover(data_bytes, data_content_type):
+                return service.instance.post_data(
+                    url=url,
+                    data=data_bytes,
+                    headers={"Content-Type": data_content_type},
+                )
+
+            res = _post_cover(image_bytes, content_type)
+            if not res:
+                logger.warning(f"设置「{library['Name']}」封面首次上传无响应，准备重试")
+                time.sleep(1)
+                res = _post_cover(image_bytes, content_type)
+
             if res and res.status_code in [200, 204]:
                 return True
+
+            # PNG 上传失败时，自动回退 JPEG 再试一次，提升兼容性
+            if content_type == "image/png":
+                try:
+                    with Image.open(BytesIO(image_bytes)).convert("RGB") as img:
+                        jpeg_buffer = BytesIO()
+                        img.save(jpeg_buffer, format="JPEG", quality=90, optimize=True)
+                        jpeg_bytes = jpeg_buffer.getvalue()
+                    logger.warning(
+                        f"设置「{library['Name']}」PNG 上传失败，回退 JPEG 重试，大小={len(jpeg_bytes) / 1024:.1f}KB"
+                    )
+                    res_jpeg = _post_cover(jpeg_bytes, "image/jpeg")
+                    if res_jpeg and res_jpeg.status_code in [200, 204]:
+                        return True
+                    if res_jpeg is not None:
+                        err_text = ""
+                        try:
+                            err_text = (res_jpeg.text or "").strip()
+                        except Exception:
+                            err_text = ""
+                        if err_text:
+                            logger.error(
+                                f"设置「{library['Name']}」封面失败，错误码：{res_jpeg.status_code}，响应：{err_text[:300]}"
+                            )
+                        else:
+                            logger.error(f"设置「{library['Name']}」封面失败，错误码：{res_jpeg.status_code}")
+                        return False
+                except Exception as jpeg_err:
+                    logger.error(f"设置「{library['Name']}」PNG 回退 JPEG 失败：{jpeg_err}")
+
+            if res is not None:
+                err_text = ""
+                try:
+                    err_text = (res.text or "").strip()
+                except Exception:
+                    err_text = ""
+                if err_text:
+                    logger.error(f"设置「{library['Name']}」封面失败，错误码：{res.status_code}，响应：{err_text[:300]}")
+                else:
+                    logger.error(f"设置「{library['Name']}」封面失败，错误码：{res.status_code}")
             else:
-                logger.error(f"设置「{library['Name']}」封面失败，错误码：{res.status_code if res else 'No response'}")
-                return False
+                logger.error(
+                    f"设置「{library['Name']}」封面失败，错误码：No response（可能是反向代理超时、连接重置或媒体服务器拒绝连接）"
+                )
+            return False
         except Exception as err:
             logger.error(f"设置「{library['Name']}」封面失败：{str(err)}")
         return False
