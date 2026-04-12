@@ -28,7 +28,6 @@ from app.chain.mediaserver import MediaServerChain
 from app.core.config import settings
 from app.core.event import eventmanager, Event
 from app.core.meta import MetaBase
-from app.helper.mediaserver import MediaServerHelper
 from app.log import logger
 from app.plugins import _PluginBase
 from app.schemas import MediaInfo, TransferInfo
@@ -38,6 +37,36 @@ from app.utils.http import RequestUtils
 from app.utils.url import UrlUtils
 
 sys.dont_write_bytecode = True
+
+
+class _ManualServerInstance:
+    def __init__(self, host: str, api_key: str):
+        self.host = (host or "").strip().rstrip("/") + "/"
+        self.api_key = (api_key or "").strip()
+
+    def is_inactive(self):
+        return False
+
+    def _replace_url(self, url: str) -> str:
+        real_url = (url or "").replace("[HOST]", self.host).replace("[APIKEY]", self.api_key)
+        if real_url.startswith("emby/"):
+            real_url = self.host + real_url
+        return real_url
+
+    def get_data(self, url: str):
+        real_url = self._replace_url(url)
+        return requests.get(real_url, timeout=20, verify=False)
+
+    def post_data(self, url: str, data=None, headers=None):
+        real_url = self._replace_url(url)
+        return requests.post(real_url, data=data, headers=headers, timeout=30, verify=False)
+
+
+class _ManualService:
+    def __init__(self, name: str, host: str, api_key: str):
+        self.name = name
+        self.type = "emby"
+        self.instance = _ManualServerInstance(host=host, api_key=api_key)
 
 
 class WsEmbyCover(_PluginBase):
@@ -74,6 +103,9 @@ class WsEmbyCover(_PluginBase):
     _delay = 60
     _servers = None
     _selected_servers = []
+    _servers_config = ''
+    _server_style_map = {}
+    _manual_servers = []
     _all_libraries = []
     _include_libraries = []
     _sort_by = 'Random'
@@ -125,7 +157,6 @@ class WsEmbyCover(_PluginBase):
 
     def init_plugin(self, config: dict = None):
         self.mschain = MediaServerChain()
-        self.mediaserver_helper = MediaServerHelper()   
         data_path = self.get_data_path()
         (data_path / 'fonts').mkdir(parents=True, exist_ok=True)
         (data_path / 'input').mkdir(parents=True, exist_ok=True)
@@ -137,7 +168,9 @@ class WsEmbyCover(_PluginBase):
             self._transfer_monitor = config.get("transfer_monitor")
             self._cron = config.get("cron")
             self._delay = config.get("delay")
-            self._selected_servers = config.get("selected_servers")
+            self._selected_servers = []
+            self._servers_config = config.get("servers_config", "")
+            self._manual_servers = self.__parse_manual_servers_from_config(config)
             self._include_libraries = config.get("include_libraries")
             self._sort_by = config.get("sort_by")
             self._covers_output = config.get("covers_output")
@@ -224,18 +257,22 @@ class WsEmbyCover(_PluginBase):
             logger.warning(f"分辨率配置初始化失败，使用默认配置: {e}")
             self._resolution_config = self.__new_resolution_config("480p")
 
-        if self._selected_servers:
-            self._servers = self.mediaserver_helper.get_services(
-                name_filters=self._selected_servers
-            )
-            self._all_libraries = []
-            for server, service in self._servers.items():
-                if not service.instance.is_inactive():
-                    self._all_libraries.extend(self.__get_all_libraries(server, service))
-                else:
-                    logger.info(f"媒体服务器 {server} 未连接")
-        else:
-            logger.info("未选择媒体服务器")
+        self._servers = {}
+        self._server_style_map = {}
+        self._all_libraries = []
+        parsed_servers = self._manual_servers or self.__parse_servers_config(self._servers_config)
+        for server_item in parsed_servers:
+            server_name = server_item.get("name")
+            host = server_item.get("host")
+            api_key = server_item.get("api_key")
+            style = server_item.get("style", "static_1")
+            service = _ManualService(name=server_name, host=host, api_key=api_key)
+            self._servers[server_name] = service
+            self._server_style_map[server_name] = style if style in {"static_1", "static_2"} else "static_1"
+            self._all_libraries.extend(self.__get_all_libraries(server_name, service))
+
+        if not self._servers:
+            logger.info("未配置可用媒体服务器")
         
         # 停止现有任务
         self.stop_service()
@@ -333,6 +370,69 @@ class WsEmbyCover(_PluginBase):
     def __validate_font_file(self, font_path: Path):
         return self._validate_font_file(font_path)
 
+    def __parse_servers_config(self, config_text: str) -> List[Dict[str, str]]:
+        if not config_text or not str(config_text).strip():
+            return []
+        try:
+            raw = yaml.safe_load(config_text) or []
+        except Exception as e:
+            logger.error(f"服务器配置解析失败: {e}")
+            return []
+
+        if isinstance(raw, dict):
+            raw = [raw]
+        if not isinstance(raw, list):
+            logger.error("服务器配置格式错误，应为列表")
+            return []
+
+        items: List[Dict[str, str]] = []
+        for one in raw:
+            if not isinstance(one, dict):
+                continue
+            name = str(one.get("name", "")).strip()
+            host = str(one.get("host", "")).strip()
+            api_key = str(one.get("api_key", "")).strip()
+            style = str(one.get("style", "static_1")).strip() or "static_1"
+            if not name or not host or not api_key:
+                continue
+            if not host.startswith(("http://", "https://")):
+                host = f"http://{host}"
+            items.append({
+                "name": name,
+                "host": host.rstrip("/") + "/",
+                "api_key": api_key,
+                "style": "static_2" if style == "static_2" else "static_1",
+            })
+        return items
+
+    def __parse_manual_servers_from_config(self, config: dict) -> List[Dict[str, str]]:
+        items: List[Dict[str, str]] = []
+        cfg = config or {}
+        for idx in range(1, 6):
+            name = str(cfg.get(f"server_{idx}_name", "")).strip()
+            host = str(cfg.get(f"server_{idx}_host", "")).strip()
+            api_key = str(cfg.get(f"server_{idx}_api_key", "")).strip()
+            style = str(cfg.get(f"server_{idx}_style", "static_1")).strip() or "static_1"
+            if not name or not host or not api_key:
+                continue
+            if not host.startswith(("http://", "https://")):
+                host = f"http://{host}"
+            items.append({
+                "name": name,
+                "host": host.rstrip("/") + "/",
+                "api_key": api_key,
+                "style": "static_2" if style == "static_2" else "static_1",
+            })
+        return items
+
+    def __manual_server_slot_value(self, idx: int, key: str, default: str = "") -> str:
+        if not self._manual_servers:
+            return default
+        pos = idx - 1
+        if pos < 0 or pos >= len(self._manual_servers):
+            return default
+        return str(self._manual_servers[pos].get(key, default))
+
     def __compose_cover_style(self, base_style: str, variant: str) -> str:
         mapping = {
             "static_1": "static_1",
@@ -363,7 +463,7 @@ class WsEmbyCover(_PluginBase):
         if self._cover_style == "static_1":
             return 9
         if self._cover_style == "static_2":
-            return 5
+            return 6
         return 5
 
     def __get_fetch_target_count(self) -> int:
@@ -383,7 +483,28 @@ class WsEmbyCover(_PluginBase):
             "transfer_monitor": self._transfer_monitor,
             "cron": self._cron,
             "delay": self._delay,
-            "selected_servers": self._selected_servers,
+            "selected_servers": [],
+            "servers_config": self._servers_config,
+            "server_1_name": self.__manual_server_slot_value(1, "name", ""),
+            "server_1_host": self.__manual_server_slot_value(1, "host", ""),
+            "server_1_api_key": self.__manual_server_slot_value(1, "api_key", ""),
+            "server_1_style": self.__manual_server_slot_value(1, "style", "static_1"),
+            "server_2_name": self.__manual_server_slot_value(2, "name", ""),
+            "server_2_host": self.__manual_server_slot_value(2, "host", ""),
+            "server_2_api_key": self.__manual_server_slot_value(2, "api_key", ""),
+            "server_2_style": self.__manual_server_slot_value(2, "style", "static_1"),
+            "server_3_name": self.__manual_server_slot_value(3, "name", ""),
+            "server_3_host": self.__manual_server_slot_value(3, "host", ""),
+            "server_3_api_key": self.__manual_server_slot_value(3, "api_key", ""),
+            "server_3_style": self.__manual_server_slot_value(3, "style", "static_1"),
+            "server_4_name": self.__manual_server_slot_value(4, "name", ""),
+            "server_4_host": self.__manual_server_slot_value(4, "host", ""),
+            "server_4_api_key": self.__manual_server_slot_value(4, "api_key", ""),
+            "server_4_style": self.__manual_server_slot_value(4, "style", "static_1"),
+            "server_5_name": self.__manual_server_slot_value(5, "name", ""),
+            "server_5_host": self.__manual_server_slot_value(5, "host", ""),
+            "server_5_api_key": self.__manual_server_slot_value(5, "api_key", ""),
+            "server_5_style": self.__manual_server_slot_value(5, "style", "static_1"),
             "include_libraries": self._include_libraries,
             "all_libraries": self._all_libraries,
             "sort_by": self._sort_by,
@@ -718,12 +839,9 @@ class WsEmbyCover(_PluginBase):
             if not self._enabled:
                 logger.warning("【WsEmbyCover】立即生成失败：插件未启用，请先在设置页启用插件并保存")
                 return {"code": 1, "msg": "插件未启用，请先在设置页启用插件并保存"}
-            if not self._selected_servers:
-                logger.warning("【WsEmbyCover】立即生成失败：未勾选媒体服务器，请先在设置页勾选服务器并保存")
-                return {"code": 1, "msg": "未勾选媒体服务器，请先在设置页勾选服务器并保存"}
             if not self._servers:
-                logger.warning("【WsEmbyCover】立即生成失败：服务器连接信息为空，请检查设置并保存后重试")
-                return {"code": 1, "msg": "服务器连接信息为空，请检查设置并保存后重试"}
+                logger.warning("【WsEmbyCover】立即生成失败：未配置媒体服务器，请先在设置页填写并保存")
+                return {"code": 1, "msg": "未配置媒体服务器，请先在设置页填写并保存"}
 
             target_style = (style or "").strip()
             allowed_styles = {
@@ -1449,6 +1567,45 @@ class WsEmbyCover(_PluginBase):
                                         'content': [
                                             {
                                                 'component': 'VCol',
+                                                'props': {'cols': 12},
+                                                'content': [
+                                                    {
+                                                        'component': 'VAlert',
+                                                        'props': {
+                                                            'type': 'info',
+                                                            'variant': 'tonal',
+                                                            'text': '服务器可视化配置：填写名称、地址、APIKey，并为每台服务器单独选择 style1/style2（默认 style1）。'
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_1_name', 'label': '服务器1 名称'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_1_host', 'label': '服务器1 地址'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_1_api_key', 'label': '服务器1 API Key'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VSelect', 'props': {'model': 'server_1_style', 'label': '服务器1 风格', 'items': [{'title': 'style1', 'value': 'static_1'}, {'title': 'style2', 'value': 'static_2'}]}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_2_name', 'label': '服务器2 名称'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_2_host', 'label': '服务器2 地址'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_2_api_key', 'label': '服务器2 API Key'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VSelect', 'props': {'model': 'server_2_style', 'label': '服务器2 风格', 'items': [{'title': 'style1', 'value': 'static_1'}, {'title': 'style2', 'value': 'static_2'}]}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_3_name', 'label': '服务器3 名称'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_3_host', 'label': '服务器3 地址'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_3_api_key', 'label': '服务器3 API Key'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VSelect', 'props': {'model': 'server_3_style', 'label': '服务器3 风格', 'items': [{'title': 'style1', 'value': 'static_1'}, {'title': 'style2', 'value': 'static_2'}]}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_4_name', 'label': '服务器4 名称'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_4_host', 'label': '服务器4 地址'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_4_api_key', 'label': '服务器4 API Key'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VSelect', 'props': {'model': 'server_4_style', 'label': '服务器4 风格', 'items': [{'title': 'style1', 'value': 'static_1'}, {'title': 'style2', 'value': 'static_2'}]}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_5_name', 'label': '服务器5 名称'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_5_host', 'label': '服务器5 地址'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_5_api_key', 'label': '服务器5 API Key'}}]},
+                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VSelect', 'props': {'model': 'server_5_style', 'label': '服务器5 风格', 'items': [{'title': 'style1', 'value': 'static_1'}, {'title': 'style2', 'value': 'static_2'}]}}]}
+                                        ]
+                                    },
+                                    {
+                                        'component': 'VRow',
+                                        'content': [
+                                            {
+                                                'component': 'VCol',
                                                 'props': {'cols': 12, 'md': 4},
                                                 'content': [
                                                     {
@@ -1921,17 +2078,15 @@ class WsEmbyCover(_PluginBase):
                                                 },
                                                 'content': [
                                                     {
-                                                        'component': 'VSelect',
+                                                        'component': 'VTextarea',
                                                         'props': {
-                                                            'multiple': True,
-                                                            'chips': True,
-                                                            'clearable': True,
-                                                            'model': 'selected_servers',
-                                                            'label': '媒体服务器',
-                                                            'items': [{"title": config.name, "value": config.name}
-                                                                    for config in self.mediaserver_helper.get_configs().values()
-                                                                    if config.type in ("emby", "jellyfin")
-                                                                    ]
+                                                            'model': 'servers_config',
+                                                            'label': '媒体服务器配置（手动输入）',
+                                                            'rows': 7,
+                                                            'autoGrow': True,
+                                                            'hint': 'YAML 列表，每台服务器填 name/host/api_key/style；style 仅支持 static_1 或 static_2（默认 static_1）',
+                                                            'persistentHint': True,
+                                                            'placeholder': '- name: emby_1\\n  host: http://127.0.0.1:8096\\n  api_key: xxxxx\\n  style: static_1\\n- name: emby_2\\n  host: http://192.168.1.10:8096\\n  api_key: yyyyy\\n  style: static_2'
                                                         }
                                                     }
                                                 ]
@@ -2110,6 +2265,27 @@ class WsEmbyCover(_PluginBase):
             "cron": "",
             "delay": 60,
             "selected_servers": [],
+            "servers_config": "",
+            "server_1_name": self.__manual_server_slot_value(1, "name", ""),
+            "server_1_host": self.__manual_server_slot_value(1, "host", ""),
+            "server_1_api_key": self.__manual_server_slot_value(1, "api_key", ""),
+            "server_1_style": self.__manual_server_slot_value(1, "style", "static_1"),
+            "server_2_name": self.__manual_server_slot_value(2, "name", ""),
+            "server_2_host": self.__manual_server_slot_value(2, "host", ""),
+            "server_2_api_key": self.__manual_server_slot_value(2, "api_key", ""),
+            "server_2_style": self.__manual_server_slot_value(2, "style", "static_1"),
+            "server_3_name": self.__manual_server_slot_value(3, "name", ""),
+            "server_3_host": self.__manual_server_slot_value(3, "host", ""),
+            "server_3_api_key": self.__manual_server_slot_value(3, "api_key", ""),
+            "server_3_style": self.__manual_server_slot_value(3, "style", "static_1"),
+            "server_4_name": self.__manual_server_slot_value(4, "name", ""),
+            "server_4_host": self.__manual_server_slot_value(4, "host", ""),
+            "server_4_api_key": self.__manual_server_slot_value(4, "api_key", ""),
+            "server_4_style": self.__manual_server_slot_value(4, "style", "static_1"),
+            "server_5_name": self.__manual_server_slot_value(5, "name", ""),
+            "server_5_host": self.__manual_server_slot_value(5, "host", ""),
+            "server_5_api_key": self.__manual_server_slot_value(5, "api_key", ""),
+            "server_5_style": self.__manual_server_slot_value(5, "style", "static_1"),
             "include_libraries": [],
             "sort_by": "Random",
             "title_config": '''# 配置封面标题（按媒体库名称对应）
@@ -2167,10 +2343,8 @@ class WsEmbyCover(_PluginBase):
         setup_warnings: List[str] = []
         if not self._enabled:
             setup_warnings.append("插件未启用，请先在设置页启用插件并保存。")
-        if not self._selected_servers:
-            setup_warnings.append("未勾选媒体服务器，请先在设置页勾选服务器并保存。")
-        elif not self._servers:
-            setup_warnings.append("服务器配置尚未生效，请在设置页保存后重试。")
+        if not self._servers:
+            setup_warnings.append("未配置媒体服务器，请先在设置页填写服务器名称、地址、APIKey并保存。")
 
         # 永远默认首先访问封面生成页，不记忆用户的最后一次Tab选择，以提升开启速度
         page_tab = "generate-tab"
@@ -2823,7 +2997,9 @@ class WsEmbyCover(_PluginBase):
         logger.info("开始更新媒体库封面 ...")
         # 开始前确保停止信号已清除
         self._event.clear()
+        global_style = self._cover_style
         for server, service in self._servers.items():
+            self._cover_style = self._server_style_map.get(server, "static_1")
             # 扫描所有媒体库
             logger.info(f"当前服务器 {server}")
             cover_style = {
@@ -2863,6 +3039,7 @@ class WsEmbyCover(_PluginBase):
                 else:
                     logger.warning(f"媒体库 {server}：{library['Name']} 封面更新失败")
                     fail_count += 1
+        self._cover_style = global_style
         tips = f"媒体库封面更新任务结束，成功 {success_count} 个，失败 {fail_count} 个"
         logger.info(tips)
         return tips
@@ -3028,7 +3205,7 @@ class WsEmbyCover(_PluginBase):
             else:
                 library_dir = cache_library_dir
             logger.info(f"static_2: 准备图片目录 {library_dir}")
-            if self.prepare_library_images(library_dir, required_items=5):
+            if self.prepare_library_images(library_dir, required_items=6):
                 logger.info("static_2: 图片目录准备完成，开始生成封面")
                 image_data = create_style_static_2(
                     image_path=image_path,
