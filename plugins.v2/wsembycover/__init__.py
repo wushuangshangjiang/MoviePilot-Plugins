@@ -108,6 +108,7 @@ class WsEmbyCover(_PluginBase):
     _manual_servers = []
     _server_profiles = {}
     _active_server_name = ""
+    _active_server_edit_target = ""
     _active_server_host = ""
     _active_server_api_key = ""
     _active_server_style = "static_1"
@@ -250,6 +251,7 @@ class WsEmbyCover(_PluginBase):
             )
             self._page_tab = config.get("page_tab", "generate-tab")
             self._active_server_name = str(config.get("active_server_name", "") or "").strip()
+            self._active_server_edit_target = str(config.get("active_server_edit_target", "") or "").strip()
             self._active_server_host = str(config.get("active_server_host", "") or "").strip()
             self._active_server_api_key = str(config.get("active_server_api_key", "") or "").strip()
             self._active_server_style = str(config.get("active_server_style", "static_1") or "static_1").strip() or "static_1"
@@ -656,6 +658,7 @@ class WsEmbyCover(_PluginBase):
     def __upsert_active_server_profile(self, config: dict) -> bool:
         cfg = config or {}
         selected_name = str(cfg.get("active_server_name", self._active_server_name or "")).strip()
+        edit_target = str(cfg.get("active_server_edit_target", self._active_server_name or "")).strip()
         host = str(cfg.get("active_server_host", "")).strip()
         api_key = str(cfg.get("active_server_api_key", "")).strip()
         style = str(cfg.get("active_server_style", self._active_server_style or "static_1")).strip() or "static_1"
@@ -663,10 +666,29 @@ class WsEmbyCover(_PluginBase):
             return False
         if selected_name != "__new__" and selected_name not in self._server_profiles:
             return False
+        dirty = False
+        if edit_target and edit_target in self._server_profiles and host and api_key:
+            old_edit_profile = self._server_profiles.get(edit_target)
+            edit_style = style if selected_name in {edit_target, "__new__"} else str(old_edit_profile.get("style", "static_1"))
+            new_edit_profile = self.__profile_from_runtime(
+                name=edit_target,
+                host=host,
+                api_key=api_key,
+                style=edit_style,
+            )
+            if old_edit_profile != new_edit_profile:
+                self._server_profiles[edit_target] = new_edit_profile
+                dirty = True
+        if selected_name != "__new__":
+            if self._active_server_name != selected_name:
+                dirty = True
+            self._active_server_name = selected_name
+            self.__sync_active_server_editor()
+            return dirty
         if not host or not api_key:
             self._active_server_name = selected_name
             self._active_server_style = "static_2" if style == "static_2" else "static_1"
-            return False
+            return dirty
         target_name = selected_name
         if selected_name == "__new__":
             fetched_name = self.__fetch_emby_server_name(host=host, api_key=api_key) or "Emby"
@@ -683,7 +705,7 @@ class WsEmbyCover(_PluginBase):
         self._active_server_host = profile.get("host", "")
         self._active_server_api_key = profile.get("api_key", "")
         self._active_server_style = profile.get("style", "static_1")
-        return old_profile != profile
+        return dirty or (old_profile != profile)
 
     def __sync_active_server_editor(self):
         if self._active_server_name == "__new__":
@@ -703,6 +725,7 @@ class WsEmbyCover(_PluginBase):
         self._active_server_host = str(profile.get("host", "")).strip()
         self._active_server_api_key = str(profile.get("api_key", "")).strip()
         self._active_server_style = "static_2" if str(profile.get("style", "static_1")) == "static_2" else "static_1"
+        self._active_server_edit_target = self._active_server_name
         self.__apply_server_profile_values(profile)
 
     def __apply_server_profile(self, server_name: str):
@@ -766,6 +789,7 @@ class WsEmbyCover(_PluginBase):
             "servers_config": self._servers_config,
             "server_profiles": self._server_profiles,
             "active_server_name": self._active_server_name,
+            "active_server_edit_target": self._active_server_name,
             "active_server_host": self._active_server_host,
             "active_server_api_key": self._active_server_api_key,
             "active_server_style": self._active_server_style,
@@ -2299,6 +2323,22 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
+                                                    'style': 'display:none;'
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VTextField',
+                                                        'props': {
+                                                            'model': 'active_server_edit_target',
+                                                            'readonly': True
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
                                                     'md': 4
                                                 },
                                                 'content': [
@@ -2341,6 +2381,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
+                                                    'md': 6
                                                 },
                                                 'content': [
                                                     {
@@ -2349,6 +2390,29 @@ class WsEmbyCover(_PluginBase):
                                                             'model': 'cron',
                                                             'label': '定时更新封面',
                                                             'placeholder': '5位cron表达式'
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                    'md': 6
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VSelect',
+                                                        'props': {
+                                                            'chips': False,
+                                                            'multiple': False,
+                                                            'model': 'sort_by',
+                                                            'label': '封面来源排序，默认随机',
+                                                            'items': [
+                                                                {"title": "随机", "value": "Random"},
+                                                                {"title": "最新入库", "value": "DateCreated"},
+                                                                {"title": "最新发行", "value": "PremiereDate"}
+                                                            ]
                                                         }
                                                     }
                                                 ]
@@ -2396,29 +2460,6 @@ class WsEmbyCover(_PluginBase):
                                     {
                                         'component': 'VRow',
                                         'content': [
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
-                                                    'md': 12
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VSelect',
-                                                        'props': {
-                                                            'chips': False,
-                                                            'multiple': False,
-                                                            'model': 'sort_by',
-                                                            'label': '封面来源排序，默认随机',
-                                                            'items': [
-                                                                {"title": "随机", "value": "Random"},
-                                                                {"title": "最新入库", "value": "DateCreated"},
-                                                                {"title": "最新发行", "value": "PremiereDate"}
-                                                            ]
-                                                        }
-                                                    }
-                                                ]
-                                            },
                                         ]
                                     }
                                     
@@ -2526,6 +2567,7 @@ class WsEmbyCover(_PluginBase):
             "servers_config": self._servers_config or "",
             "server_profiles": self._server_profiles,
             "active_server_name": self._active_server_name or "__new__",
+            "active_server_edit_target": self._active_server_edit_target or self._active_server_name or "",
             "active_server_host": self._active_server_host,
             "active_server_api_key": self._active_server_api_key,
             "active_server_style": self._active_server_style or "static_1",
