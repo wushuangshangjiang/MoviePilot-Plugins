@@ -177,7 +177,7 @@ class WsEmbyCover(_PluginBase):
             self._servers_config = config.get("servers_config", "")
             self._manual_servers = self.__parse_manual_servers_from_config(config)
             self._server_profiles = self.__parse_server_profiles_from_config(config)
-            self._include_libraries = config.get("include_libraries")
+            self._include_libraries = []
             self._sort_by = config.get("sort_by")
             self._covers_output = config.get("covers_output")
             self._covers_input = config.get("covers_input")
@@ -270,9 +270,12 @@ class WsEmbyCover(_PluginBase):
         self._servers = {}
         self._server_style_map = {}
         self._all_libraries = []
+        profile_dirty = False
         if not self._server_profiles:
             self._server_profiles = self.__build_server_profiles_from_legacy(config or {})
-        self.__upsert_active_server_profile(config or {})
+            profile_dirty = bool(self._server_profiles)
+        if self.__upsert_active_server_profile(config or {}):
+            profile_dirty = True
         self._manual_servers = self.__profiles_to_manual_servers()
         self.__sync_active_server_editor()
         parsed_servers = self._manual_servers or self.__parse_servers_config(self._servers_config)
@@ -285,6 +288,8 @@ class WsEmbyCover(_PluginBase):
             self._servers[server_name] = service
             self._server_style_map[server_name] = style if style in {"static_1", "static_2"} else "static_1"
             self._all_libraries.extend(self.__get_all_libraries(server_name, service))
+        if profile_dirty:
+            self.__update_config()
 
         if not self._servers:
             logger.info("未配置可用媒体服务器")
@@ -648,24 +653,25 @@ class WsEmbyCover(_PluginBase):
             idx += 1
         return f"{raw}_{idx}"
 
-    def __upsert_active_server_profile(self, config: dict):
+    def __upsert_active_server_profile(self, config: dict) -> bool:
         cfg = config or {}
         selected_name = str(cfg.get("active_server_name", self._active_server_name or "")).strip()
         host = str(cfg.get("active_server_host", "")).strip()
         api_key = str(cfg.get("active_server_api_key", "")).strip()
         style = str(cfg.get("active_server_style", self._active_server_style or "static_1")).strip() or "static_1"
         if not selected_name:
-            return
+            return False
         if selected_name != "__new__" and selected_name not in self._server_profiles:
-            return
+            return False
         if not host or not api_key:
             self._active_server_name = selected_name
             self._active_server_style = "static_2" if style == "static_2" else "static_1"
-            return
+            return False
         target_name = selected_name
         if selected_name == "__new__":
             fetched_name = self.__fetch_emby_server_name(host=host, api_key=api_key) or "Emby"
             target_name = self.__make_unique_server_name(fetched_name)
+        old_profile = self._server_profiles.get(target_name)
         profile = self.__profile_from_runtime(
             name=target_name,
             host=host,
@@ -677,6 +683,7 @@ class WsEmbyCover(_PluginBase):
         self._active_server_host = profile.get("host", "")
         self._active_server_api_key = profile.get("api_key", "")
         self._active_server_style = profile.get("style", "static_1")
+        return old_profile != profile
 
     def __sync_active_server_editor(self):
         if self._active_server_name == "__new__":
@@ -2393,7 +2400,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 6
+                                                    'md': 12
                                                 },
                                                 'content': [
                                                     {
@@ -2408,31 +2415,6 @@ class WsEmbyCover(_PluginBase):
                                                                 {"title": "最新入库", "value": "DateCreated"},
                                                                 {"title": "最新发行", "value": "PremiereDate"}
                                                             ]
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
-                                                    'md': 6
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VSelect',
-                                                        'props': {
-                                                            'multiple': True,
-                                                            'chips': True,
-                                                            'clearable': True,
-                                                            'model': 'include_libraries',
-                                                            'label': '更新媒体库',
-                                                            'items': [
-                                                                {"title": config['name'], "value": config['value']}
-                                                                    for config in self._all_libraries
-                                                            ],
-                                                            'hint': '默认更新全部，或只更新勾选的媒体库',
-                                                            'persistentHint': True
                                                         }
                                                     }
                                                 ]
@@ -3077,9 +3059,6 @@ class WsEmbyCover(_PluginBase):
             library_id = library.get("Id")
         else:
             library_id = library.get("ItemId")
-        if self._include_libraries and f"{server}-{library_id}" not in self._include_libraries:
-            logger.info(f"{server}：{library['Name']} 不在列表中，跳过更新封面")
-            return
 
         update_key = (server, item_id)
         if update_key in self._current_updating_items:
@@ -3168,9 +3147,6 @@ class WsEmbyCover(_PluginBase):
                     library_id = library.get("Id")
                 else:
                     library_id = library.get("ItemId")
-                if self._include_libraries and f"{server}-{library_id}" not in self._include_libraries:
-                    logger.info(f"{server}：{library['Name']} 不在列表中，跳过更新封面")
-                    continue
                 if self.__update_library(service, library):
                     logger.info(f"媒体库 {server}：{library['Name']} 封面更新成功")
                     success_count += 1
