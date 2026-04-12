@@ -1703,6 +1703,8 @@ class WsEmbyCover(_PluginBase):
                 "src": self.__style_preview_src(2)
             },
         ]
+        server_profile_items = [{"title": name, "value": name} for name in sorted(self._server_profiles.keys())]
+        server_profile_items.append({"title": "新增服务器", "value": "__new__"})
         profile_defaults: Dict[str, Any] = {}
         server_profile_panels: List[Dict[str, Any]] = []
         profile_entries = list(sorted(self._server_profiles.items(), key=lambda item: item[0]))
@@ -2384,17 +2386,70 @@ class WsEmbyCover(_PluginBase):
                                             {
                                                 'component': 'VCol',
                                                 'props': {
-                                                    'cols': 12
+                                                    'cols': 12,
+                                                    'md': 4
                                                 },
                                                 'content': [
                                                     {
-                                                        'component': 'VExpansionPanels',
+                                                        'component': 'VSelect',
                                                         'props': {
-                                                            'multiple': True,
-                                                            'class': 'mt-1'
+                                                            'model': 'active_server_name',
+                                                            'label': '媒体服务器',
+                                                            'items': server_profile_items,
+                                                            'hint': '下拉选择服务器，或选择“新增服务器”后填写地址与 API Key',
+                                                            'persistentHint': True,
                                                         }
-                                                        ,
-                                                        'content': server_profile_panels
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                    'style': 'display:none;'
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VTextField',
+                                                        'props': {
+                                                            'model': 'active_server_edit_target',
+                                                            'readonly': True
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                    'md': 4
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VTextField',
+                                                        'props': {
+                                                            'model': 'active_server_host',
+                                                            'label': '当前服务器地址',
+                                                            'placeholder': 'http://127.0.0.1:8096',
+                                                            'persistentHint': True,
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                    'md': 4
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VTextField',
+                                                        'props': {
+                                                            'model': 'active_server_api_key',
+                                                            'label': '当前服务器 API Key',
+                                                            'persistentHint': True
+                                                        }
                                                     }
                                                 ]
                                             },
@@ -2474,7 +2529,7 @@ class WsEmbyCover(_PluginBase):
                                                         'props': {
                                                             'type': 'info',
                                                             'variant': 'tonal',
-                                                            'text': '服务器参数在上方各自独立编辑'
+                                                            'text': '当前选中的服务器参数可编辑'
                                                         }
                                                     }
                                                 ]
@@ -2493,8 +2548,27 @@ class WsEmbyCover(_PluginBase):
                                                         'props': {
                                                             'type': 'info',
                                                             'variant': 'tonal',
-                                                            'text': '每个服务器的风格已在对应服务器卡片内独立设置'
+                                                            'text': '服务器风格预览（当前服务器独立）'
                                                         }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {'cols': 12},
+                                                'content': [
+                                                    {
+                                                        'component': 'VRadioGroup',
+                                                        'props': {
+                                                            'model': 'active_server_style',
+                                                            'inline': True
+                                                        },
+                                                        'content': [
+                                                            {
+                                                                'component': 'VRow',
+                                                                'content': preview_style_content
+                                                            }
+                                                        ]
                                                     }
                                                 ]
                                             },
