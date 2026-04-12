@@ -48,7 +48,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.16"
+    plugin_version = "1.17"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -4083,7 +4083,7 @@ class WsEmbyCover(_PluginBase):
                 return service.instance.post_data(
                     url=url,
                     data=data_text,
-                    headers={"Content-Type": "text/plain; charset=utf-8"},
+                    headers={"Content-Type": content_type},
                 )
 
             res = _post_cover(image_base64)
