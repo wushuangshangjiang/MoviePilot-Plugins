@@ -489,6 +489,9 @@ class WsEmbyCover(_PluginBase):
             "sort_by": self._sort_by or "Random",
             "covers_input": self._covers_input or "",
             "covers_output": self._covers_output or "",
+            "save_recent_covers": bool(self._save_recent_covers),
+            "covers_history_limit_per_library": self._covers_history_limit_per_library,
+            "covers_page_history_limit": self._covers_page_history_limit,
             "use_primary": bool(self._use_primary),
             "multi_1_blur": bool(self._multi_1_blur),
             "resolution": self._resolution or "480p",
@@ -530,6 +533,7 @@ class WsEmbyCover(_PluginBase):
         }
         for key in [
             "title_config", "sort_by", "covers_input", "covers_output", "use_primary", "multi_1_blur",
+            "save_recent_covers", "covers_history_limit_per_library", "covers_page_history_limit",
             "resolution", "custom_width", "custom_height", "bg_color_mode", "custom_bg_color",
             "zh_font_preset", "en_font_preset", "zh_font_custom", "en_font_custom",
             "zh_font_size", "en_font_size", "blur_size", "color_ratio", "title_scale",
@@ -593,6 +597,15 @@ class WsEmbyCover(_PluginBase):
         self._sort_by = profile.get("sort_by") or "Random"
         self._covers_input = profile.get("covers_input") or ""
         self._covers_output = profile.get("covers_output") or ""
+        self._save_recent_covers = bool(profile.get("save_recent_covers", self._save_recent_covers))
+        self._covers_history_limit_per_library = self.__clamp_value(
+            profile.get("covers_history_limit_per_library", self._covers_history_limit_per_library),
+            1, 100, 10, "covers_history_limit_per_library[profile]", int
+        )
+        self._covers_page_history_limit = self.__clamp_value(
+            profile.get("covers_page_history_limit", self._covers_page_history_limit),
+            1, 500, 50, "covers_page_history_limit[profile]", int
+        )
         self._use_primary = bool(profile.get("use_primary", self._use_primary))
         self._multi_1_blur = bool(profile.get("multi_1_blur", self._multi_1_blur))
         self._resolution = str(profile.get("resolution", self._resolution or "480p"))
@@ -2276,25 +2289,6 @@ class WsEmbyCover(_PluginBase):
                                                     }
                                                 ]
                                             },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
-                                                    'md': 3
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VTextField',
-                                                        'props': {
-                                                            'model': 'delay',
-                                                            'label': '入库延迟（秒）',
-                                                            'placeholder': '60',
-                                                            'hint': '根据实际情况调整延迟时间',
-                                                            'persistentHint': True
-                                                        }
-                                                    }
-                                                ]
-                                            },
                                         ]
                                     },
                                     {
@@ -2381,7 +2375,26 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 6
+                                                    'md': 4
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VTextField',
+                                                        'props': {
+                                                            'model': 'delay',
+                                                            'label': '入库延迟（秒）',
+                                                            'placeholder': '60',
+                                                            'hint': '根据实际情况调整延迟时间',
+                                                            'persistentHint': True
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                    'md': 4
                                                 },
                                                 'content': [
                                                     {
@@ -2398,7 +2411,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 6
+                                                    'md': 4
                                                 },
                                                 'content': [
                                                     {
