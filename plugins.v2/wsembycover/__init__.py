@@ -477,6 +477,18 @@ class WsEmbyCover(_PluginBase):
 #
 '''
 
+    @staticmethod
+    def __default_servers_config_template() -> str:
+        return '''# 配置多服务器（YAML 列表）
+# 格式如下：
+#
+# - name: 服务器名称
+#   host: http://127.0.0.1:8096
+#   api_key: xxxxx
+#   style: static_1   # 可选：static_1 / static_2
+#
+'''
+
     def __profile_from_runtime(self, name: str, host: str, api_key: str, style: str) -> Dict[str, Any]:
         safe_style = "static_2" if style == "static_2" else "static_1"
         normalized_host = (host or "").strip()
@@ -1292,7 +1304,7 @@ class WsEmbyCover(_PluginBase):
                                     'theme': 'monokai',
                                     'style': 'height: 18rem',
                                     'label': '多服务器配置',
-                                    'placeholder': '- name: 物语云\\n  host: http://10.144.144.1:38097\\n  api_key: xxxxx\\n  style: static_1\\n- name: 风月无边\\n  host: http://10.10.10.10:8096\\n  api_key: yyyyy\\n  style: static_2'
+                                    'placeholder': self.__default_servers_config_template()
                                  }
                              }
                          ]
@@ -2594,7 +2606,7 @@ class WsEmbyCover(_PluginBase):
             "cron": "",
             "delay": 60,
             "selected_servers": [],
-            "servers_config": self._servers_config or "",
+            "servers_config": self._servers_config or self.__default_servers_config_template(),
             "server_profiles": self._server_profiles,
             "active_server_name": self._active_server_name or "__new__",
             "active_server_edit_target": self._active_server_edit_target or self._active_server_name or "",
