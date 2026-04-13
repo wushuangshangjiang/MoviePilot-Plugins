@@ -405,16 +405,67 @@ class WsEmbyCover(_PluginBase):
             logger.error(f"服务器配置解析失败: {e}")
             return []
 
+        items: List[Dict[str, str]] = []
+
+        def append_item(name: str, host: str, api_key: str, style: str = "static_1"):
+            safe_name = str(name or "").strip()
+            safe_host = str(host or "").strip()
+            safe_api_key = str(api_key or "").strip()
+            safe_style = str(style or "static_1").strip() or "static_1"
+            if not safe_name or not safe_host or not safe_api_key:
+                return
+            if not safe_host.startswith(("http://", "https://")):
+                safe_host = f"http://{safe_host}"
+            items.append({
+                "name": safe_name,
+                "host": safe_host.rstrip("/") + "/",
+                "api_key": safe_api_key,
+                "style": "static_2" if safe_style == "static_2" else "static_1",
+            })
+
+        def parse_mapping(name: str, value: Any):
+            if isinstance(value, dict):
+                append_item(
+                    name=name,
+                    host=str(value.get("host", "") or value.get("地址", "")).strip(),
+                    api_key=str(value.get("api_key", "") or value.get("apikey", "") or value.get("ApiKey", "")).strip(),
+                    style=str(value.get("style", "static_1")).strip() or "static_1",
+                )
+                return
+            if isinstance(value, (list, tuple)):
+                host = str(value[0]).strip() if len(value) > 0 else ""
+                api_key = str(value[1]).strip() if len(value) > 1 else ""
+                style = str(value[2]).strip() if len(value) > 2 else "static_1"
+                append_item(name=name, host=host, api_key=api_key, style=style)
+                return
+            if isinstance(value, str):
+                append_item(name=name, host=value, api_key="", style="static_1")
+
         if isinstance(raw, dict):
-            raw = [raw]
+            # 新格式：
+            # 服务器1:
+            #   - http://127.0.0.1:8096
+            #   - apikey
+            if any(key in raw for key in ("name", "host", "api_key")):
+                raw = [raw]
+            else:
+                for server_name, cfg in raw.items():
+                    parse_mapping(str(server_name), cfg)
+                return items
+
         if not isinstance(raw, list):
-            logger.error("服务器配置格式错误，应为列表")
+            logger.error("服务器配置格式错误，应为列表或字典")
             return []
 
-        items: List[Dict[str, str]] = []
         for one in raw:
             if not isinstance(one, dict):
                 continue
+            # 兼容列表中的新格式单项：{服务器名: [host, apikey]}
+            if "name" not in one and "host" not in one and "api_key" not in one and len(one) == 1:
+                only_name, only_value = next(iter(one.items()))
+                parse_mapping(str(only_name), only_value)
+                continue
+
             name = str(one.get("name", "")).strip()
             host = str(one.get("host", "")).strip()
             api_key = str(one.get("api_key", "")).strip()
@@ -461,15 +512,18 @@ class WsEmbyCover(_PluginBase):
 
     @staticmethod
     def __default_title_config_template() -> str:
-        return '''# 配置封面标题（按媒体库名称对应）
-# 支持两种格式：
+        return '''# 配置封面标题（支持按服务器分组）
+# 推荐格式（按服务器分组）：
 #
-# 格式1 - 两行配置（主标题+副标题）：
-# 媒体库名称:
-#   - 主标题
-#   - 副标题
+# 服务器1:
+#   媒体库名称:
+#     - 主标题
+#     - 副标题
+#   另一个媒体库:
+#     - 主标题
+#     - 副标题
 #
-# 格式2 - 三行配置（主标题+副标题+背景颜色）：
+# 兼容旧格式（不分服务器）：
 # 媒体库名称:
 #   - 主标题
 #   - 副标题
@@ -479,13 +533,15 @@ class WsEmbyCover(_PluginBase):
 
     @staticmethod
     def __default_servers_config_template() -> str:
-        return '''# 配置多服务器（YAML 列表）
+        return '''# 配置多服务器
 # 格式如下：
 #
-# - name: 服务器名称
-#   host: http://127.0.0.1:8096
-#   api_key: xxxxx
-#   style: static_1   # 可选：static_1 / static_2
+# 服务器1:
+#   - http://127.0.0.1:8096
+#   - xxxxx
+# 服务器2:
+#   - http://192.168.1.10:8096
+#   - yyyyy
 #
 '''
 
@@ -1332,10 +1388,13 @@ class WsEmbyCover(_PluginBase):
                                     'theme': 'monokai',
                                     'style': 'height: 30rem',
                                     'label': '中英标题配置',
-                                    'placeholder': '''媒体库名称:
-- 主标题
-- 副标题
-- "#FF5722"  # 可选：背景颜色（必须加引号）'''
+                                    'placeholder': '''服务器1:
+  动画电影:
+    - 动画电影
+    - ANI MOVIE
+  华语电影:
+    - 华语电影
+    - CHN MOVIE'''
                                  }
                              }
                          ]
@@ -3228,6 +3287,8 @@ class WsEmbyCover(_PluginBase):
                     logger.info("媒体库封面更新服务停止")
                     self._event.clear()
                     return
+                library_name = str(library.get("Name") or "").strip() or "未知媒体库"
+                logger.info(f"当前执行：{server} -> {library_name}")
                 if service.type == 'emby':
                     library_id = library.get("Id")
                 else:
@@ -3250,7 +3311,7 @@ class WsEmbyCover(_PluginBase):
         # 自定义图像路径
         image_path = self.__check_custom_image(library_name)
         # 从配置获取标题和背景颜色
-        title_result = self.__get_title_from_config(library_name)
+        title_result = self.__get_title_from_config(library_name, service.name)
         if len(title_result) == 3:
             title = (title_result[0], title_result[1])
             config_bg_color = title_result[2]
@@ -3754,7 +3815,7 @@ class WsEmbyCover(_PluginBase):
             return False
         updated_item_id = self.__get_item_id(item)
         # 从配置获取背景颜色
-        title_result = self.__get_title_from_config(library['Name'])
+        title_result = self.__get_title_from_config(library['Name'], service.name)
         config_bg_color = title_result[2] if len(title_result) == 3 else None
         image_data = self.__generate_image_from_path(service.name, library['Name'], title, image_path, config_bg_color)
             
@@ -3796,7 +3857,7 @@ class WsEmbyCover(_PluginBase):
             
         # 生成九宫格图片
         # 从配置获取背景颜色
-        title_result = self.__get_title_from_config(library['Name'])
+        title_result = self.__get_title_from_config(library['Name'], service.name)
         config_bg_color = title_result[2] if len(title_result) == 3 else None
         image_data = self.__generate_image_from_path(service.name, library['Name'], title, None, config_bg_color)
         if not image_data:
@@ -3871,7 +3932,7 @@ class WsEmbyCover(_PluginBase):
         if not background_path or not updated_item_ids:
             return False
 
-        title_result = self.__get_title_from_config(library["Name"])
+        title_result = self.__get_title_from_config(library["Name"], service.name)
         config_bg_color = title_result[2] if len(title_result) == 3 else None
         image_data = self.__generate_image_from_path(
             service.name,
@@ -3943,18 +4004,41 @@ class WsEmbyCover(_PluginBase):
                 return {}
             filtered = {}
             for key, value in title_config.items():
+                if isinstance(value, dict):
+                    # 新格式：服务器名 -> 媒体库配置字典
+                    server_filtered = {}
+                    for lib_key, lib_value in value.items():
+                        if (
+                            isinstance(lib_value, list)
+                            and len(lib_value) >= 2
+                            and isinstance(lib_value[0], str)
+                            and isinstance(lib_value[1], str)
+                        ):
+                            if len(lib_value) >= 3 and isinstance(lib_value[2], str):
+                                server_filtered[str(lib_key)] = [lib_value[0], lib_value[1], lib_value[2]]
+                            else:
+                                server_filtered[str(lib_key)] = [lib_value[0], lib_value[1]]
+                            if len(lib_value) > 3:
+                                logger.info(f"配置项 {key}/{lib_key} 包含多行，只使用前三行")
+                        else:
+                            logger.warning(f"标题配置项格式不正确，已忽略: {key}/{lib_key} -> {lib_value}")
+                    if server_filtered:
+                        filtered[str(key)] = server_filtered
+                    continue
+
                 if isinstance(value, list) and len(value) >= 2 and isinstance(value[0], str) and isinstance(value[1], str):
-                    # 支持两行或三行配置（第三行可选）
+                    # 兼容旧格式：媒体库 -> [中文, 英文, 可选背景色]
                     if len(value) >= 3 and isinstance(value[2], str):
                         filtered[str(key)] = [value[0], value[1], value[2]]
                     else:
                         filtered[str(key)] = [value[0], value[1]]
                     if len(value) > 3:
                         logger.info(f"配置项 {key} 包含多行，只使用前三行")
-                else:
-                    # 忽略格式不正确的项
-                    logger.warning(f"标题配置项格式不正确，已忽略: {key} -> {value}")
                     continue
+
+                # 忽略格式不正确的项
+                logger.warning(f"标题配置项格式不正确，已忽略: {key} -> {value}")
+                continue
 
             logger.debug(f"解析后的配置: {filtered}")
             return filtered
@@ -3963,9 +4047,12 @@ class WsEmbyCover(_PluginBase):
             logger.warning(f"YAML 解析失败，使用空配置: {e}")
             return {}
 
-    def __get_title_from_config(self, library_name):
+    def __get_title_from_config(self, library_name, server_name: Optional[str] = None):
         """
         从 yaml 配置中获取媒体库的主副标题和背景颜色
+        支持：
+        1. 服务器分组：服务器名 -> 媒体库名 -> [中文, 英文, 可选背景色]
+        2. 旧格式：媒体库名 -> [中文, 英文, 可选背景色]
         """
         zh_title = library_name
         en_title = ''
@@ -3976,12 +4063,33 @@ class WsEmbyCover(_PluginBase):
         elif self._title_config:
             title_config = self.__load_title_config(self._title_config)
 
+        scoped_config = title_config
+        nested_mode = any(isinstance(v, dict) for v in title_config.values()) if isinstance(title_config, dict) else False
+        if server_name and isinstance(title_config, dict):
+            server_key = None
+            if server_name in title_config and isinstance(title_config.get(server_name), dict):
+                server_key = server_name
+            else:
+                for key, value in title_config.items():
+                    if isinstance(value, dict) and str(key).strip().lower() == str(server_name).strip().lower():
+                        server_key = str(key)
+                        break
+            if server_key:
+                scoped_config = title_config.get(server_key, {})
+                logger.debug(f"标题配置按服务器匹配成功: {server_key}")
+            elif nested_mode:
+                # 新格式下未找到服务器时，不跨服务器扫描
+                scoped_config = {}
+                logger.debug(f"标题配置未找到服务器分组: {server_name}")
+
         # 添加调试信息
         logger.debug(f"查找媒体库名称: '{library_name}' (类型: {type(library_name)})")
-        logger.debug(f"可用的配置键: {list(title_config.keys())}")
+        logger.debug(f"当前作用域配置键: {list(scoped_config.keys()) if isinstance(scoped_config, dict) else []}")
 
         # 多种匹配策略，确保数字或字母开头的媒体库名能够正确匹配
-        for lib_name, config_values in title_config.items():
+        for lib_name, config_values in (scoped_config.items() if isinstance(scoped_config, dict) else []):
+            if not isinstance(config_values, list) or len(config_values) < 2:
+                continue
             # 策略1: 直接字符串比较
             if str(lib_name) == str(library_name):
                 zh_title = config_values[0]
