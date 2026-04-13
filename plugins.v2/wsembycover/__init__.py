@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.39"
+    plugin_version = "1.40"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -296,6 +296,8 @@ class WsEmbyCover(_PluginBase):
             self._server_profiles = self.__build_server_profiles_from_legacy(config or {})
             profile_dirty = bool(self._server_profiles)
         if (not loaded_profiles_from_form) and self.__upsert_active_server_profile(config or {}):
+            profile_dirty = True
+        if self.__sync_profile_styles_with_selected_style():
             profile_dirty = True
         self._manual_servers = self.__profiles_to_manual_servers()
         self.__sync_active_server_editor()
@@ -863,6 +865,21 @@ class WsEmbyCover(_PluginBase):
             return
         self.__apply_server_profile_values(profile)
 
+    def __sync_profile_styles_with_selected_style(self) -> bool:
+        target_style = "static_2" if str(self._cover_style_base or "static_1") == "static_2" else "static_1"
+        dirty = False
+        if isinstance(self._server_profiles, dict):
+            for name, profile in list(self._server_profiles.items()):
+                normalized = dict(profile or {})
+                if str(normalized.get("style", "")).strip() != target_style:
+                    normalized["style"] = target_style
+                    self._server_profiles[name] = normalized
+                    dirty = True
+        self._active_server_style = target_style
+        self._cover_style = target_style
+        self._cover_style_base = target_style
+        return dirty
+
     def __compose_cover_style(self, base_style: str, variant: str) -> str:
         mapping = {
             "static_1": "static_1",
@@ -898,6 +915,7 @@ class WsEmbyCover(_PluginBase):
         ??????
         """
         self._cover_style = self.__compose_cover_style(self._cover_style_base, "static")
+        self.__sync_profile_styles_with_selected_style()
         self.update_config({
             "enabled": self._enabled,
             "update_now": self._update_now,
