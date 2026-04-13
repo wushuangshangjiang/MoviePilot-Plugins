@@ -82,7 +82,7 @@ def _build_poster_card(image_path, size, border_color):
     return shadow_canvas
 
 
-def create_style_static_5(
+def create_style_static_2(
     image_path,
     library_dir,
     title,
@@ -242,5 +242,5 @@ def create_style_static_5(
         merged.save(buffer, format="PNG", optimize=True)
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
     except Exception as e:
-        logger.error(f"创建静态5封面时出错: {e}")
+        logger.error(f"创建静态2封面时出错: {e}")
         return False

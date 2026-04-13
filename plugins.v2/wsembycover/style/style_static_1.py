@@ -774,7 +774,7 @@ def add_film_grain(image, intensity=0.05):
     
     return Image.fromarray(img_array)
 
-def create_style_static_3(library_dir, title, font_path, font_size=(170,75), font_offset=(0,40,40), is_blur=False, blur_size=50, color_ratio=0.8, resolution_config=None, bg_color_config=None):
+def create_style_static_1(library_dir, title, font_path, font_size=(170,75), font_offset=(0,40,40), is_blur=False, blur_size=50, color_ratio=0.8, resolution_config=None, bg_color_config=None):
     """
     生成海报：多张图片以旋转列的形式排列在渐变背景上。
     输入:
@@ -1206,8 +1206,3 @@ def create_style_static_3(library_dir, title, font_path, font_size=(170,75), fon
         logger.error(f"创建多图封面时出错: {e}")
         logger.error(traceback.format_exc())
         return False
-
-
-def create_style_multi_1(*args, **kwargs):
-    """兼容旧命名"""
-    return create_style_static_3(*args, **kwargs)

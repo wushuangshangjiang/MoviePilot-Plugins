@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.37"
+    plugin_version = "1.38"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -215,12 +215,8 @@ class WsEmbyCover(_PluginBase):
                     self._cover_style = 'static_2'
                 elif self._cover_style == 'multi_1':
                     self._cover_style = 'static_2'
-            if self._cover_style in {"static_6"}:
-                self._cover_style = "static_2"
             default_base, default_variant = self.__resolve_cover_style_ui(self._cover_style)
             self._cover_style_base = config.get("cover_style_base", default_base)
-            if self._cover_style_base in {"static_6"}:
-                self._cover_style_base = "static_2"
             self._multi_1_blur = config.get("multi_1_blur", True)
             self._zh_font_size = config.get("zh_font_size", 170)
             self._en_font_size = config.get("en_font_size", 75)
@@ -361,9 +357,6 @@ class WsEmbyCover(_PluginBase):
             return clamped
 
         return parsed
-
-    def __get_animated_2_required_items(self) -> int:
-        return 5
 
     def __load_style_creator(self, module_name: str, func_name: str):
         module = importlib.import_module(f"app.plugins.wsembycover.style.{module_name}")
@@ -872,22 +865,13 @@ class WsEmbyCover(_PluginBase):
         mapping = {
             "static_1": "static_1",
             "static_2": "static_2",
-            "static_5": "static_2",
-            "static_6": "static_2",
         }
         return mapping.get(base_style, "static_1")
 
     def __resolve_cover_style_ui(self, cover_style: str) -> Tuple[str, str]:
         mapping = {
             "static_1": "static_1",
-            "static_2": "static_1",
-            "static_4": "static_2",
-            "static_5": "static_2",
-            "static_6": "static_2",
-            "animated_1": "static_1",
-            "animated_2": "static_2",
-            "animated_3": "static_1",
-            "animated_4": "static_2",
+            "static_2": "static_2",
         }
         return mapping.get(cover_style, "static_1"), "static"
 
@@ -3263,6 +3247,8 @@ class WsEmbyCover(_PluginBase):
         # 开始前确保停止信号已清除
         self._event.clear()
         global_style = self._cover_style
+        total_success_count = 0
+        total_fail_count = 0
         for server, service in self._servers.items():
             self.__apply_server_profile(server)
             # 扫描所有媒体库
@@ -3270,13 +3256,6 @@ class WsEmbyCover(_PluginBase):
             cover_style = {
                 "static_1": "静态 1",
                 "static_2": "静态 2",
-                "legacy_static": "静态 2",
-                "static_4": "静态 4（全屏模糊）",
-                "static_5": "静态 5（横幅+海报）",
-                "animated_1": "卡片翻转动画",
-                "animated_2": "帷幕切换动画",
-                "animated_3": "斜向滚动动画",
-                "animated_4": "全屏模糊渐变"
             }.get(self._cover_style, "静态 1")
             logger.info(f"当前风格 {cover_style}")
             # 获取媒体库列表
@@ -3303,8 +3282,10 @@ class WsEmbyCover(_PluginBase):
                 else:
                     logger.warning(f"媒体库 {server}：{library['Name']} 封面更新失败")
                     fail_count += 1
+            total_success_count += success_count
+            total_fail_count += fail_count
         self._cover_style = global_style
-        tips = f"媒体库封面更新任务结束，成功 {success_count} 个，失败 {fail_count} 个"
+        tips = f"媒体库封面更新任务结束，成功 {total_success_count} 个，失败 {total_fail_count} 个"
         logger.info(tips)
         return tips
                  
@@ -3457,7 +3438,7 @@ class WsEmbyCover(_PluginBase):
             else:
                 logger.warning(f"static_1: 图片目录准备失败 {library_dir}")
         elif self._cover_style == 'static_2':
-            create_style_static_2 = self.__load_style_creator("style_static_2", "create_style_static_5")
+            create_style_static_2 = self.__load_style_creator("style_static_2", "create_style_static_2")
             safe_library_name = self.__sanitize_filename(library_name)
             cache_library_dir = Path(self._covers_path) / safe_library_name
             custom_library_dir = Path(self._covers_input) / safe_library_name if self._covers_input else None
@@ -3485,35 +3466,6 @@ class WsEmbyCover(_PluginBase):
                 )
             else:
                 logger.warning(f"static_2: 图片目录准备失败 {library_dir}")
-        elif False:
-            create_style_legacy = self.__load_style_creator("style_static_2", "create_style_static_5")
-            safe_library_name = self.__sanitize_filename(library_name)
-            cache_library_dir = Path(self._covers_path) / safe_library_name
-            custom_library_dir = Path(self._covers_input) / safe_library_name if self._covers_input else None
-            numbered_posters = [cache_library_dir / f"{index}.jpg" for index in range(1, 11)]
-            if all(path.exists() for path in numbered_posters):
-                library_dir = cache_library_dir
-            elif custom_library_dir and custom_library_dir.exists():
-                library_dir = custom_library_dir
-            else:
-                library_dir = cache_library_dir
-            logger.info(f"legacy_style: 准备图片目录 {library_dir}")
-            if self.prepare_library_images(library_dir, required_items=10):
-                logger.info("legacy_style: 图片目录准备完成，开始生成封面")
-                image_data = create_style_legacy(
-                    image_path=image_path,
-                    library_dir=library_dir,
-                    title=title,
-                    font_path=font_path,
-                    font_size=font_size,
-                    font_offset=font_offset,
-                    blur_size=blur_size,
-                    color_ratio=color_ratio,
-                    resolution_config=self._resolution_config,
-                    bg_color_config=bg_color_config,
-                )
-            else:
-                logger.warning(f"legacy_style: 图片目录准备失败 {library_dir}")
         gc.collect()
         return image_data
     
@@ -4008,10 +3960,15 @@ class WsEmbyCover(_PluginBase):
                 return {}
             filtered = {}
             for key, value in title_config.items():
+                if value is None:
+                    # 允许仅声明服务器键，未配置媒体库时不告警
+                    continue
                 if isinstance(value, dict):
                     # 新格式：服务器名 -> 媒体库配置字典
                     server_filtered = {}
                     for lib_key, lib_value in value.items():
+                        if lib_value is None:
+                            continue
                         if (
                             isinstance(lib_value, list)
                             and len(lib_value) >= 2
