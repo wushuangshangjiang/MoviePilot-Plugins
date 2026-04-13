@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.31"
+    plugin_version = "1.32"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -2555,7 +2555,7 @@ class WsEmbyCover(_PluginBase):
                         "content": [
                             {
                                 "component": "VTab",
-                                "props": {"value": "__removed__", "style": "display:none"},
+                                "props": {"value": "style-tab"},
                                 "content": [
                                     {
                                         "component": "VIcon",
@@ -2622,9 +2622,9 @@ class WsEmbyCover(_PluginBase):
                         "content": [
                             {
                                 "component": "VWindowItem",
-                                "props": {"value": "__removed__", "style": "display:none"},
+                                "props": {"value": "style-tab"},
                                 "content": [
-                                    {"component": "VCardText", "content": []}
+                                    {"component": "VCardText", "content": style_tab}
                                 ],
                             },
                             {
@@ -4130,13 +4130,45 @@ class WsEmbyCover(_PluginBase):
                     url = f'[HOST]emby/Library/VirtualFolders/Query?api_key=[APIKEY]'
                 else:
                     url = f'[HOST]emby/Library/VirtualFolders/?api_key=[APIKEY]'
+                request_url = url
+                try:
+                    replace_url = getattr(service.instance, "_replace_url", None)
+                    if callable(replace_url):
+                        request_url = replace_url(url)
+                except Exception:
+                    request_url = url
+                request_url_safe = re.sub(r"(api_key=)[^&]+", r"\1***", str(request_url))
                 res = service.instance.get_data(url=url)
-                if res:
+                if not res:
+                    logger.warning(f"获取媒体库列表失败(无响应)：server={getattr(service, 'name', 'unknown')} url={request_url_safe}")
+                    return []
+                if res.status_code >= 400:
+                    body_preview = ""
+                    try:
+                        body_preview = (res.text or "").strip().replace("\n", " ")[:300]
+                    except Exception:
+                        body_preview = ""
+                    logger.warning(
+                        f"获取媒体库列表失败(HTTP {res.status_code})：server={getattr(service, 'name', 'unknown')} "
+                        f"url={request_url_safe} response={body_preview}"
+                    )
+                    return []
+                try:
                     data = res.json()
-                    if service.type == 'emby':
-                        return data.get("Items", [])
-                    else:
-                        return data
+                except Exception as json_err:
+                    body_preview = ""
+                    try:
+                        body_preview = (res.text or "").strip().replace("\n", " ")[:300]
+                    except Exception:
+                        body_preview = ""
+                    logger.warning(
+                        f"获取媒体库列表失败(JSON解析失败)：server={getattr(service, 'name', 'unknown')} "
+                        f"url={request_url_safe} err={json_err} response={body_preview}"
+                    )
+                    return []
+                if service.type == 'emby':
+                    return data.get("Items", []) if isinstance(data, dict) else []
+                return data if isinstance(data, list) else []
             except Exception as err:
                 logger.error(f"获取媒体库列表失败：{str(err)}")
             return []
