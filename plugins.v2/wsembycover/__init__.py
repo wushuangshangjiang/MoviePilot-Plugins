@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.32"
+    plugin_version = "1.33"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -157,6 +157,7 @@ class WsEmbyCover(_PluginBase):
     _covers_history_limit_per_library = 10
     _covers_page_history_limit = 50
     _page_tab = "generate-tab"
+    _debug_show_apikey = False
 
     def __init__(self):
         super().__init__()
@@ -234,6 +235,7 @@ class WsEmbyCover(_PluginBase):
             self._clean_images = config.get("clean_images", False)
             self._clean_fonts = config.get("clean_fonts", False)
             self._save_recent_covers = config.get("save_recent_covers", True)
+            self._debug_show_apikey = bool(config.get("debug_show_apikey", False))
             self._covers_history_limit_per_library = self.__clamp_value(
                 config.get("covers_history_limit_per_library", 10),
                 1,
@@ -963,6 +965,7 @@ class WsEmbyCover(_PluginBase):
             "clean_images": self._clean_images,
             "clean_fonts": self._clean_fonts,
             "save_recent_covers": self._save_recent_covers,
+            "debug_show_apikey": bool(self._debug_show_apikey),
             "covers_history_limit_per_library": self._covers_history_limit_per_library,
             "covers_page_history_limit": self._covers_page_history_limit,
             "page_tab": self._page_tab,
@@ -2538,6 +2541,30 @@ class WsEmbyCover(_PluginBase):
                                             },
                                         ]
                                     },
+                                    {
+                                        'component': 'VRow',
+                                        'content': [
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                    'md': 4
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VSwitch',
+                                                        'props': {
+                                                            'model': 'debug_show_apikey',
+                                                            'label': '调试日志显示完整 APIKey',
+                                                            'hint': '仅排障时开启，可能泄露敏感信息',
+                                                            'persistentHint': True,
+                                                            'color': 'warning',
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                        ]
+                                    },
                                     
                                 ]
                             },
@@ -2717,6 +2744,7 @@ class WsEmbyCover(_PluginBase):
             "clean_images": self._clean_images,
             "clean_fonts": self._clean_fonts,
             "save_recent_covers": self._save_recent_covers,
+            "debug_show_apikey": bool(self._debug_show_apikey),
             "covers_history_limit_per_library": self._covers_history_limit_per_library,
             "covers_page_history_limit": self._covers_page_history_limit,
             "page_tab": "generate-tab",
@@ -4137,7 +4165,9 @@ class WsEmbyCover(_PluginBase):
                         request_url = replace_url(url)
                 except Exception:
                     request_url = url
-                request_url_safe = re.sub(r"(api_key=)[^&]+", r"\1***", str(request_url))
+                request_url_safe = str(request_url)
+                if not self._debug_show_apikey:
+                    request_url_safe = re.sub(r"(api_key=)[^&]+", r"\1***", request_url_safe)
                 res = service.instance.get_data(url=url)
                 if not res:
                     logger.warning(f"获取媒体库列表失败(无响应)：server={getattr(service, 'name', 'unknown')} url={request_url_safe}")
