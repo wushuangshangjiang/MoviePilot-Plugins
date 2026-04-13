@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.34"
+    plugin_version = "1.35"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -2008,11 +2008,6 @@ class WsEmbyCover(_PluginBase):
                             {
                                 'component': 'VExpansionPanelText',
                                 'content': [
-                                    {
-                                        'component': 'VRow',
-                                        'content': [
-                                        ]
-                                    },
                                     {
                                         'component': 'VRow',
                                         'content': [
