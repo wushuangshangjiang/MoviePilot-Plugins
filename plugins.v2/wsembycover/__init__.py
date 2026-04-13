@@ -1288,6 +1288,30 @@ class WsEmbyCover(_PluginBase):
                             {
                                 'component': 'VAceEditor',
                                 'props': {
+                                    'modelvalue': 'servers_config',
+                                    'lang': 'yaml',
+                                    'theme': 'monokai',
+                                    'style': 'height: 18rem',
+                                    'label': '多服务器配置',
+                                    'placeholder': '- name: 物语云\\n  host: http://10.144.144.1:38097\\n  api_key: xxxxx\\n  style: static_1\\n- name: 风月无边\\n  host: http://10.10.10.10:8096\\n  api_key: yyyyy\\n  style: static_2'
+                                 }
+                             }
+                         ]
+                     },
+                ]
+            },
+            {
+                'component': 'VRow',
+                'content': [
+                    {
+                        'component': 'VCol',
+                        'props': {
+                            'cols': 12,
+                        },
+                        'content': [
+                            {
+                                'component': 'VAceEditor',
+                                'props': {
                                     'modelvalue': 'title_config',
                                     'lang': 'yaml',
                                     'theme': 'monokai',
@@ -1703,8 +1727,6 @@ class WsEmbyCover(_PluginBase):
                 "src": self.__style_preview_src(2)
             },
         ]
-        server_profile_items = [{"title": name, "value": name} for name in sorted(self._server_profiles.keys())]
-        server_profile_items.append({"title": "新增服务器", "value": "__new__"})
         profile_defaults: Dict[str, Any] = {}
         server_profile_panels: List[Dict[str, Any]] = []
         profile_entries = list(sorted(self._server_profiles.items(), key=lambda item: item[0]))
@@ -2387,68 +2409,20 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 4
+                                                    'md': 12
                                                 },
                                                 'content': [
                                                     {
-                                                        'component': 'VSelect',
+                                                        'component': 'VAceEditor',
                                                         'props': {
-                                                            'model': 'active_server_name',
-                                                            'label': '媒体服务器',
-                                                            'items': server_profile_items,
-                                                            'hint': '下拉选择服务器，或选择“新增服务器”后填写地址与 API Key',
+                                                            'modelvalue': 'servers_config',
+                                                            'lang': 'yaml',
+                                                            'theme': 'monokai',
+                                                            'style': 'height: 14rem',
+                                                            'label': '媒体服务器配置（支持多个）',
+                                                            'placeholder': '- name: 物语云\\n  host: http://10.144.144.1:38097\\n  api_key: xxxxx\\n  style: static_1\\n- name: 风月无边\\n  host: http://10.10.10.10:8096\\n  api_key: yyyyy\\n  style: static_2',
+                                                            'hint': '按 YAML 列表填写多服务器；name/host/api_key 必填，style 可选(static_1/static_2)',
                                                             'persistentHint': True,
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
-                                                    'style': 'display:none;'
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VTextField',
-                                                        'props': {
-                                                            'model': 'active_server_edit_target',
-                                                            'readonly': True
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
-                                                    'md': 4
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VTextField',
-                                                        'props': {
-                                                            'model': 'active_server_host',
-                                                            'label': '当前服务器地址',
-                                                            'placeholder': 'http://127.0.0.1:8096',
-                                                            'persistentHint': True,
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
-                                                    'md': 4
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VTextField',
-                                                        'props': {
-                                                            'model': 'active_server_api_key',
-                                                            'label': '当前服务器 API Key',
-                                                            'persistentHint': True
                                                         }
                                                     }
                                                 ]
@@ -2462,7 +2436,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 3
+                                                    'md': 4
                                                 },
                                                 'content': [
                                                     {
@@ -2481,7 +2455,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 3
+                                                    'md': 4
                                                 },
                                                 'content': [
                                                     {
@@ -2498,7 +2472,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 3
+                                                    'md': 4
                                                 },
                                                 'content': [
                                                     {
@@ -2517,68 +2491,8 @@ class WsEmbyCover(_PluginBase):
                                                     }
                                                 ]
                                             },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
-                                                    'md': 3
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VAlert',
-                                                        'props': {
-                                                            'type': 'info',
-                                                            'variant': 'tonal',
-                                                            'text': '当前选中的服务器参数可编辑'
-                                                        }
-                                                    }
-                                                ]
-                                            }
                                         ]
                                     },
-                                    {
-                                        'component': 'VRow',
-                                        'content': [
-                                            {
-                                                'component': 'VCol',
-                                                'props': {'cols': 12},
-                                                'content': [
-                                                    {
-                                                        'component': 'VAlert',
-                                                        'props': {
-                                                            'type': 'info',
-                                                            'variant': 'tonal',
-                                                            'text': '服务器风格预览（当前服务器独立）'
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {'cols': 12},
-                                                'content': [
-                                                    {
-                                                        'component': 'VRadioGroup',
-                                                        'props': {
-                                                            'model': 'active_server_style',
-                                                            'inline': True
-                                                        },
-                                                        'content': [
-                                                            {
-                                                                'component': 'VRow',
-                                                                'content': preview_style_content
-                                                            }
-                                                        ]
-                                                    }
-                                                ]
-                                            },
-                                        ]
-                                    },
-                                    {
-                                        'component': 'VRow',
-                                        'content': [
-                                        ]
-                                    }
                                     
                                 ]
                             },
