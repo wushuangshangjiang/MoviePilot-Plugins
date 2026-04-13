@@ -1274,8 +1274,7 @@ class WsEmbyCover(_PluginBase):
         self._page_tab = "generate-tab"
         
         zh_font_items, en_font_items, _, _ = self.__get_font_presets()
-        # 标题配置
-        title_tab = [
+        server_tab = [
             {
                 'component': 'VRow',
                 'content': [
@@ -1300,6 +1299,10 @@ class WsEmbyCover(_PluginBase):
                      },
                 ]
             },
+        ]
+
+        # 标题配置
+        title_tab = [
             {
                 'component': 'VRow',
                 'content': [
@@ -2354,7 +2357,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 3
+                                                    'md': 4
                                                 },
                                                 'content': [
                                                     {
@@ -2370,7 +2373,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 3
+                                                    'md': 4
                                                 },
                                                 'content': [
                                                     {
@@ -2386,7 +2389,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 3
+                                                    'md': 4
                                                 },
                                                 'content': [
                                                     {
@@ -2394,35 +2397,6 @@ class WsEmbyCover(_PluginBase):
                                                         'props': {
                                                             'model': 'transfer_monitor',
                                                             'label': '入库监控',
-                                                            'hint': '自动更新入库媒体所在媒体库封面',
-                                                            'persistentHint': True
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                        ]
-                                    },
-                                    {
-                                        'component': 'VRow',
-                                        'content': [
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
-                                                    'md': 12
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VAceEditor',
-                                                        'props': {
-                                                            'modelvalue': 'servers_config',
-                                                            'lang': 'yaml',
-                                                            'theme': 'monokai',
-                                                            'style': 'height: 14rem',
-                                                            'label': '媒体服务器配置（支持多个）',
-                                                            'placeholder': '- name: 物语云\\n  host: http://10.144.144.1:38097\\n  api_key: xxxxx\\n  style: static_1\\n- name: 风月无边\\n  host: http://10.10.10.10:8096\\n  api_key: yyyyy\\n  style: static_2',
-                                                            'hint': '按 YAML 列表填写多服务器；name/host/api_key 必填，style 可选(static_1/static_2)',
-                                                            'persistentHint': True,
                                                         }
                                                     }
                                                 ]
@@ -2525,6 +2499,21 @@ class WsEmbyCover(_PluginBase):
                             },
                             {
                                 "component": "VTab",
+                                "props": {"value": "server-tab"},
+                                "content": [
+                                    {
+                                        "component": "VIcon",
+                                        "props": {
+                                            "icon": "mdi-server-network",
+                                            "start": True,
+                                            "color": "#26A69A",
+                                        },
+                                    },
+                                    {"component": "span", "text": "多服务器"},
+                                ],
+                            },
+                            {
+                                "component": "VTab",
                                 "props": {"value": "title-tab"},
                                 "content": [
                                     {
@@ -2565,6 +2554,16 @@ class WsEmbyCover(_PluginBase):
                                 "props": {"value": "__removed__", "style": "display:none"},
                                 "content": [
                                     {"component": "VCardText", "content": []}
+                                ],
+                            },
+                            {
+                                "component": "VWindowItem",
+                                "props": {"value": "server-tab"},
+                                "content": [
+                                    {
+                                        "component": "VCardText",
+                                        "content": server_tab,
+                                    }
                                 ],
                             },
                             {
