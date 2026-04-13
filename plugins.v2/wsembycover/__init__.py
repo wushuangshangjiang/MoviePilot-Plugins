@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.33"
+    plugin_version = "1.34"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -178,8 +178,23 @@ class WsEmbyCover(_PluginBase):
             self._selected_servers = []
             self._servers_config = config.get("servers_config", "")
             self._manual_servers = self.__parse_manual_servers_from_config(config)
-            form_profiles = self.__parse_server_profiles_from_form_slots(config)
-            self._server_profiles = form_profiles or self.__parse_server_profiles_from_config(config)
+            parsed_from_servers_config = self.__parse_servers_config(self._servers_config)
+            if parsed_from_servers_config:
+                self._server_profiles = {}
+                for item in parsed_from_servers_config:
+                    name = str(item.get("name", "")).strip()
+                    if not name:
+                        continue
+                    self._server_profiles[name] = self.__profile_from_runtime(
+                        name=name,
+                        host=item.get("host", ""),
+                        api_key=item.get("api_key", ""),
+                        style=item.get("style", "static_1"),
+                    )
+                form_profiles = {}
+            else:
+                form_profiles = self.__parse_server_profiles_from_form_slots(config)
+                self._server_profiles = self.__parse_server_profiles_from_config(config) or form_profiles
             self._include_libraries = []
             self._sort_by = config.get("sort_by")
             self._covers_output = config.get("covers_output")
@@ -1996,40 +2011,6 @@ class WsEmbyCover(_PluginBase):
                                     {
                                         'component': 'VRow',
                                         'content': [
-                                            {
-                                                'component': 'VCol',
-                                                'props': {'cols': 12},
-                                                'content': [
-                                                    {
-                                                        'component': 'VAlert',
-                                                        'props': {
-                                                            'type': 'info',
-                                                            'variant': 'tonal',
-                                                            'text': '服务器可视化配置：填写名称、地址、APIKey，并为每台服务器单独选择 style1/style2（默认 style1）。'
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_1_name', 'label': '服务器1 名称'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_1_host', 'label': '服务器1 地址'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_1_api_key', 'label': '服务器1 API Key'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VSelect', 'props': {'model': 'server_1_style', 'label': '服务器1 风格', 'items': [{'title': 'style1', 'value': 'static_1'}, {'title': 'style2', 'value': 'static_2'}]}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_2_name', 'label': '服务器2 名称'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_2_host', 'label': '服务器2 地址'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_2_api_key', 'label': '服务器2 API Key'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VSelect', 'props': {'model': 'server_2_style', 'label': '服务器2 风格', 'items': [{'title': 'style1', 'value': 'static_1'}, {'title': 'style2', 'value': 'static_2'}]}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_3_name', 'label': '服务器3 名称'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_3_host', 'label': '服务器3 地址'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_3_api_key', 'label': '服务器3 API Key'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VSelect', 'props': {'model': 'server_3_style', 'label': '服务器3 风格', 'items': [{'title': 'style1', 'value': 'static_1'}, {'title': 'style2', 'value': 'static_2'}]}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_4_name', 'label': '服务器4 名称'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_4_host', 'label': '服务器4 地址'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_4_api_key', 'label': '服务器4 API Key'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VSelect', 'props': {'model': 'server_4_style', 'label': '服务器4 风格', 'items': [{'title': 'style1', 'value': 'static_1'}, {'title': 'style2', 'value': 'static_2'}]}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_5_name', 'label': '服务器5 名称'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_5_host', 'label': '服务器5 地址'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VTextField', 'props': {'model': 'server_5_api_key', 'label': '服务器5 API Key'}}]},
-                                            {'component': 'VCol', 'props': {'cols': 12, 'md': 3}, 'content': [{'component': 'VSelect', 'props': {'model': 'server_5_style', 'label': '服务器5 风格', 'items': [{'title': 'style1', 'value': 'static_1'}, {'title': 'style2', 'value': 'static_2'}]}}]}
                                         ]
                                     },
                                     {
