@@ -35,13 +35,7 @@ def _build_poster_card(image_path, size, border_color):
     shadow_blur = max(16, int(card_w * 0.045))
 
     with Image.open(image_path).convert("RGB") as src:
-        src_w, src_h = src.size
-        inner_w = max(1, card_w - border_width * 2)
-        inner_h = max(1, card_h - border_width * 2)
-        scale = min(inner_w / max(1, src_w), inner_h / max(1, src_h))
-        fit_w = max(1, int(src_w * scale))
-        fit_h = max(1, int(src_h * scale))
-        poster = src.resize((fit_w, fit_h), Image.Resampling.LANCZOS)
+        poster = ImageOps.fit(src, (card_w, card_h), method=Image.Resampling.LANCZOS)
 
     card = Image.new("RGBA", (card_w, card_h), (0, 0, 0, 0))
     poster_rgba = poster.convert("RGBA")
@@ -67,12 +61,11 @@ def _build_poster_card(image_path, size, border_color):
     border_layer.putalpha(outer_mask)
     card = Image.alpha_composite(card, border_layer)
 
-    inner_w = card_w - border_width * 2
-    inner_h = card_h - border_width * 2
-    inner_poster = Image.new("RGBA", (inner_w, inner_h), (0, 0, 0, 0))
-    paste_x = (inner_w - poster_rgba.size[0]) // 2
-    paste_y = (inner_h - poster_rgba.size[1]) // 2
-    inner_poster.paste(poster_rgba, (paste_x, paste_y), poster_rgba)
+    inner_poster = ImageOps.fit(
+        poster_rgba,
+        (card_w - border_width * 2, card_h - border_width * 2),
+        method=Image.Resampling.LANCZOS,
+    )
     inner_card = Image.new("RGBA", (card_w, card_h), (0, 0, 0, 0))
     inner_card.paste(inner_poster, (border_width, border_width), inner_poster)
     inner_card.putalpha(inner_mask)
@@ -89,7 +82,7 @@ def _build_poster_card(image_path, size, border_color):
     return shadow_canvas
 
 
-def create_style_static_2(
+def create_style_static_5(
     image_path,
     library_dir,
     title,
@@ -141,6 +134,27 @@ def create_style_static_2(
         ratio = min(1.0, max(0.0, float(color_ratio)))
         canvas = background.convert("RGBA")
 
+        left_gradient = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+        grad_px = left_gradient.load()
+        for x in range(canvas_size[0]):
+            strength = 1.0 - min(1.0, x / max(1, int(canvas_size[0] * 0.56)))
+            alpha = int((88 + 120 * ratio) * (strength ** 1.38))
+            color = overlay_color + (alpha,)
+            for y in range(canvas_size[1]):
+                grad_px[x, y] = color
+        canvas = Image.alpha_composite(canvas, left_gradient)
+
+        # Keep background sharp while softening only the left title area.
+        title_fade = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
+        fade_px = title_fade.load()
+        for x in range(canvas_size[0]):
+            strength = 1.0 - min(1.0, x / max(1, int(canvas_size[0] * 0.42)))
+            alpha = int((48 + 66 * ratio) * (strength ** 1.12))
+            color = (20, 36, 58, alpha)
+            for y in range(canvas_size[1]):
+                fade_px[x, y] = color
+        canvas = Image.alpha_composite(canvas, title_fade)
+
         warm_haze = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
         haze_draw = ImageDraw.Draw(warm_haze)
         haze_draw.ellipse(
@@ -175,48 +189,27 @@ def create_style_static_2(
         title_x = int(canvas_size[0] * 0.035)
         title_y = int(canvas_size[1] * 0.14) + int(float(zh_font_offset))
         zh_bbox = draw.textbbox((0, 0), title_zh, font=zh_font)
-        zh_w = zh_bbox[2] - zh_bbox[0]
         zh_h = zh_bbox[3] - zh_bbox[1]
-
-        en_text = title_en.upper()
-        en_spacing = max(4, int(float(en_font_size) * 0.16))
-        en_bbox = draw.textbbox((0, 0), en_text, font=en_font)
-        en_w = (en_bbox[2] - en_bbox[0]) + max(0, len(en_text) - 1) * en_spacing
-        title_right_edge = min(canvas_size[0] - 1, title_x + int(max(zh_w, en_w)))
-
-        # Subtle left gradient: starts at title's right edge and fades to the left edge.
-        title_focus = Image.new("RGBA", canvas_size, (0, 0, 0, 0))
-        focus_px = title_focus.load()
-        max_alpha = int((58 + 44 * ratio) * 1.5)
-        for x in range(canvas_size[0]):
-            if x > title_right_edge:
-                alpha = 0
-            else:
-                strength = 1.0 - (x / max(1, title_right_edge))
-                alpha = int(max_alpha * (strength ** 1.18))
-            color = overlay_color + (alpha,)
-            for y in range(canvas_size[1]):
-                focus_px[x, y] = color
-        canvas = Image.alpha_composite(canvas, title_focus)
 
         for offset in range(4, 13, 2):
             shadow_draw.text((title_x + offset, title_y + offset), title_zh, font=zh_font, fill=text_shadow)
         draw.text((title_x, title_y), title_zh, font=zh_font, fill=text_color)
 
         en_y = title_y + zh_h + int(float(title_spacing))
+        en_spacing = max(4, int(float(en_font_size) * 0.16))
         for offset in range(2, 8, 2):
             _draw_spaced_text(
                 shadow_draw,
                 (title_x + offset, en_y + offset),
-                en_text,
+                title_en.upper(),
                 en_font,
                 text_shadow,
                 en_spacing,
             )
-        _draw_spaced_text(draw, (title_x, en_y), en_text, en_font, text_color, en_spacing)
+        _draw_spaced_text(draw, (title_x, en_y), title_en.upper(), en_font, text_color, en_spacing)
 
         poster_paths = []
-        for index in range(1, 7):
+        for index in range(1, 6):
             candidate = Path(library_dir) / f"{index}.jpg"
             if candidate.exists():
                 poster_paths.append(candidate)
@@ -224,14 +217,13 @@ def create_style_static_2(
             logger.warning("static_5 未找到可用海报图")
             return False
 
-        poster_count = min(6, len(poster_paths))
-        available_width = int(canvas_size[0] * 0.92)
-        poster_width = int(available_width / (poster_count + 0.45))
+        available_width = int(canvas_size[0] * 0.90)
+        poster_width = int(available_width / 5.45)
         poster_height = int(poster_width * 1.43)
-        cards = [_build_poster_card(path, (poster_width, poster_height), frame_color) for path in poster_paths[:poster_count]]
+        cards = [_build_poster_card(path, (poster_width, poster_height), frame_color) for path in poster_paths[:5]]
 
         total_cards_width = sum(card.size[0] for card in cards)
-        gap = max(10, int((canvas_size[0] - total_cards_width) / max(1, len(cards) + 1)))
+        gap = max(12, int((canvas_size[0] - total_cards_width) / 6))
         start_x = gap
         start_y = canvas_size[1] - max(card.size[1] for card in cards) - int(canvas_size[1] * 0.03)
 
@@ -250,10 +242,5 @@ def create_style_static_2(
         merged.save(buffer, format="PNG", optimize=True)
         return base64.b64encode(buffer.getvalue()).decode("utf-8")
     except Exception as e:
-        logger.error(f"创建静态2封面时出错: {e}")
+        logger.error(f"创建静态5封面时出错: {e}")
         return False
-
-
-def create_style_static_5(*args, **kwargs):
-    # 兼容旧调用名称
-    return create_style_static_2(*args, **kwargs)
