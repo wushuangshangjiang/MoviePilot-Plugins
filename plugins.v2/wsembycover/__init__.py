@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.44"
+    plugin_version = "1.45"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -2002,18 +2002,10 @@ class WsEmbyCover(_PluginBase):
                 ]
             },
             {
-                'component': 'VBtnToggle',
-                'props': {
-                    'mandatory': True,
-                    'class': 'mt-3',
-                    'divided': True
-                },
-            },
-            {
                 'component': 'VExpansionPanels',
                 'props': {
                     'multiple': True,
-                    'class': 'mt-3'
+                    'class': 'mt-1'
                 },
                 'content': [
                     {
@@ -2415,7 +2407,7 @@ class WsEmbyCover(_PluginBase):
                                                             'model': 'selected_libraries',
                                                             'label': '指定媒体库',
                                                             'items': library_items,
-                                                            'style': 'max-height: 56px; overflow: hidden;',
+                                                            'counter': True,
                                                         }
                                                     }
                                                 ]
@@ -2788,15 +2780,15 @@ class WsEmbyCover(_PluginBase):
                 )
             current_style = "static_2" if str(self._cover_style or self._cover_style_base) == "static_2" else "static_1"
             style_cards: List[Dict[str, Any]] = []
-            for style_value, style_title, style_index in [
-                ("static_1", "Style 1", 1),
-                ("static_2", "Style 2", 2),
+            for style_value, style_index in [
+                ("static_1", 1),
+                ("static_2", 2),
             ]:
                 is_current = (style_value == current_style)
                 style_cards.append(
                     {
                         "component": "VCol",
-                        "props": {"cols": 12, "sm": 6, "md": 6},
+                        "props": {"cols": 12, "sm": 6, "md": 4},
                         "content": [
                             {
                                 "component": "VLabel",
@@ -2807,7 +2799,7 @@ class WsEmbyCover(_PluginBase):
                                         "props": {
                                             "variant": "flat",
                                             "class": "rounded-lg overflow-hidden mb-2",
-                                            "style": "position: relative; max-width: 420px; margin: 0 auto;",
+                                            "style": "position: relative;",
                                         },
                                         "content": [
                                             {
@@ -2821,19 +2813,12 @@ class WsEmbyCover(_PluginBase):
                                             {
                                                 "component": "VIcon",
                                                 "props": {
-                                                    "icon": "mdi-check-circle" if is_current else "mdi-radiobox-blank",
+                                                    "icon": "mdi-radiobox-marked" if is_current else "mdi-radiobox-blank",
                                                     "color": "#FFFFFF",
                                                     "class": "position-absolute",
                                                     "style": "top: 8px; right: 8px; z-index: 2; font-size: 26px; text-shadow: 0 1px 2px rgba(0,0,0,0.45);",
                                                 },
                                             },
-                                        ],
-                                    },
-                                    {
-                                        "component": "div",
-                                        "props": {"class": "px-2"},
-                                        "content": [
-                                            {"component": "span", "props": {"class": "text-subtitle-2"}, "text": style_title},
                                         ],
                                     },
                                 ],
