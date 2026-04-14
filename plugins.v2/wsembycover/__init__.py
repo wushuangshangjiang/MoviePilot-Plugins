@@ -76,7 +76,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.54"
+    plugin_version = "1.55"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -1019,6 +1019,10 @@ class WsEmbyCover(_PluginBase):
 
     def get_state(self) -> bool:
         return self._enabled
+
+    def get_page(self) -> List[dict]:
+        # 详情页已移除，保留抽象方法实现以满足插件框架实例化要求
+        return []
 
     def __font_search_dirs(self) -> List[Path]:
         dirs: List[Path] = []
@@ -2528,10 +2532,6 @@ class WsEmbyCover(_PluginBase):
             "style_naming_v2": True,
             **profile_defaults,
         }
-
-    def get_page(self) -> List[dict]:
-        # 保留最小入口以满足插件框架要求；详情页功能代码已移除
-        return []
 
     @staticmethod
     def __style_preview_src(index: int) -> str:
