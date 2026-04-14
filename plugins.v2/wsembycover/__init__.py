@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.45"
+    plugin_version = "1.46"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -1251,6 +1251,8 @@ class WsEmbyCover(_PluginBase):
             {"path": "set_page_tab_generate", "endpoint": self.api_set_page_tab_generate, "auth": "bear", "methods": ["POST"], "summary": "切换到生成页(兼容)"},
             {"path": "set_page_tab_history", "endpoint": self.api_set_page_tab_history, "auth": "bear", "methods": ["POST"], "summary": "切换到历史页(兼容)"},
             {"path": "set_page_tab_clean", "endpoint": self.api_set_page_tab_clean, "auth": "bear", "methods": ["POST"], "summary": "切换到清理页(兼容)"},
+            {"path": "/set_generate_style", "endpoint": self.api_set_generate_style, "auth": "bear", "methods": ["POST", "GET"], "summary": "生成页切换封面风格"},
+            {"path": "set_generate_style", "endpoint": self.api_set_generate_style, "auth": "bear", "methods": ["POST", "GET"], "summary": "生成页切换封面风格(兼容)"},
             {"path": "/saved_cover_image", "endpoint": self.api_saved_cover_image, "methods": ["GET"], "summary": "获取已保存封面图片"},
             {"path": "saved_cover_image", "endpoint": self.api_saved_cover_image, "methods": ["GET"], "summary": "获取已保存封面图片(兼容)"},
         ]
@@ -1333,6 +1335,22 @@ class WsEmbyCover(_PluginBase):
     def api_set_page_tab_clean(self):
         self.__set_page_tab("clean-tab")
         return {"code": 0, "msg": "已切换到清理缓存"}
+
+    def api_set_generate_style(self, style: str = ""):
+        try:
+            target_style = str(style or "").strip()
+            if target_style not in {"static_1", "static_2"}:
+                return {"code": 1, "msg": f"不支持的风格: {target_style}"}
+            self._cover_style = target_style
+            self._cover_style_base = target_style
+            self._active_server_style = target_style
+            self.__sync_profile_styles_with_selected_style()
+            self.__update_config()
+            logger.info(f"【WsEmbyCover】生成页已切换风格: {target_style}")
+            return {"code": 0, "msg": f"已切换到 {target_style}"}
+        except Exception as e:
+            logger.error(f"【WsEmbyCover】生成页切换风格失败: {e}", exc_info=True)
+            return {"code": 1, "msg": f"切换失败: {e}"}
 
     def api_saved_cover_image(self, file: str = ""):
         target_file = self.__resolve_saved_cover_path(file)
@@ -2005,7 +2023,7 @@ class WsEmbyCover(_PluginBase):
                 'component': 'VExpansionPanels',
                 'props': {
                     'multiple': True,
-                    'class': 'mt-1'
+                    'class': 'mt-2'
                 },
                 'content': [
                     {
@@ -2798,8 +2816,14 @@ class WsEmbyCover(_PluginBase):
                                         "component": "VCard",
                                         "props": {
                                             "variant": "flat",
-                                            "class": "rounded-lg overflow-hidden mb-2",
+                                            "class": "rounded-lg overflow-hidden mb-2 cursor-pointer",
                                             "style": "position: relative;",
+                                        },
+                                        "events": {
+                                            "click": {
+                                                "api": f"plugin/WsEmbyCover/set_generate_style?style={style_value}",
+                                                "method": "post",
+                                            }
                                         },
                                         "content": [
                                             {
