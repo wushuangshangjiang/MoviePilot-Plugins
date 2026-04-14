@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.50"
+    plugin_version = "1.51"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -2802,19 +2802,14 @@ class WsEmbyCover(_PluginBase):
                 ("static_1", 1),
                 ("static_2", 2),
             ]:
-                is_current = (style_value == current_style)
                 style_cards.append(
                     {
                         "component": "VCol",
                         "props": {"cols": 12, "sm": 6, "md": 3},
                         "content": [
                             {
-                                "component": "VCard",
-                                "props": {
-                                    "variant": "flat",
-                                    "class": "rounded-lg overflow-hidden mb-2 cursor-pointer mx-auto",
-                                    "style": "position: relative; width: 260px; max-width: 100%;",
-                                },
+                                "component": "VLabel",
+                                "props": {"class": "d-block w-100 cursor-pointer"},
                                 "events": {
                                     "click": {
                                         "api": f"plugin/WsEmbyCover/set_generate_style?style={style_value}",
@@ -2823,27 +2818,37 @@ class WsEmbyCover(_PluginBase):
                                 },
                                 "content": [
                                     {
-                                        "component": "VImg",
+                                        "component": "VCard",
                                         "props": {
-                                            "src": self.__style_preview_src(style_index),
-                                            "aspect-ratio": "16/9",
-                                            "cover": True,
+                                            "variant": "flat",
+                                            "class": "rounded-lg overflow-hidden mb-2 mx-auto",
+                                            "style": "position: relative; width: 200px; max-width: 100%;",
+                                            "ripple": False,
                                         },
-                                    },
-                                    *(
-                                        [
+                                        "content": [
                                             {
-                                                "component": "VIcon",
+                                                "component": "VImg",
                                                 "props": {
-                                                    "icon": "mdi-check-circle",
-                                                    "color": "#7CFC00",
-                                                    "class": "position-absolute",
-                                                    "style": "top: 8px; right: 8px; z-index: 2; font-size: 28px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.45)); pointer-events: none;",
+                                                    "src": self.__style_preview_src(style_index),
+                                                    "aspect-ratio": "16/9",
+                                                    "cover": True,
+                                                    "eager": True,
                                                 },
-                                            }
-                                        ]
-                                        if is_current else []
-                                    ),
+                                            },
+                                            {
+                                                "component": "VRadio",
+                                                "props": {
+                                                    "value": style_value,
+                                                    "color": "#FFFFFF",
+                                                    "baseColor": "#FFFFFF",
+                                                    "density": "default",
+                                                    "hideDetails": True,
+                                                    "class": "position-absolute",
+                                                    "style": "top: 8px; right: 8px; z-index: 2; margin: 0; transform: scale(1.2); transform-origin: top right; pointer-events: none;",
+                                                },
+                                            },
+                                        ],
+                                    }
                                 ],
                             }
                         ],
@@ -2851,8 +2856,14 @@ class WsEmbyCover(_PluginBase):
                 )
             generate_content.append(
                 {
-                    "component": "VRow",
-                    "content": style_cards,
+                    "component": "VRadioGroup",
+                    "props": {"model": current_style},
+                    "content": [
+                        {
+                            "component": "VRow",
+                            "content": style_cards,
+                        }
+                    ],
                 }
             )
             generate_content.append(
