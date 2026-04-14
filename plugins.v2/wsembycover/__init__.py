@@ -3,7 +3,6 @@ import datetime
 import gc
 import hashlib
 import importlib
-import mimetypes
 import os
 import re
 import ast
@@ -14,7 +13,7 @@ import shutil
 import random
 import requests
 from pathlib import Path
-from urllib.parse import urlparse, quote, unquote
+from urllib.parse import urlparse
 from typing import Any, Dict, List, Optional, Tuple
 from collections import defaultdict
 import pytz
@@ -77,7 +76,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.52"
+    plugin_version = "1.53"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -159,7 +158,6 @@ class WsEmbyCover(_PluginBase):
     _save_recent_covers = True
     _covers_history_limit_per_library = 10
     _covers_page_history_limit = 50
-    _page_tab = "generate-tab"
     _debug_mode = False
 
     def __init__(self):
@@ -279,7 +277,6 @@ class WsEmbyCover(_PluginBase):
                 "covers_page_history_limit[init_plugin]",
                 int,
             )
-            self._page_tab = config.get("page_tab", "generate-tab")
             self._active_server_name = str(config.get("active_server_name", "") or "").strip()
             self._active_server_edit_target = str(config.get("active_server_edit_target", "") or "").strip()
             self._active_server_host = str(config.get("active_server_host", "") or "").strip()
@@ -1017,7 +1014,6 @@ class WsEmbyCover(_PluginBase):
             "debug_show_apikey": bool(self._debug_mode),
             "covers_history_limit_per_library": self._covers_history_limit_per_library,
             "covers_page_history_limit": self._covers_page_history_limit,
-            "page_tab": self._page_tab,
             "style_naming_v2": True,
         })
 
@@ -1204,48 +1200,6 @@ class WsEmbyCover(_PluginBase):
                 "summary": "立即清理全部缓存（图片+字体，兼容无前导斜杠）",
             },
             {
-                "path": "/clean_images",
-                "endpoint": self.api_clean_images,
-                "auth": "bear",
-                "methods": ["POST"],
-                "summary": "立即清理封面图片缓存",
-            },
-            {
-                "path": "clean_images",
-                "endpoint": self.api_clean_images,
-                "auth": "bear",
-                "methods": ["POST"],
-                "summary": "立即清理封面图片缓存(兼容无前导斜杠)",
-            },
-            {
-                "path": "/clean_fonts",
-                "endpoint": self.api_clean_fonts,
-                "auth": "bear",
-                "methods": ["POST"],
-                "summary": "立即清理字体缓存",
-            },
-            {
-                "path": "clean_fonts",
-                "endpoint": self.api_clean_fonts,
-                "auth": "bear",
-                "methods": ["POST"],
-                "summary": "立即清理字体缓存(兼容无前导斜杠)",
-            },
-            {
-                "path": "/delete_saved_cover",
-                "endpoint": self.api_delete_saved_cover,
-                "auth": "bear",
-                "methods": ["POST", "GET"],
-                "summary": "删除一张已保存封面",
-            },
-            {
-                "path": "delete_saved_cover",
-                "endpoint": self.api_delete_saved_cover,
-                "auth": "bear",
-                "methods": ["POST", "GET"],
-                "summary": "删除一张已保存封面(兼容无前导斜杠)",
-            },
-            {
                 "path": "/generate_now",
                 "endpoint": self.api_generate_now,
                 "auth": "bear",
@@ -1259,39 +1213,7 @@ class WsEmbyCover(_PluginBase):
                 "methods": ["POST", "GET"],
                 "summary": "立即生成媒体库封面(兼容无前导斜杠)",
             },
-            {"path": "/set_page_tab_generate", "endpoint": self.api_set_page_tab_generate, "auth": "bear", "methods": ["POST"], "summary": "切换到生成页"},
-            {"path": "/set_page_tab_history", "endpoint": self.api_set_page_tab_history, "auth": "bear", "methods": ["POST"], "summary": "切换到历史页"},
-            {"path": "/set_page_tab_clean", "endpoint": self.api_set_page_tab_clean, "auth": "bear", "methods": ["POST"], "summary": "切换到清理页"},
-            {"path": "set_page_tab_generate", "endpoint": self.api_set_page_tab_generate, "auth": "bear", "methods": ["POST"], "summary": "切换到生成页(兼容)"},
-            {"path": "set_page_tab_history", "endpoint": self.api_set_page_tab_history, "auth": "bear", "methods": ["POST"], "summary": "切换到历史页(兼容)"},
-            {"path": "set_page_tab_clean", "endpoint": self.api_set_page_tab_clean, "auth": "bear", "methods": ["POST"], "summary": "切换到清理页(兼容)"},
-            {"path": "/set_generate_style", "endpoint": self.api_set_generate_style, "auth": "bear", "methods": ["POST", "GET"], "summary": "生成页切换封面风格"},
-            {"path": "set_generate_style", "endpoint": self.api_set_generate_style, "auth": "bear", "methods": ["POST", "GET"], "summary": "生成页切换封面风格(兼容)"},
-            {"path": "/saved_cover_image", "endpoint": self.api_saved_cover_image, "methods": ["GET"], "summary": "获取已保存封面图片"},
-            {"path": "saved_cover_image", "endpoint": self.api_saved_cover_image, "methods": ["GET"], "summary": "获取已保存封面图片(兼容)"},
         ]
-
-    def api_clean_images(self):
-        try:
-            logger.info("【WsEmbyCover】收到立即清理图片缓存请求")
-            self.__clean_generated_images()
-            self._clean_images = False
-            self.__update_config()
-            return {"code": 0, "msg": "图片缓存清理完成"}
-        except Exception as e:
-            logger.error(f"【WsEmbyCover】立即清理图片失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"图片缓存清理失败: {e}"}
-
-    def api_clean_fonts(self):
-        try:
-            logger.info("【WsEmbyCover】收到立即清理字体缓存请求")
-            self.__clean_downloaded_fonts()
-            self._clean_fonts = False
-            self.__update_config()
-            return {"code": 0, "msg": "字体缓存清理完成"}
-        except Exception as e:
-            logger.error(f"【WsEmbyCover】立即清理字体失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"字体缓存清理失败: {e}"}
 
     def api_clean_cache(self):
         try:
@@ -1305,20 +1227,6 @@ class WsEmbyCover(_PluginBase):
         except Exception as e:
             logger.error(f"【WsEmbyCover】立即清理全部缓存失败: {e}", exc_info=True)
             return {"code": 1, "msg": f"缓存清理失败: {e}"}
-
-    def api_delete_saved_cover(self, file: str = ""):
-        try:
-            target_file = self.__resolve_saved_cover_path(file)
-            if not target_file:
-                return {"code": 1, "msg": "无效文件路径"}
-            if not target_file.exists() or not target_file.is_file():
-                return {"code": 1, "msg": "文件不存在"}
-            target_file.unlink(missing_ok=True)
-            logger.info(f"【WsEmbyCover】已删除封面文件: {target_file}")
-            return {"code": 0, "msg": "封面文件删除成功"}
-        except Exception as e:
-            logger.error(f"【WsEmbyCover】删除封面文件失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"封面文件删除失败: {e}"}
 
     def api_generate_now(self, style: str = ""):
         old_style = self._cover_style
@@ -1346,56 +1254,6 @@ class WsEmbyCover(_PluginBase):
             return {"code": 1, "msg": f"封面生成失败: {e}"}
         finally:
             self._cover_style = old_style
-
-    def __set_page_tab(self, tab: str):
-        self._page_tab = tab if tab in ["generate-tab", "history-tab", "clean-tab"] else "generate-tab"
-        logger.info(f"【WsEmbyCover】已切换页面Tab: {self._page_tab}")
-
-    def api_set_page_tab_generate(self):
-        self.__set_page_tab("generate-tab")
-        return {"code": 0, "msg": "已切换到封面生成"}
-
-    def api_set_page_tab_history(self):
-        self.__set_page_tab("history-tab")
-        return {"code": 0, "msg": "已切换到历史封面"}
-
-    def api_set_page_tab_clean(self):
-        self.__set_page_tab("clean-tab")
-        return {"code": 0, "msg": "已切换到清理缓存"}
-
-    def api_set_generate_style(self, style: str = ""):
-        try:
-            target_style = str(style or "").strip()
-            if target_style not in {"static_1", "static_2"}:
-                return {"code": 1, "msg": f"不支持的风格: {target_style}"}
-            self._cover_style = target_style
-            self._cover_style_base = target_style
-            self._active_server_style = target_style
-            self.__sync_profile_styles_with_selected_style()
-            self.__update_config()
-            logger.info(f"【WsEmbyCover】生成页已切换风格: {target_style}")
-            return {"code": 0, "msg": f"已切换到 {target_style}"}
-        except Exception as e:
-            logger.error(f"【WsEmbyCover】生成页切换风格失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"切换失败: {e}"}
-
-    def api_saved_cover_image(self, file: str = ""):
-        target_file = self.__resolve_saved_cover_path(file)
-        if not target_file or not target_file.exists() or not target_file.is_file():
-            return {"code": 1, "msg": "图片不存在"}
-        mime_type, _ = mimetypes.guess_type(str(target_file))
-        if not mime_type:
-            mime_type = "image/jpeg"
-        try:
-            from fastapi.responses import FileResponse
-            return FileResponse(path=str(target_file), media_type=mime_type)
-        except Exception:
-            try:
-                from starlette.responses import FileResponse
-                return FileResponse(path=str(target_file), media_type=mime_type)
-            except Exception as e:
-                logger.error(f"【WsEmbyCover】返回图片失败: {e}")
-                return {"code": 1, "msg": "返回图片失败"}
 
     def get_service(self) -> List[Dict[str, Any]]:
         """
@@ -1435,9 +1293,6 @@ class WsEmbyCover(_PluginBase):
         """
         拼装插件配置页面
         """
-        # 每次用户打开插件设置页面时，强制重置回封面生成页签，满足不记忆页签的需求
-        self._page_tab = "generate-tab"
-        
         zh_font_items, en_font_items, _, _ = self.__get_font_presets()
         server_tab = [
             {
@@ -2670,14 +2525,10 @@ class WsEmbyCover(_PluginBase):
             "debug_show_apikey": bool(self._debug_mode),
             "covers_history_limit_per_library": self._covers_history_limit_per_library,
             "covers_page_history_limit": self._covers_page_history_limit,
-            "page_tab": "generate-tab",
             "style_naming_v2": True,
             **profile_defaults,
         }
 
-    def get_page(self) -> List[dict]:
-        # 按需求移除详情页，打开插件后直接使用配置页
-        return []
     @staticmethod
     def __style_preview_src(index: int) -> str:
 
@@ -2687,124 +2538,6 @@ class WsEmbyCover(_PluginBase):
             2: "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/images/style_5_preview.jpg?v=20260407-248",
         }
         return preview_map.get(safe_index, preview_map[1])
-
-    def __get_recent_generated_covers(self, limit: int = 20) -> List[Dict[str, Any]]:
-        items: List[Dict[str, Any]] = []
-        cover_dirs: List[Path] = []
-
-        if self._covers_output:
-            cover_dirs.append(Path(self._covers_output))
-        data_path = self.get_data_path()
-        default_output = data_path / "output"
-        if default_output.exists():
-            cover_dirs.append(default_output)
-
-        allowed_ext = {".jpg", ".jpeg", ".png", ".gif", ".apng", ".webp"}
-        seen = set()
-        for directory in cover_dirs:
-            key = str(directory)
-            if key in seen:
-                continue
-            seen.add(key)
-            if not directory.exists() or not directory.is_dir():
-                continue
-            for file_path in directory.iterdir():
-                if not file_path.is_file():
-                    continue
-                if file_path.suffix.lower() not in allowed_ext:
-                    continue
-                try:
-                    stat = file_path.stat()
-                    
-                    try:
-                        from PIL import Image
-                        from io import BytesIO
-                        import base64
-                        
-                        # 动态生成缩略图进行 Base64 传输
-                        # 1. 彻底绕开 /api/v1/plugin 外部接口存在的 401 鉴权问题
-                        # 2. 将几十 MB 的动图压缩为了几十 KB 的缩略图，解决前端加载卡死问题
-                        with Image.open(file_path) as img:
-                            if hasattr(img, 'is_animated') and img.is_animated:
-                                img.seek(0)
-                                
-                            thumb = img.copy()
-                            if thumb.mode != 'RGB':
-                                thumb = thumb.convert('RGB')
-                                
-                            thumb.thumbnail((480, 270))
-                            buf = BytesIO()
-                            thumb.save(buf, format="JPEG", quality=75)
-                            image_b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
-                            image_src = f"data:image/jpeg;base64,{image_b64}"
-                            
-                    except Exception as img_err:
-                        logger.debug(f"生成缩略图失败 {file_path}: {img_err}")
-                        continue
-
-                    items.append(
-                        {
-                            "name": file_path.name,
-                            "path": str(file_path),
-                            "mtime_ts": float(stat.st_mtime),
-                            "mtime": datetime.datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M:%S"),
-                            "size": self.__format_size(stat.st_size),
-                            "src": image_src,
-                        }
-                    )
-                except Exception as e:
-                    logger.debug(f"读取封面文件信息失败: {file_path} -> {e}")
-
-        items.sort(key=lambda x: x.get("mtime_ts", 0.0), reverse=True)
-        return items[:max(1, int(limit))]
-
-    @staticmethod
-    def __format_size(size_bytes: int) -> str:
-        try:
-            size = float(size_bytes)
-        except (TypeError, ValueError):
-            return "0 B"
-        units = ["B", "KB", "MB", "GB"]
-        for unit in units:
-            if size < 1024 or unit == units[-1]:
-                return f"{size:.1f} {unit}" if unit != "B" else f"{int(size)} {unit}"
-            size /= 1024
-        return f"{int(size_bytes)} B"
-
-    def __get_saved_cover_dirs(self) -> List[Path]:
-        result: List[Path] = []
-        if self._covers_output:
-            result.append(Path(self._covers_output))
-        data_path = self.get_data_path()
-        default_output = data_path / "output"
-        result.append(default_output)
-        unique: List[Path] = []
-        seen = set()
-        for directory in result:
-            key = str(directory)
-            if key in seen:
-                continue
-            seen.add(key)
-            unique.append(directory)
-        return unique
-
-    def __resolve_saved_cover_path(self, raw_path: str) -> Optional[Path]:
-        if not raw_path:
-            return None
-        decoded = unquote(str(raw_path)).strip()
-        target = Path(decoded).expanduser()
-        if not target.is_absolute():
-            return None
-        allowed_dirs = self.__get_saved_cover_dirs()
-        for directory in allowed_dirs:
-            try:
-                root = directory.resolve()
-                file_path = target.resolve()
-                if str(file_path).startswith(str(root) + os.sep) or file_path == root:
-                    return file_path
-            except Exception:
-                continue
-        return None
 
     def __get_recent_cover_output_dir(self) -> Path:
         if self._covers_output:
