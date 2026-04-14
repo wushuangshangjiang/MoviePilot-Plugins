@@ -76,7 +76,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.53"
+    plugin_version = "1.54"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -2528,6 +2528,10 @@ class WsEmbyCover(_PluginBase):
             "style_naming_v2": True,
             **profile_defaults,
         }
+
+    def get_page(self) -> List[dict]:
+        # 保留最小入口以满足插件框架要求；详情页功能代码已移除
+        return []
 
     @staticmethod
     def __style_preview_src(index: int) -> str:
