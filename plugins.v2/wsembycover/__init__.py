@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.43"
+    plugin_version = "1.44"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -160,7 +160,7 @@ class WsEmbyCover(_PluginBase):
     _covers_history_limit_per_library = 10
     _covers_page_history_limit = 50
     _page_tab = "generate-tab"
-    _debug_show_apikey = False
+    _debug_mode = False
 
     def __init__(self):
         super().__init__()
@@ -262,7 +262,7 @@ class WsEmbyCover(_PluginBase):
             self._clean_images = config.get("clean_images", False)
             self._clean_fonts = config.get("clean_fonts", False)
             self._save_recent_covers = config.get("save_recent_covers", True)
-            self._debug_show_apikey = bool(config.get("debug_show_apikey", False))
+            self._debug_mode = bool(config.get("debug_mode", config.get("debug_show_apikey", False)))
             self._covers_history_limit_per_library = self.__clamp_value(
                 config.get("covers_history_limit_per_library", 10),
                 1,
@@ -1013,7 +1013,8 @@ class WsEmbyCover(_PluginBase):
             "clean_images": self._clean_images,
             "clean_fonts": self._clean_fonts,
             "save_recent_covers": self._save_recent_covers,
-            "debug_show_apikey": bool(self._debug_show_apikey),
+            "debug_mode": bool(self._debug_mode),
+            "debug_show_apikey": bool(self._debug_mode),
             "covers_history_limit_per_library": self._covers_history_limit_per_library,
             "covers_page_history_limit": self._covers_page_history_limit,
             "page_tab": self._page_tab,
@@ -1989,15 +1990,6 @@ class WsEmbyCover(_PluginBase):
         # 封面风格设置标签
         style_tab = [
             {
-                'component': 'VAlert',
-                'props': {
-                    'type': 'info',
-                    'variant': 'tonal',
-                    'text': '先选基础样式，再选静态或动态。点击整张预览图即可切换。',
-                    'class': 'mb-3'
-                }
-            },
-            {
                 'component': 'VRadioGroup',
                 'props': {
                     'model': 'cover_style_base',
@@ -2284,7 +2276,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 4
+                                                    'md': 3
                                                 },
                                                 'content': [
                                                     {
@@ -2300,7 +2292,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 4
+                                                    'md': 3
                                                 },
                                                 'content': [
                                                     {
@@ -2316,7 +2308,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 4
+                                                    'md': 3
                                                 },
                                                 'content': [
                                                     {
@@ -2324,6 +2316,23 @@ class WsEmbyCover(_PluginBase):
                                                         'props': {
                                                             'model': 'transfer_monitor',
                                                             'label': '入库监控',
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                    'md': 3
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VSwitch',
+                                                        'props': {
+                                                            'model': 'debug_mode',
+                                                            'label': '调试模式',
+                                                            'color': 'warning',
                                                         }
                                                     }
                                                 ]
@@ -2346,8 +2355,6 @@ class WsEmbyCover(_PluginBase):
                                                             'model': 'delay',
                                                             'label': '入库延迟（秒）',
                                                             'placeholder': '60',
-                                                            'hint': '根据实际情况调整延迟时间',
-                                                            'persistentHint': True
                                                         }
                                                     }
                                                 ]
@@ -2402,36 +2409,13 @@ class WsEmbyCover(_PluginBase):
                                                     {
                                                         'component': 'VSelect',
                                                         'props': {
-                                                            'chips': True,
+                                                            'chips': False,
                                                             'multiple': True,
                                                             'clearable': True,
                                                             'model': 'selected_libraries',
-                                                            'label': '更新媒体库（可选）',
+                                                            'label': '指定媒体库',
                                                             'items': library_items,
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                        ]
-                                    },
-                                    {
-                                        'component': 'VRow',
-                                        'content': [
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
-                                                    'md': 4
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VSwitch',
-                                                        'props': {
-                                                            'model': 'debug_show_apikey',
-                                                            'label': '调试日志显示完整 APIKey',
-                                                            'hint': '仅排障时开启，可能泄露敏感信息',
-                                                            'persistentHint': True,
-                                                            'color': 'warning',
+                                                            'style': 'max-height: 56px; overflow: hidden;',
                                                         }
                                                     }
                                                 ]
@@ -2618,7 +2602,8 @@ class WsEmbyCover(_PluginBase):
             "clean_images": self._clean_images,
             "clean_fonts": self._clean_fonts,
             "save_recent_covers": self._save_recent_covers,
-            "debug_show_apikey": bool(self._debug_show_apikey),
+            "debug_mode": bool(self._debug_mode),
+            "debug_show_apikey": bool(self._debug_mode),
             "covers_history_limit_per_library": self._covers_history_limit_per_library,
             "covers_page_history_limit": self._covers_page_history_limit,
             "page_tab": "generate-tab",
@@ -2811,7 +2796,7 @@ class WsEmbyCover(_PluginBase):
                 style_cards.append(
                     {
                         "component": "VCol",
-                        "props": {"cols": 12, "sm": 6, "md": 4},
+                        "props": {"cols": 12, "sm": 6, "md": 6},
                         "content": [
                             {
                                 "component": "VLabel",
@@ -2846,14 +2831,9 @@ class WsEmbyCover(_PluginBase):
                                     },
                                     {
                                         "component": "div",
-                                        "props": {"class": "d-flex align-center justify-space-between px-2"},
+                                        "props": {"class": "px-2"},
                                         "content": [
                                             {"component": "span", "props": {"class": "text-subtitle-2"}, "text": style_title},
-                                            {
-                                                "component": "span",
-                                                "props": {"class": f"text-caption {'text-success' if is_current else 'text-medium-emphasis'}"},
-                                                "text": "当前使用中" if is_current else "未启用",
-                                            },
                                         ],
                                     },
                                 ],
@@ -3224,6 +3204,7 @@ class WsEmbyCover(_PluginBase):
             logger.error(f"初始化过程中出错: {e}")
             logger.warning("将尝试继续执行，但可能影响封面生成质量")
         logger.info("开始更新媒体库封面 ...")
+        self.__debug_log(f"调试模式开启：selected_libraries={self._selected_libraries}")
         # 开始前确保停止信号已清除
         self._event.clear()
         global_style = self._cover_style
@@ -3247,8 +3228,10 @@ class WsEmbyCover(_PluginBase):
             if not libraries:
                 logger.warning(f"服务器 {server} 的媒体库列表获取失败")
                 continue
+            self.__debug_log(f"服务器 {server} 可用媒体库数量={len(libraries)}")
             selected_library_ids = {library_id for srv, library_id in selected_pairs if srv == server}
             if selected_library_ids:
+                self.__debug_log(f"服务器 {server} 指定媒体库过滤={sorted(selected_library_ids)}")
                 filtered_libraries = []
                 for library in libraries:
                     current_library_id = library.get("Id") if service.type == 'emby' else library.get("ItemId")
@@ -4076,6 +4059,16 @@ class WsEmbyCover(_PluginBase):
                 logger.info(f"媒体库名 '{library_name}' 以数字或字母开头，如果需要自定义标题，请在配置中使用引号包围媒体库名，例如: \"{library_name}\":")
 
         return (zh_title, en_title, bg_color)
+
+    def __safe_log_url(self, url: str) -> str:
+        text = str(url or "")
+        if self._debug_mode:
+            return text
+        return re.sub(r"(api_key=)[^&]+", r"\1***", text)
+
+    def __debug_log(self, message: str):
+        if self._debug_mode:
+            logger.info(f"[DEBUG] {message}")
     
     def __get_server_libraries(self, service):
         try:
@@ -4093,13 +4086,13 @@ class WsEmbyCover(_PluginBase):
                         request_url = replace_url(url)
                 except Exception:
                     request_url = url
-                request_url_safe = str(request_url)
-                if not self._debug_show_apikey:
-                    request_url_safe = re.sub(r"(api_key=)[^&]+", r"\1***", request_url_safe)
+                request_url_safe = self.__safe_log_url(request_url)
+                self.__debug_log(f"请求媒体库列表：server={getattr(service, 'name', 'unknown')} url={request_url_safe}")
                 res = service.instance.get_data(url=url)
                 if not res:
                     logger.warning(f"获取媒体库列表失败(无响应)：server={getattr(service, 'name', 'unknown')} url={request_url_safe}")
                     return []
+                self.__debug_log(f"媒体库列表响应：server={getattr(service, 'name', 'unknown')} status={res.status_code}")
                 if res.status_code >= 400:
                     body_preview = ""
                     try:
@@ -4124,6 +4117,8 @@ class WsEmbyCover(_PluginBase):
                         f"url={request_url_safe} err={json_err} response={body_preview}"
                     )
                     return []
+                count_hint = len(data) if isinstance(data, list) else len(data.get("Items", [])) if isinstance(data, dict) else 0
+                self.__debug_log(f"媒体库列表解析成功：server={getattr(service, 'name', 'unknown')} count={count_hint}")
                 if service.type == 'emby':
                     return data.get("Items", []) if isinstance(data, dict) else []
                 return data if isinstance(data, list) else []
@@ -4529,6 +4524,17 @@ class WsEmbyCover(_PluginBase):
                 library_id = library.get("ItemId")
             
             url = f'[HOST]emby/Items/{library_id}/Images/Primary?api_key=[APIKEY]'
+            request_url = url
+            try:
+                replace_url = getattr(service.instance, "_replace_url", None)
+                if callable(replace_url):
+                    request_url = replace_url(url)
+            except Exception:
+                request_url = url
+            self.__debug_log(
+                f"设置封面请求：server={service.name} library={library.get('Name')} library_id={library_id} "
+                f"url={self.__safe_log_url(request_url)}"
+            )
             # 根据 base64 前几个字节简单判断格式
             content_type = "image/png"
             extension = "png"
@@ -4561,6 +4567,9 @@ class WsEmbyCover(_PluginBase):
             logger.info(
                 f"准备上传封面: {library['Name']} 格式={content_type} 大小={len(image_bytes) / 1024:.1f}KB"
             )
+            self.__debug_log(
+                f"封面上传参数：content_type={content_type} extension={extension} base64_len={len(image_base64)} bytes={len(image_bytes)}"
+            )
 
             def _post_cover(data_text):
                 return service.instance.post_data(
@@ -4574,8 +4583,11 @@ class WsEmbyCover(_PluginBase):
                 logger.warning(f"设置「{library['Name']}」封面首次上传无响应，准备重试")
                 time.sleep(1)
                 res = _post_cover(image_base64)
+            else:
+                self.__debug_log(f"封面上传响应：status={res.status_code}")
 
             if res and res.status_code in [200, 204]:
+                self.__debug_log(f"封面上传成功：library={library['Name']} status={res.status_code}")
                 return True
 
             if res is not None:
