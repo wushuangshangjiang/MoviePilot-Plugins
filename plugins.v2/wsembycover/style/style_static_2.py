@@ -209,7 +209,7 @@ def create_style_static_2(
         _draw_spaced_text(draw, (title_x, en_y), title_en.upper(), en_font, text_color, en_spacing)
 
         poster_paths = []
-        for index in range(1, 6):
+        for index in range(1, 7):
             candidate = Path(library_dir) / f"{index}.jpg"
             if candidate.exists():
                 poster_paths.append(candidate)
@@ -217,13 +217,17 @@ def create_style_static_2(
             logger.warning("static_5 未找到可用海报图")
             return False
 
+        poster_count = min(6, len(poster_paths))
         available_width = int(canvas_size[0] * 0.90)
-        poster_width = int(available_width / 5.45)
+        poster_width = int(available_width / max(1.0, poster_count + 0.42))
         poster_height = int(poster_width * 1.43)
-        cards = [_build_poster_card(path, (poster_width, poster_height), frame_color) for path in poster_paths[:5]]
+        cards = [
+            _build_poster_card(path, (poster_width, poster_height), frame_color)
+            for path in poster_paths[:poster_count]
+        ]
 
         total_cards_width = sum(card.size[0] for card in cards)
-        gap = max(12, int((canvas_size[0] - total_cards_width) / 6))
+        gap = max(10, int((canvas_size[0] - total_cards_width) / (poster_count + 1)))
         start_x = gap
         start_y = canvas_size[1] - max(card.size[1] for card in cards) - int(canvas_size[1] * 0.03)
 

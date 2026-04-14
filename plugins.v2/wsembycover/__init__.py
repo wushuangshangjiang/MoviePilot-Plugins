@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.40"
+    plugin_version = "1.41"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -2907,6 +2907,61 @@ class WsEmbyCover(_PluginBase):
                         },
                     ]
                 )
+            current_style = "static_2" if str(self._cover_style or self._cover_style_base) == "static_2" else "static_1"
+            style_cards: List[Dict[str, Any]] = []
+            for style_value, style_title, style_index in [
+                ("static_1", "Style 1", 1),
+                ("static_2", "Style 2", 2),
+            ]:
+                is_current = (style_value == current_style)
+                style_cards.append(
+                    {
+                        "component": "VCol",
+                        "props": {"cols": 12, "md": 6},
+                        "content": [
+                            {
+                                "component": "VCard",
+                                "props": {
+                                    "variant": "outlined",
+                                    "class": "mb-2",
+                                    "style": "overflow: hidden;",
+                                },
+                                "content": [
+                                    {
+                                        "component": "VImg",
+                                        "props": {
+                                            "src": self.__style_preview_src(style_index),
+                                            "aspect-ratio": "16/9",
+                                            "cover": True,
+                                        },
+                                    },
+                                    {
+                                        "component": "VCardText",
+                                        "props": {"class": "py-2 d-flex align-center justify-space-between"},
+                                        "content": [
+                                            {"component": "span", "text": style_title},
+                                            {
+                                                "component": "VChip",
+                                                "props": {
+                                                    "size": "small",
+                                                    "color": "success" if is_current else "default",
+                                                    "variant": "flat" if is_current else "outlined",
+                                                },
+                                                "text": "当前使用中" if is_current else "未启用",
+                                            },
+                                        ],
+                                    },
+                                ],
+                            }
+                        ],
+                    }
+                )
+            generate_content.append(
+                {
+                    "component": "VRow",
+                    "content": style_cards,
+                }
+            )
             generate_content.append(
                 {
                     "component": "VRow",
