@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.46"
+    plugin_version = "1.47"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -2817,7 +2817,7 @@ class WsEmbyCover(_PluginBase):
                                         "props": {
                                             "variant": "flat",
                                             "class": "rounded-lg overflow-hidden mb-2 cursor-pointer",
-                                            "style": "position: relative;",
+                                            "style": "position: relative; max-width: 320px; margin: 0 auto;",
                                         },
                                         "events": {
                                             "click": {
@@ -2834,15 +2834,18 @@ class WsEmbyCover(_PluginBase):
                                                     "cover": True,
                                                 },
                                             },
-                                            {
-                                                "component": "VIcon",
-                                                "props": {
-                                                    "icon": "mdi-radiobox-marked" if is_current else "mdi-radiobox-blank",
-                                                    "color": "#FFFFFF",
-                                                    "class": "position-absolute",
-                                                    "style": "top: 8px; right: 8px; z-index: 2; font-size: 26px; text-shadow: 0 1px 2px rgba(0,0,0,0.45);",
-                                                },
-                                            },
+                                            *(
+                                                [{
+                                                    "component": "VIcon",
+                                                    "props": {
+                                                        "icon": "mdi-checkbox-blank-circle-outline",
+                                                        "color": "#FFFFFF",
+                                                        "class": "position-absolute",
+                                                        "style": "top: 8px; right: 8px; z-index: 2; font-size: 28px; text-shadow: 0 1px 2px rgba(0,0,0,0.45);",
+                                                    },
+                                                }]
+                                                if is_current else []
+                                            ),
                                         ],
                                     },
                                 ],
