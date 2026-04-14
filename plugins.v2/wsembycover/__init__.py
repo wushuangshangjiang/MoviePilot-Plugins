@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.47"
+    plugin_version = "1.48"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -2838,7 +2838,7 @@ class WsEmbyCover(_PluginBase):
                                                 [{
                                                     "component": "VIcon",
                                                     "props": {
-                                                        "icon": "mdi-checkbox-blank-circle-outline",
+                                                        "icon": "mdi-radiobox-blank",
                                                         "color": "#FFFFFF",
                                                         "class": "position-absolute",
                                                         "style": "top: 8px; right: 8px; z-index: 2; font-size: 28px; text-shadow: 0 1px 2px rgba(0,0,0,0.45);",
