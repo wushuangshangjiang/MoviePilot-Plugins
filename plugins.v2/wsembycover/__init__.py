@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.41"
+    plugin_version = "1.42"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -114,6 +114,7 @@ class WsEmbyCover(_PluginBase):
     _active_server_style = "static_1"
     _all_libraries = []
     _include_libraries = []
+    _selected_library = ''
     _sort_by = 'Random'
     _monitor_sort = ''
     _current_updating_items = set()
@@ -198,6 +199,11 @@ class WsEmbyCover(_PluginBase):
                 form_profiles = self.__parse_server_profiles_from_form_slots(config)
                 self._server_profiles = self.__parse_server_profiles_from_config(config) or form_profiles
             self._include_libraries = []
+            self._selected_library = str(config.get("selected_library", "") or "").strip()
+            if not self._selected_library:
+                legacy_include = config.get("include_libraries")
+                if isinstance(legacy_include, list) and legacy_include:
+                    self._selected_library = str(legacy_include[0] or "").strip()
             self._sort_by = config.get("sort_by")
             self._covers_output = config.get("covers_output")
             self._covers_input = config.get("covers_input")
@@ -311,6 +317,14 @@ class WsEmbyCover(_PluginBase):
             self._servers[server_name] = service
             self._server_style_map[server_name] = style if style in {"static_1", "static_2"} else "static_1"
             self._all_libraries.extend(self.__get_all_libraries(server_name, service))
+        available_library_values = {
+            str(item.get("value", "")).strip()
+            for item in self._all_libraries
+            if isinstance(item, dict) and str(item.get("value", "")).strip()
+        }
+        if self._selected_library and self._selected_library not in available_library_values:
+            self._selected_library = ""
+            profile_dirty = True
         if profile_dirty:
             self.__update_config()
 
@@ -951,6 +965,7 @@ class WsEmbyCover(_PluginBase):
             "server_5_api_key": self.__manual_server_slot_value(5, "api_key", ""),
             "server_5_style": self.__manual_server_slot_value(5, "style", "static_1"),
             "include_libraries": self._include_libraries,
+            "selected_library": self._selected_library,
             "all_libraries": self._all_libraries,
             "sort_by": self._sort_by,
             "covers_output": self._covers_output,
@@ -1823,6 +1838,7 @@ class WsEmbyCover(_PluginBase):
                 "src": self.__style_preview_src(2)
             },
         ]
+        library_items = self._all_libraries or []
         profile_defaults: Dict[str, Any] = {}
         server_profile_panels: List[Dict[str, Any]] = []
         profile_entries = list(sorted(self._server_profiles.items(), key=lambda item: item[0]))
@@ -2215,163 +2231,6 @@ class WsEmbyCover(_PluginBase):
                             }
                         ]
                     },
-                    {
-                        'component': 'VExpansionPanel',
-                        'props': {
-                            'elevation': 0,
-                            'class': 'rounded-lg',
-                            'style': 'background-color: rgba(var(--v-theme-surface), 0.32); border: 1px solid rgba(var(--v-border-color), 0.32); backdrop-filter: blur(6px);'
-                        },
-                        'content': [
-                            {
-                                'component': 'VExpansionPanelTitle',
-                                'props': {
-                                    'class': 'font-weight-medium'
-                                },
-                                'text': '动态图参数'
-                            },
-                            {
-                                'component': 'VExpansionPanelText',
-                                'content': [
-                                    {
-                                        'component': 'VRow',
-                                        'props': {'class': 'mt-1'},
-                                        'content': [
-                                            {
-                                                'component': 'VCol',
-                                                'props': {'cols': 12, 'md': 3},
-                                                'content': [
-                                                    {
-                                                        'component': 'VTextField',
-                                                        'props': {
-                                                            'label': '动画循环周期 (秒)',
-                                                            'type': 'number',
-                                                            'prependInnerIcon': 'mdi-clock-outline'
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {'cols': 12, 'md': 3},
-                                                'content': [
-                                                    {
-                                                        'component': 'VTextField',
-                                                        'props': {
-                                                            'label': '帧率 (FPS)',
-                                                            'type': 'number',
-                                                            'prependInnerIcon': 'mdi-speedometer'
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {'cols': 12, 'md': 3},
-                                                'content': [
-                                                    {
-                                                        'component': 'VSelect',
-                                                        'props': {
-                                                            'label': '输出格式',
-                                                            'items': [
-                                                                {'title': 'APNG', 'value': 'apng'},
-                                                                {'title': 'GIF', 'value': 'gif'}
-                                                            ],
-                                                            'prependInnerIcon': 'mdi-file-video'
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {'cols': 12, 'md': 3},
-                                                'content': [
-                                                    {
-                                                        'component': 'VSelect',
-                                                        'props': {
-                                                            'label': '颜色压缩等级',
-                                                            'items': [
-                                                                {'title': '关闭（保真优先）', 'value': 'off'},
-                                                                {'title': '中等压缩', 'value': 'medium'},
-                                                                {'title': '强压缩（体积最小）', 'value': 'strong'}
-                                                            ],
-                                                            'prependInnerIcon': 'mdi-palette-outline'
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                        ]
-                                    },
-                                    {
-                                        'component': 'VRow',
-                                        'props': {'class': 'mt-2'},
-                                        'content': [
-                                            {
-                                                'component': 'VCol',
-                                                'props': {'cols': 12, 'md': 4},
-                                                'content': [
-                                                    {
-                                                        'component': 'VTextField',
-                                                        'props': {
-                                                            'label': '样式1/2 图片数量 (3~9)',
-                                                            'type': 'number',
-                                                            'min': 3,
-                                                            'max': 9,
-                                                            'hint': '仅样式1/2有效',
-                                                            'persistentHint': True,
-                                                            'prependInnerIcon': 'mdi-image-multiple'
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {'cols': 12, 'md': 4},
-                                                'content': [
-                                                    {
-                                                        'component': 'VSelect',
-                                                        'props': {
-                                                            'label': '样式1动画风格',
-                                                            'hint': '仅样式1有效',
-                                                            'persistentHint': True,
-                                                            'items': [
-                                                                {'title': '旋转-飞出', 'value': 'fly'},
-                                                                {'title': '旋转-渐隐', 'value': 'fade'},
-                                                                {'title': '渐变', 'value': 'crossfade'}
-                                                            ],
-                                                            'prependInnerIcon': 'mdi-transition'
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {'cols': 12, 'md': 4},
-                                                'content': [
-                                                    {
-                                                        'component': 'VSelect',
-                                                        'props': {
-                                                            'label': '样式3滚动方向',
-                                                            'hint': '仅样式3有效',
-                                                            'persistentHint': True,
-                                                            'items': [
-                                                                {'title': '向下', 'value': 'down'},
-                                                                {'title': '向上', 'value': 'up'},
-                                                                {'title': '交替 (两边下/中间上)', 'value': 'alternate'},
-                                                                {'title': '交替反向 (两边上/中间下)', 'value': 'alternate_reverse'}
-                                                            ],
-                                                            'prependInnerIcon': 'mdi-swap-vertical'
-                                                        }
-                                                    }
-                                                ]
-                                            }
-                                        ]
-                                    },
- 
-                                ]
-                            }
-                        ]
-                    }
                 ]
             }
         ]
@@ -2464,7 +2323,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 4
+                                                    'md': 3
                                                 },
                                                 'content': [
                                                     {
@@ -2483,7 +2342,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 4
+                                                    'md': 3
                                                 },
                                                 'content': [
                                                     {
@@ -2500,7 +2359,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 4
+                                                    'md': 3
                                                 },
                                                 'content': [
                                                     {
@@ -2515,6 +2374,28 @@ class WsEmbyCover(_PluginBase):
                                                                 {"title": "最新入库", "value": "DateCreated"},
                                                                 {"title": "最新发行", "value": "PremiereDate"}
                                                             ]
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                    'md': 3
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VSelect',
+                                                        'props': {
+                                                            'chips': False,
+                                                            'multiple': False,
+                                                            'clearable': True,
+                                                            'model': 'selected_library',
+                                                            'label': '更新媒体库（可选）',
+                                                            'items': library_items,
+                                                            'hint': '留空时更新所有分类；选择后仅更新：服务器 - 分类',
+                                                            'persistentHint': True
                                                         }
                                                     }
                                                 ]
@@ -2700,6 +2581,7 @@ class WsEmbyCover(_PluginBase):
             "server_5_api_key": self.__manual_server_slot_value(5, "api_key", ""),
             "server_5_style": self.__manual_server_slot_value(5, "style", "static_1"),
             "include_libraries": self._include_libraries or [],
+            "selected_library": self._selected_library or "",
             "sort_by": self._sort_by or "Random",
             "title_config": self._title_config or self.__default_title_config_template(),
             "tab": "title-tab",
@@ -2917,21 +2799,21 @@ class WsEmbyCover(_PluginBase):
                 style_cards.append(
                     {
                         "component": "VCol",
-                        "props": {"cols": 12, "md": 6},
+                        "props": {"cols": 12, "sm": 6, "md": 4, "lg": 3},
                         "content": [
                             {
                                 "component": "VCard",
                                 "props": {
                                     "variant": "outlined",
                                     "class": "mb-2",
-                                    "style": "overflow: hidden;",
+                                    "style": "overflow: hidden; max-width: 360px; margin: 0 auto;",
                                 },
                                 "content": [
                                     {
                                         "component": "VImg",
                                         "props": {
                                             "src": self.__style_preview_src(style_index),
-                                            "aspect-ratio": "16/9",
+                                            "height": 120,
                                             "cover": True,
                                         },
                                     },
@@ -3324,7 +3206,10 @@ class WsEmbyCover(_PluginBase):
         global_style = self._cover_style
         total_success_count = 0
         total_fail_count = 0
+        selected_server, selected_library_id = self.__parse_selected_library()
         for server, service in self._servers.items():
+            if selected_server and server != selected_server:
+                continue
             self.__apply_server_profile(server)
             # 扫描所有媒体库
             logger.info(f"当前服务器 {server}")
@@ -3338,6 +3223,16 @@ class WsEmbyCover(_PluginBase):
             if not libraries:
                 logger.warning(f"服务器 {server} 的媒体库列表获取失败")
                 continue
+            if selected_library_id:
+                filtered_libraries = []
+                for library in libraries:
+                    current_library_id = library.get("Id") if service.type == 'emby' else library.get("ItemId")
+                    if str(current_library_id or "").strip() == selected_library_id:
+                        filtered_libraries.append(library)
+                libraries = filtered_libraries
+                if not libraries:
+                    logger.warning(f"服务器 {server} 中未找到已选择的媒体库，已跳过")
+                    continue
             success_count = 0
             fail_count = 0
             for library in libraries:
@@ -4225,14 +4120,27 @@ class WsEmbyCover(_PluginBase):
                     library_id = library.get("ItemId")
                 if library['Name'] and library_id:
                     lib_item = {
-                        "name": f"{server}: {library['Name']}",
-                        "value": f"{server}-{library_id}"
+                        "title": f"{server} - {library['Name']}",
+                        "value": f"{server}::{library_id}"
                     }
                     lib_items.append(lib_item)
             return lib_items
         except Exception as err:
             logger.error(f"获取所有媒体库失败：{str(err)}")
             return []
+
+    def __parse_selected_library(self) -> Tuple[str, str]:
+        raw = str(self._selected_library or "").strip()
+        if not raw:
+            return "", ""
+        if "::" in raw:
+            server, library_id = raw.split("::", 1)
+            return server.strip(), library_id.strip()
+        if "-" in raw:
+            # 向后兼容旧格式：server-library_id
+            server, library_id = raw.split("-", 1)
+            return server.strip(), library_id.strip()
+        return "", ""
 
     def __get_showcase_background_url(self, item):
         """获取横幅展示风格使用的背景图URL，优先背景图。"""
