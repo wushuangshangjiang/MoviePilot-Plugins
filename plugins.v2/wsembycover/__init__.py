@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.42"
+    plugin_version = "1.43"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -114,7 +114,7 @@ class WsEmbyCover(_PluginBase):
     _active_server_style = "static_1"
     _all_libraries = []
     _include_libraries = []
-    _selected_library = ''
+    _selected_libraries = []
     _sort_by = 'Random'
     _monitor_sort = ''
     _current_updating_items = set()
@@ -199,11 +199,19 @@ class WsEmbyCover(_PluginBase):
                 form_profiles = self.__parse_server_profiles_from_form_slots(config)
                 self._server_profiles = self.__parse_server_profiles_from_config(config) or form_profiles
             self._include_libraries = []
-            self._selected_library = str(config.get("selected_library", "") or "").strip()
-            if not self._selected_library:
-                legacy_include = config.get("include_libraries")
-                if isinstance(legacy_include, list) and legacy_include:
-                    self._selected_library = str(legacy_include[0] or "").strip()
+            selected_libraries = config.get("selected_libraries")
+            if isinstance(selected_libraries, list):
+                self._selected_libraries = [str(item or "").strip() for item in selected_libraries if str(item or "").strip()]
+            else:
+                legacy_single = str(config.get("selected_library", "") or "").strip()
+                if legacy_single:
+                    self._selected_libraries = [legacy_single]
+                else:
+                    legacy_include = config.get("include_libraries")
+                    if isinstance(legacy_include, list):
+                        self._selected_libraries = [str(item or "").strip() for item in legacy_include if str(item or "").strip()]
+                    else:
+                        self._selected_libraries = []
             self._sort_by = config.get("sort_by")
             self._covers_output = config.get("covers_output")
             self._covers_input = config.get("covers_input")
@@ -322,8 +330,13 @@ class WsEmbyCover(_PluginBase):
             for item in self._all_libraries
             if isinstance(item, dict) and str(item.get("value", "")).strip()
         }
-        if self._selected_library and self._selected_library not in available_library_values:
-            self._selected_library = ""
+        normalized_selected_libraries = []
+        for item in (self._selected_libraries or []):
+            raw_item = str(item or "").strip()
+            if raw_item and raw_item in available_library_values:
+                normalized_selected_libraries.append(raw_item)
+        if normalized_selected_libraries != (self._selected_libraries or []):
+            self._selected_libraries = normalized_selected_libraries
             profile_dirty = True
         if profile_dirty:
             self.__update_config()
@@ -965,7 +978,8 @@ class WsEmbyCover(_PluginBase):
             "server_5_api_key": self.__manual_server_slot_value(5, "api_key", ""),
             "server_5_style": self.__manual_server_slot_value(5, "style", "static_1"),
             "include_libraries": self._include_libraries,
-            "selected_library": self._selected_library,
+            "selected_libraries": self._selected_libraries,
+            "selected_library": self._selected_libraries[0] if self._selected_libraries else "",
             "all_libraries": self._all_libraries,
             "sort_by": self._sort_by,
             "covers_output": self._covers_output,
@@ -2388,14 +2402,12 @@ class WsEmbyCover(_PluginBase):
                                                     {
                                                         'component': 'VSelect',
                                                         'props': {
-                                                            'chips': False,
-                                                            'multiple': False,
+                                                            'chips': True,
+                                                            'multiple': True,
                                                             'clearable': True,
-                                                            'model': 'selected_library',
+                                                            'model': 'selected_libraries',
                                                             'label': '更新媒体库（可选）',
                                                             'items': library_items,
-                                                            'hint': '留空时更新所有分类；选择后仅更新：服务器 - 分类',
-                                                            'persistentHint': True
                                                         }
                                                     }
                                                 ]
@@ -2581,7 +2593,7 @@ class WsEmbyCover(_PluginBase):
             "server_5_api_key": self.__manual_server_slot_value(5, "api_key", ""),
             "server_5_style": self.__manual_server_slot_value(5, "style", "static_1"),
             "include_libraries": self._include_libraries or [],
-            "selected_library": self._selected_library or "",
+            "selected_libraries": self._selected_libraries or [],
             "sort_by": self._sort_by or "Random",
             "title_config": self._title_config or self.__default_title_config_template(),
             "tab": "title-tab",
@@ -2799,36 +2811,47 @@ class WsEmbyCover(_PluginBase):
                 style_cards.append(
                     {
                         "component": "VCol",
-                        "props": {"cols": 12, "sm": 6, "md": 4, "lg": 3},
+                        "props": {"cols": 12, "sm": 6, "md": 4},
                         "content": [
                             {
-                                "component": "VCard",
-                                "props": {
-                                    "variant": "outlined",
-                                    "class": "mb-2",
-                                    "style": "overflow: hidden; max-width: 360px; margin: 0 auto;",
-                                },
+                                "component": "VLabel",
+                                "props": {"class": "d-block w-100"},
                                 "content": [
                                     {
-                                        "component": "VImg",
+                                        "component": "VCard",
                                         "props": {
-                                            "src": self.__style_preview_src(style_index),
-                                            "height": 120,
-                                            "cover": True,
+                                            "variant": "flat",
+                                            "class": "rounded-lg overflow-hidden mb-2",
+                                            "style": "position: relative; max-width: 420px; margin: 0 auto;",
                                         },
+                                        "content": [
+                                            {
+                                                "component": "VImg",
+                                                "props": {
+                                                    "src": self.__style_preview_src(style_index),
+                                                    "aspect-ratio": "16/9",
+                                                    "cover": True,
+                                                },
+                                            },
+                                            {
+                                                "component": "VIcon",
+                                                "props": {
+                                                    "icon": "mdi-check-circle" if is_current else "mdi-radiobox-blank",
+                                                    "color": "#FFFFFF",
+                                                    "class": "position-absolute",
+                                                    "style": "top: 8px; right: 8px; z-index: 2; font-size: 26px; text-shadow: 0 1px 2px rgba(0,0,0,0.45);",
+                                                },
+                                            },
+                                        ],
                                     },
                                     {
-                                        "component": "VCardText",
-                                        "props": {"class": "py-2 d-flex align-center justify-space-between"},
+                                        "component": "div",
+                                        "props": {"class": "d-flex align-center justify-space-between px-2"},
                                         "content": [
-                                            {"component": "span", "text": style_title},
+                                            {"component": "span", "props": {"class": "text-subtitle-2"}, "text": style_title},
                                             {
-                                                "component": "VChip",
-                                                "props": {
-                                                    "size": "small",
-                                                    "color": "success" if is_current else "default",
-                                                    "variant": "flat" if is_current else "outlined",
-                                                },
+                                                "component": "span",
+                                                "props": {"class": f"text-caption {'text-success' if is_current else 'text-medium-emphasis'}"},
                                                 "text": "当前使用中" if is_current else "未启用",
                                             },
                                         ],
@@ -3206,9 +3229,10 @@ class WsEmbyCover(_PluginBase):
         global_style = self._cover_style
         total_success_count = 0
         total_fail_count = 0
-        selected_server, selected_library_id = self.__parse_selected_library()
+        selected_pairs = self.__parse_selected_libraries()
+        selected_servers = {server for server, _ in selected_pairs}
         for server, service in self._servers.items():
-            if selected_server and server != selected_server:
+            if selected_servers and server not in selected_servers:
                 continue
             self.__apply_server_profile(server)
             # 扫描所有媒体库
@@ -3223,11 +3247,12 @@ class WsEmbyCover(_PluginBase):
             if not libraries:
                 logger.warning(f"服务器 {server} 的媒体库列表获取失败")
                 continue
-            if selected_library_id:
+            selected_library_ids = {library_id for srv, library_id in selected_pairs if srv == server}
+            if selected_library_ids:
                 filtered_libraries = []
                 for library in libraries:
                     current_library_id = library.get("Id") if service.type == 'emby' else library.get("ItemId")
-                    if str(current_library_id or "").strip() == selected_library_id:
+                    if str(current_library_id or "").strip() in selected_library_ids:
                         filtered_libraries.append(library)
                 libraries = filtered_libraries
                 if not libraries:
@@ -4129,18 +4154,24 @@ class WsEmbyCover(_PluginBase):
             logger.error(f"获取所有媒体库失败：{str(err)}")
             return []
 
-    def __parse_selected_library(self) -> Tuple[str, str]:
-        raw = str(self._selected_library or "").strip()
-        if not raw:
-            return "", ""
-        if "::" in raw:
-            server, library_id = raw.split("::", 1)
-            return server.strip(), library_id.strip()
-        if "-" in raw:
-            # 向后兼容旧格式：server-library_id
-            server, library_id = raw.split("-", 1)
-            return server.strip(), library_id.strip()
-        return "", ""
+    def __parse_selected_libraries(self) -> List[Tuple[str, str]]:
+        selected: List[Tuple[str, str]] = []
+        for item in (self._selected_libraries or []):
+            raw = str(item or "").strip()
+            if not raw:
+                continue
+            if "::" in raw:
+                server, library_id = raw.split("::", 1)
+            elif "-" in raw:
+                # 向后兼容旧格式：server-library_id
+                server, library_id = raw.split("-", 1)
+            else:
+                continue
+            server = server.strip()
+            library_id = library_id.strip()
+            if server and library_id:
+                selected.append((server, library_id))
+        return selected
 
     def __get_showcase_background_url(self, item):
         """获取横幅展示风格使用的背景图URL，优先背景图。"""
