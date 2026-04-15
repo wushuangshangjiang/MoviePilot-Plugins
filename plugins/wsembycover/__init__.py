@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.78"
+    plugin_version = "1.79"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -1245,43 +1245,43 @@ class WsEmbyCover(_PluginBase):
             {
                 "path": "/clean_cache",
                 "endpoint": self.api_clean_cache,
-                "auth": "bear",
+                "auth": "",
                 "methods": ["POST", "GET"],
                 "summary": "立即清理全部缓存（图片+字体）",
             },
             {
                 "path": "clean_cache",
                 "endpoint": self.api_clean_cache,
-                "auth": "bear",
+                "auth": "",
                 "methods": ["POST", "GET"],
                 "summary": "立即清理全部缓存（兼容路由）",
             },
             {
                 "path": "/clean_images",
                 "endpoint": self.api_clean_images,
-                "auth": "bear",
-                "methods": ["POST"],
+                "auth": "",
+                "methods": ["POST", "GET"],
                 "summary": "立即清理图片缓存",
             },
             {
                 "path": "clean_images",
                 "endpoint": self.api_clean_images,
-                "auth": "bear",
-                "methods": ["POST"],
+                "auth": "",
+                "methods": ["POST", "GET"],
                 "summary": "立即清理图片缓存（兼容路由）",
             },
             {
                 "path": "/clean_fonts",
                 "endpoint": self.api_clean_fonts,
-                "auth": "bear",
-                "methods": ["POST"],
+                "auth": "",
+                "methods": ["POST", "GET"],
                 "summary": "立即清理字体缓存",
             },
             {
                 "path": "clean_fonts",
                 "endpoint": self.api_clean_fonts,
-                "auth": "bear",
-                "methods": ["POST"],
+                "auth": "",
+                "methods": ["POST", "GET"],
                 "summary": "立即清理字体缓存（兼容路由）",
             },
             {
@@ -1314,43 +1314,43 @@ class WsEmbyCover(_PluginBase):
             },
         ]
 
-    def api_clean_images(self):
+    def api_clean_images(self, apikey: str = ""):
         try:
-            logger.warning("[WsEmbyCover] 收到立即清理图片缓存请求")
+            logger.warning(f"[WsEmbyCover] ?????????? apikey={'yes' if apikey else 'no'}")
             self.__clean_generated_images()
             self._clean_images = False
             self.__update_config()
-            logger.warning("[WsEmbyCover] 图片缓存清理完成")
-            return {"code": 0, "msg": "图片缓存清理完成"}
+            logger.warning("[WsEmbyCover] ????????")
+            return {"code": 0, "msg": "????????"}
         except Exception as e:
-            logger.error(f"[WsEmbyCover] 立即清理图片缓存失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"图片缓存清理失败: {e}"}
+            logger.error(f"[WsEmbyCover] ????????: {e}", exc_info=True)
+            return {"code": 1, "msg": f"????????: {e}"}
 
-    def api_clean_fonts(self):
+    def api_clean_fonts(self, apikey: str = ""):
         try:
-            logger.warning("[WsEmbyCover] 收到立即清理字体缓存请求")
+            logger.warning(f"[WsEmbyCover] ?????????? apikey={'yes' if apikey else 'no'}")
             self.__clean_downloaded_fonts()
             self._clean_fonts = False
             self.__update_config()
-            logger.warning("[WsEmbyCover] 字体缓存清理完成")
-            return {"code": 0, "msg": "字体缓存清理完成"}
+            logger.warning("[WsEmbyCover] ????????")
+            return {"code": 0, "msg": "????????"}
         except Exception as e:
-            logger.error(f"[WsEmbyCover] 立即清理字体缓存失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"字体缓存清理失败: {e}"}
+            logger.error(f"[WsEmbyCover] ????????: {e}", exc_info=True)
+            return {"code": 1, "msg": f"????????: {e}"}
 
-    def api_clean_cache(self):
+    def api_clean_cache(self, apikey: str = ""):
         try:
-            logger.warning("[WsEmbyCover] 收到立即清理全部缓存请求（图片+字体）")
+            logger.warning(f"[WsEmbyCover] ???????????+??? apikey={'yes' if apikey else 'no'}")
             self.__clean_generated_images()
             self.__clean_downloaded_fonts()
             self._clean_images = False
             self._clean_fonts = False
             self.__update_config()
-            logger.warning("[WsEmbyCover] 缓存清理完成（图片+字体）")
-            return {"code": 0, "msg": "缓存清理完成（图片+字体）"}
+            logger.warning("[WsEmbyCover] ?????????+???")
+            return {"code": 0, "msg": "?????????+???"}
         except Exception as e:
-            logger.error(f"[WsEmbyCover] 立即清理全部缓存失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"缓存清理失败: {e}"}
+            logger.error(f"[WsEmbyCover] ??????: {e}", exc_info=True)
+            return {"code": 1, "msg": f"??????: {e}"}
 
     def api_delete_saved_cover(self, file: str = ""):
         try:
@@ -2449,7 +2449,10 @@ class WsEmbyCover(_PluginBase):
                                                         'events': {
                                                             'click': {
                                                                 'api': 'plugin/WsEmbyCover/clean_cache',
-                                                                'method': 'post'
+                                                                'method': 'get',
+                                                                'params': {
+                                                                    'apikey': settings.API_TOKEN
+                                                                }
                                                             }
                                                         }
                                                     }
