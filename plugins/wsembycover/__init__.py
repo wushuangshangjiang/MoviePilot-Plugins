@@ -2675,8 +2675,7 @@ class WsEmbyCover(_PluginBase):
         }
 
     def get_page(self) -> List[dict]:
-        form_page, _ = self.get_form()
-        return form_page
+        return []
 
         limit = self.__clamp_value(
             self._covers_page_history_limit,
