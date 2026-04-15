@@ -2675,7 +2675,7 @@ class WsEmbyCover(_PluginBase):
         }
 
     def get_page(self) -> List[dict]:
-        return []
+        pass
 
     @staticmethod
     def __style_preview_src(index: int) -> str:
