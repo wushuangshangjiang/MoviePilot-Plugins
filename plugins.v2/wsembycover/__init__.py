@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.75"
+    plugin_version = "1.76"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -98,7 +98,7 @@ class WsEmbyCover(_PluginBase):
     mediaserver_helper = None
     _enabled = False
     _update_now = False
-    _transfer_monitor = True
+    _transfer_monitor = False
     _cron = None
     _delay = 60
     _servers = None
@@ -229,7 +229,7 @@ class WsEmbyCover(_PluginBase):
         if config:
             self._enabled = config.get("enabled")
             self._update_now = config.get("update_now")
-            self._transfer_monitor = config.get("transfer_monitor")
+            self._transfer_monitor = bool(config.get("transfer_monitor", False))
             self._cron = config.get("cron")
             self._delay = config.get("delay")
             self._selected_servers = []
@@ -2660,7 +2660,7 @@ class WsEmbyCover(_PluginBase):
         ], {
             "enabled": True,
             "update_now": False,
-            "transfer_monitor": True,
+            "transfer_monitor": False,
             "cron": "",
             "delay": 60,
             "selected_servers": [],
