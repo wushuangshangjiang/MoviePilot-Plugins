@@ -71,13 +71,13 @@ class _ManualService:
 
 class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍚嶇О
-    plugin_name = "鏃犲弻Emby灏侀潰"
+    plugin_name = "无双Emby封面"
     # 鎻掍欢鎻忚堪
-    plugin_desc = "鐢熸垚濯掍綋搴撳姩鎬?闈欐€佸皝闈紝鏀寔 Emby/Jellyfin"
+    plugin_desc = "生成媒体库动态/静态封面，支持 Emby/Jellyfin"
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.68"
+    plugin_version = "1.69"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -2277,7 +2277,7 @@ class WsEmbyCover(_PluginBase):
                                     "class": "mr-2",
                                 },
                             },
-                            {"component": "span", "text": "鍩虹璁剧疆"},
+                            {"component": "span", "text": "基础设置"},
                         ],
                     },
                     {"component": "VDivider"},
@@ -2301,7 +2301,7 @@ class WsEmbyCover(_PluginBase):
                                                         'component': 'VSwitch',
                                                         'props': {
                                                             'model': 'enabled',
-                                                            'label': '鍚敤鎻掍欢',
+                                                            'label': '启用插件',
                                                         }
                                                     }
                                                 ]
@@ -2317,7 +2317,7 @@ class WsEmbyCover(_PluginBase):
                                                         'component': 'VSwitch',
                                                         'props': {
                                                             'model': 'update_now',
-                                                            'label': '绔嬪嵆鏇存柊灏侀潰',
+                                                            'label': '立即更新封面',
                                                         }
                                                     }
                                                 ]
@@ -2333,7 +2333,7 @@ class WsEmbyCover(_PluginBase):
                                                         'component': 'VSwitch',
                                                         'props': {
                                                             'model': 'transfer_monitor',
-                                                            'label': '鍏ュ簱鐩戞帶',
+                                                            'label': '入库监控',
                                                         }
                                                     }
                                                 ]
@@ -2349,8 +2349,34 @@ class WsEmbyCover(_PluginBase):
                                                         'component': 'VSwitch',
                                                         'props': {
                                                             'model': 'debug_mode',
-                                                            'label': '璋冭瘯妯″紡',
+                                                            'label': '调试模式',
                                                             'color': 'warning',
+                                                        }
+                                                    }
+                                                ]
+                                            },
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12,
+                                                    'md': 2
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VBtn',
+                                                        'props': {
+                                                            'color': 'error',
+                                                            'variant': 'flat',
+                                                            'prepend-icon': 'mdi-broom',
+                                                            'class': 'text-none w-100',
+                                                            'type': 'button'
+                                                        },
+                                                        'text': '立即清理缓存',
+                                                        'events': {
+                                                            'click': {
+                                                                'api': 'plugin/WsEmbyCover/clean_cache',
+                                                                'method': 'get'
+                                                            }
                                                         }
                                                     }
                                                 ]
@@ -2388,7 +2414,7 @@ class WsEmbyCover(_PluginBase):
                                                         'component': 'VCronField',
                                                         'props': {
                                                             'model': 'cron',
-                                                            'label': '瀹氭椂鏇存柊灏侀潰',
+                                                            'label': '定时更新封面',
                                                             'placeholder': '5位cron表达式',
                                                         }
                                                     }
@@ -2409,7 +2435,7 @@ class WsEmbyCover(_PluginBase):
                                                             'model': 'sort_by',
                                                             'label': '封面来源排序，默认随机',
                                                             'items': [
-                                                                {"title": "闅忔満", "value": "Random"},
+                                                                {"title": "随机", "value": "Random"},
                                                                 {"title": "最新入库", "value": "DateCreated"},
                                                                 {"title": "最新发布", "value": "PremiereDate"}
                                                             ]
@@ -2434,32 +2460,6 @@ class WsEmbyCover(_PluginBase):
                                                             'label': '指定媒体库',
                                                             'items': library_items,
                                                             'counter': True,
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
-                                                    'md': 4
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VBtn',
-                                                        'props': {
-                                                            'color': 'error',
-                                                            'variant': 'flat',
-                                                            'prepend-icon': 'mdi-broom',
-                                                            'class': 'text-none w-100',
-                                                            'type': 'button'
-                                                        },
-                                                        'text': '立即清理缓存（图片+字体）',
-                                                        'events': {
-                                                            'click': {
-                                                                'api': 'plugin/WsEmbyCover/clean_cache',
-                                                                'method': 'get'
-                                                            }
                                                         }
                                                     }
                                                 ]
@@ -2493,7 +2493,7 @@ class WsEmbyCover(_PluginBase):
                                             "color": "#cc76d1",
                                         },
                                     },
-                                    {"component": "span", "text": "灏侀潰椋庢牸"},
+                                    {"component": "span", "text": "封面风格"},
                                 ],
                             },
                             {
@@ -2508,7 +2508,7 @@ class WsEmbyCover(_PluginBase):
                                             "color": "#26A69A",
                                         },
                                     },
-                                    {"component": "span", "text": "澶氭湇鍔″櫒"},
+                                    {"component": "span", "text": "多服务器"},
                                 ],
                             },
                             {
@@ -2523,7 +2523,7 @@ class WsEmbyCover(_PluginBase):
                                             "color": "#1976D2",
                                         },
                                     },
-                                    {"component": "span", "text": "灏侀潰鏍囬"},
+                                    {"component": "span", "text": "封面标题"},
                                 ],
                             },
                             {
@@ -2538,7 +2538,7 @@ class WsEmbyCover(_PluginBase):
                                             "color": "#f3afe4",
                                         },
                                     },
-                                    {"component": "span", "text": "鏇村鍙傛暟"},
+                                    {"component": "span", "text": "更多参数"},
                                 ],
                             },
                         ],

@@ -1,4 +1,4 @@
-{
+﻿{
     "MediaHook": {
         "name": "MediaHook",
         "description": "转移完成时,发送webhook到mediaserver",
@@ -36,7 +36,7 @@
         "name": "无双Emby封面",
         "description": "生成媒体库动态/静态封面，支持 Emby/Jellyfin",
         "labels": "Emby,动态封面,媒体库",
-      "version": "1.68",
+      "version": "1.69",
         "icon": "emby.png",
         "author": "wushuangshangjiang",
         "level": 1,
@@ -55,3 +55,4 @@
         }
     }
 }
+
