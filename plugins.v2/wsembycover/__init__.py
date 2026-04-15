@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.61"
+    plugin_version = "1.62"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -1190,6 +1190,20 @@ class WsEmbyCover(_PluginBase):
         """
         return [
             {
+                "path": "/clean_cache",
+                "endpoint": self.api_clean_cache,
+                "auth": "bear",
+                "methods": ["POST"],
+                "summary": "立即清理全部缓存（图片+字体）",
+            },
+            {
+                "path": "clean_cache",
+                "endpoint": self.api_clean_cache,
+                "auth": "bear",
+                "methods": ["POST"],
+                "summary": "立即清理全部缓存（图片+字体，兼容）",
+            },
+            {
                 "path": "/clean_images",
                 "endpoint": self.api_clean_images,
                 "auth": "bear",
@@ -1278,6 +1292,19 @@ class WsEmbyCover(_PluginBase):
         except Exception as e:
             logger.error(f"【WsEmbyCover】立即清理字体失败: {e}", exc_info=True)
             return {"code": 1, "msg": f"字体缓存清理失败: {e}"}
+
+    def api_clean_cache(self):
+        try:
+            logger.info("【WsEmbyCover】收到立即清理全部缓存请求（图片+字体）")
+            self.__clean_generated_images()
+            self.__clean_downloaded_fonts()
+            self._clean_images = False
+            self._clean_fonts = False
+            self.__update_config()
+            return {"code": 0, "msg": "缓存清理完成（图片+字体）"}
+        except Exception as e:
+            logger.error(f"【WsEmbyCover】立即清理全部缓存失败: {e}", exc_info=True)
+            return {"code": 1, "msg": f"缓存清理失败: {e}"}
 
     def api_delete_saved_cover(self, file: str = ""):
         try:
@@ -2432,6 +2459,35 @@ class WsEmbyCover(_PluginBase):
                                             },
                                         ]
                                     },
+                                    {
+                                        'component': 'VRow',
+                                        'content': [
+                                            {
+                                                'component': 'VCol',
+                                                'props': {
+                                                    'cols': 12
+                                                },
+                                                'content': [
+                                                    {
+                                                        'component': 'VBtn',
+                                                        'props': {
+                                                            'color': 'error',
+                                                            'variant': 'flat',
+                                                            'prepend-icon': 'mdi-broom',
+                                                            'class': 'text-none'
+                                                        },
+                                                        'text': '立即清理缓存（图片+字体）',
+                                                        'events': {
+                                                            'click': {
+                                                                'api': 'plugin/WsEmbyCover/clean_cache',
+                                                                'method': 'post'
+                                                            }
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        ]
+                                    },
                                     
                                 ]
                             },
@@ -2622,6 +2678,8 @@ class WsEmbyCover(_PluginBase):
         }
 
     def get_page(self) -> List[dict]:
+        return []
+
         limit = self.__clamp_value(
             self._covers_page_history_limit,
             1,
