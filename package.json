@@ -1,4 +1,4 @@
-﻿{
+{
     "WebHook": {
         "name": "Webhook-RefreshMedia",
         "description": "转移完成时,发送webhook",
