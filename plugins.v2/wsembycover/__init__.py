@@ -76,7 +76,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.55"
+    plugin_version = "1.56"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -4663,3 +4663,16 @@ class WsEmbyCover(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(f"停止服务失败: {str(e)}")
+
+
+# 兼容兜底：极端环境下若抽象方法识别异常，强制补齐 get_page，避免插件实例化失败
+try:
+    _abstracts = set(getattr(WsEmbyCover, "__abstractmethods__", set()) or set())
+    if "get_page" in _abstracts:
+        def _wsec_get_page_fallback(self) -> List[dict]:
+            return []
+        WsEmbyCover.get_page = _wsec_get_page_fallback
+        _abstracts.discard("get_page")
+        WsEmbyCover.__abstractmethods__ = frozenset(_abstracts)
+except Exception:
+    pass
