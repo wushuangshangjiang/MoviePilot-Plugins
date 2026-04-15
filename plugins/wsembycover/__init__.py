@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.69"
+    plugin_version = "1.70"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -4870,3 +4870,4 @@ class WsEmbyCover(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(f"鍋滄鏈嶅姟澶辫触: {str(e)}")
+
