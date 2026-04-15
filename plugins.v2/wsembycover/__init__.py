@@ -76,7 +76,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.56"
+    plugin_version = "1.57"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -159,6 +159,8 @@ class WsEmbyCover(_PluginBase):
     _covers_history_limit_per_library = 10
     _covers_page_history_limit = 50
     _debug_mode = False
+    # 抽象方法强兜底：类创建阶段即提供 get_page，避免任何环境差异导致实例化失败
+    get_page = lambda self: []
 
     def __init__(self):
         super().__init__()
