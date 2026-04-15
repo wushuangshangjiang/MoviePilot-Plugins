@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.72"
+    plugin_version = "1.73"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -178,21 +178,34 @@ class WsEmbyCover(_PluginBase):
         if not suspicious:
             return text
 
-        best = text
-        best_score = -1
+        suspicious_chars = set("鍚鏃璁缂銆瀛鎻绔閰鏉鏄鎴鍥瀵娴涓妯")
+
+        def score_text(s: str) -> int:
+            cjk_count = sum(1 for ch in s if '\u4e00' <= ch <= '\u9fff')
+            private_count = sum(1 for ch in s if '\ue000' <= ch <= '\uf8ff')
+            suspicious_count = sum(1 for ch in s if ch in suspicious_chars)
+            replacement_count = s.count('�')
+            return cjk_count * 3 - private_count * 8 - suspicious_count * 2 - replacement_count * 6
+
+        candidates = {text}
         for enc in ("gbk", "gb18030"):
             try:
-                candidate = text.encode(enc, errors="ignore").decode("utf-8", errors="ignore")
+                c1 = text.encode(enc, errors="ignore").decode("utf-8", errors="ignore")
+                if c1:
+                    candidates.add(c1)
             except Exception:
-                continue
-            if not candidate:
-                continue
-            cjk_count = sum(1 for ch in candidate if '\u4e00' <= ch <= '\u9fff')
-            private_count = sum(1 for ch in candidate if '\ue000' <= ch <= '\uf8ff')
-            score = cjk_count * 2 - private_count * 4
-            if score > best_score:
-                best_score = score
-                best = candidate
+                pass
+            try:
+                c2 = text.encode("utf-8", errors="ignore").decode(enc, errors="ignore")
+                if c2:
+                    candidates.add(c2)
+            except Exception:
+                pass
+
+        best = max(candidates, key=score_text)
+        # 仍然可疑时给出安全兜底，避免页面继续出现乱码
+        if any('\ue000' <= ch <= '\uf8ff' for ch in best) or sum(1 for ch in best if ch in suspicious_chars) >= 2:
+            return "配置项"
         return best
 
     def __sanitize_text_payload(self, payload):
@@ -2408,7 +2421,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 4
+                                                    'md': 2
                                                 },
                                                 'content': [
                                                     {
@@ -2417,7 +2430,8 @@ class WsEmbyCover(_PluginBase):
                                                             'color': '#4FC3F7',
                                                             'variant': 'flat',
                                                             'prepend-icon': 'mdi-broom',
-                                                            'class': 'text-none w-100 text-white',
+                                                            'class': 'text-none text-white',
+                                                            'style': 'min-width: 150px; max-width: 180px;',
                                                             'type': 'button'
                                                         },
                                                         'text': '立即清理缓存',
