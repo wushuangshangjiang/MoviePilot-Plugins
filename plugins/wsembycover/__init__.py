@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.71"
+    plugin_version = "1.72"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -164,6 +164,47 @@ class WsEmbyCover(_PluginBase):
 
     def __init__(self):
         super().__init__()
+
+    @staticmethod
+    def __repair_mojibake_text(text: str) -> str:
+        if not isinstance(text, str) or not text:
+            return text
+
+        if any('\ue000' <= ch <= '\uf8ff' for ch in text):
+            suspicious = True
+        else:
+            suspicious_tokens = ("鍚", "鏃", "璁", "缂", "銆", "瀛", "鎻", "绔", "閰")
+            suspicious = any(token in text for token in suspicious_tokens)
+        if not suspicious:
+            return text
+
+        best = text
+        best_score = -1
+        for enc in ("gbk", "gb18030"):
+            try:
+                candidate = text.encode(enc, errors="ignore").decode("utf-8", errors="ignore")
+            except Exception:
+                continue
+            if not candidate:
+                continue
+            cjk_count = sum(1 for ch in candidate if '\u4e00' <= ch <= '\u9fff')
+            private_count = sum(1 for ch in candidate if '\ue000' <= ch <= '\uf8ff')
+            score = cjk_count * 2 - private_count * 4
+            if score > best_score:
+                best_score = score
+                best = candidate
+        return best
+
+    def __sanitize_text_payload(self, payload):
+        if isinstance(payload, dict):
+            return {k: self.__sanitize_text_payload(v) for k, v in payload.items()}
+        if isinstance(payload, list):
+            return [self.__sanitize_text_payload(v) for v in payload]
+        if isinstance(payload, tuple):
+            return tuple(self.__sanitize_text_payload(v) for v in payload)
+        if isinstance(payload, str):
+            return self.__repair_mojibake_text(payload)
+        return payload
 
     def init_plugin(self, config: dict = None):
         self.mschain = MediaServerChain()
@@ -1119,9 +1160,17 @@ class WsEmbyCover(_PluginBase):
         cache_dirs: List[Path] = []
         if self._covers_path:
             cache_dirs.append(Path(self._covers_path))
+        if self._covers_input:
+            cache_dirs.append(Path(self._covers_input))
+        if self._covers_output:
+            cache_dirs.append(Path(self._covers_output))
         data_path = self.get_data_path()
         legacy_covers_dir = data_path / "covers"
+        legacy_input_dir = data_path / "input"
+        legacy_output_dir = data_path / "output"
         cache_dirs.append(legacy_covers_dir)
+        cache_dirs.append(legacy_input_dir)
+        cache_dirs.append(legacy_output_dir)
 
         handled = set()
         for cache_dir in cache_dirs:
@@ -1142,8 +1191,8 @@ class WsEmbyCover(_PluginBase):
                         entry.unlink(missing_ok=True)
                         removed += 1
                 except Exception as e:
-                    logger.warning(f"娓呯悊鍥剧墖澶辫触 {entry}: {e}")
-        logger.info(f"清理图片完成（含旧版 covers 兼容目录），共清理 {removed} 项")
+                    logger.warning(f"清理图片缓存失败 {entry}: {e}")
+        logger.info(f"清理图片缓存完成，共清理 {removed} 项")
 
     def __clean_downloaded_fonts(self):
         if not self._font_path or not Path(self._font_path).exists():
@@ -1161,7 +1210,7 @@ class WsEmbyCover(_PluginBase):
                     shutil.rmtree(entry)
                     removed += 1
             except Exception as e:
-                logger.warning(f"娓呯悊瀛椾綋澶辫触 {entry}: {e}")
+                logger.warning(f"清理字体缓存失败 {entry}: {e}")
         self._zh_font_path = ""
         self._en_font_path = ""
         logger.info(f"清理字体完成，共清理 {removed} 项")
@@ -1179,7 +1228,7 @@ class WsEmbyCover(_PluginBase):
         ]
 
     def get_api(self) -> List[Dict[str, Any]]:
-        return [
+        return self.__sanitize_text_payload([
             {
                 "path": "/clean_cache",
                 "endpoint": self.api_clean_cache,
@@ -1250,7 +1299,7 @@ class WsEmbyCover(_PluginBase):
                 "methods": ["POST", "GET"],
                 "summary": "立即生成媒体库封面（兼容路由）",
             },
-        ]
+        ])
 
     def api_clean_images(self):
         try:
@@ -1258,10 +1307,10 @@ class WsEmbyCover(_PluginBase):
             self.__clean_generated_images()
             self._clean_images = False
             self.__update_config()
-            return {"code": 0, "msg": "鍥剧墖缂撳瓨娓呯悊瀹屾垚"}
+            return {"code": 0, "msg": "图片缓存清理完成"}
         except Exception as e:
-            logger.error(f"銆怶sEmbyCover銆戠珛鍗虫竻鐞嗗浘鐗囧け璐? {e}", exc_info=True)
-            return {"code": 1, "msg": f"鍥剧墖缂撳瓨娓呯悊澶辫触: {e}"}
+            logger.error(f"[WsEmbyCover] 立即清理图片缓存失败: {e}", exc_info=True)
+            return {"code": 1, "msg": f"图片缓存清理失败: {e}"}
 
     def api_clean_fonts(self):
         try:
@@ -1269,10 +1318,10 @@ class WsEmbyCover(_PluginBase):
             self.__clean_downloaded_fonts()
             self._clean_fonts = False
             self.__update_config()
-            return {"code": 0, "msg": "瀛椾綋缂撳瓨娓呯悊瀹屾垚"}
+            return {"code": 0, "msg": "字体缓存清理完成"}
         except Exception as e:
-            logger.error(f"銆怶sEmbyCover銆戠珛鍗虫竻鐞嗗瓧浣撳け璐? {e}", exc_info=True)
-            return {"code": 1, "msg": f"瀛椾綋缂撳瓨娓呯悊澶辫触: {e}"}
+            logger.error(f"[WsEmbyCover] 立即清理字体缓存失败: {e}", exc_info=True)
+            return {"code": 1, "msg": f"字体缓存清理失败: {e}"}
 
     def api_clean_cache(self):
         try:
@@ -1284,8 +1333,8 @@ class WsEmbyCover(_PluginBase):
             self.__update_config()
             return {"code": 0, "msg": "缓存清理完成（图片+字体）"}
         except Exception as e:
-            logger.error(f"銆怶sEmbyCover銆戠珛鍗虫竻鐞嗗叏閮ㄧ紦瀛樺け璐? {e}", exc_info=True)
-            return {"code": 1, "msg": f"缂撳瓨娓呯悊澶辫触: {e}"}
+            logger.error(f"[WsEmbyCover] 立即清理全部缓存失败: {e}", exc_info=True)
+            return {"code": 1, "msg": f"缓存清理失败: {e}"}
 
     def api_delete_saved_cover(self, file: str = ""):
         try:
@@ -2260,7 +2309,7 @@ class WsEmbyCover(_PluginBase):
         ]
 
 
-        return [
+        return self.__sanitize_text_payload([
             {
                 "component": "VCard",
                 "props": {"variant": "outlined", "class": "mb-3"},
@@ -2359,16 +2408,16 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 2
+                                                    'md': 4
                                                 },
                                                 'content': [
                                                     {
                                                         'component': 'VBtn',
                                                         'props': {
-                                                            'color': 'error',
+                                                            'color': '#4FC3F7',
                                                             'variant': 'flat',
                                                             'prepend-icon': 'mdi-broom',
-                                                            'class': 'text-none w-100',
+                                                            'class': 'text-none w-100 text-white',
                                                             'type': 'button'
                                                         },
                                                         'text': '立即清理缓存',
@@ -2586,7 +2635,7 @@ class WsEmbyCover(_PluginBase):
                     },
                 ],
             }
-        ], {
+        ]), self.__sanitize_text_payload({
             "enabled": True,
             "update_now": False,
             "transfer_monitor": True,
@@ -2653,7 +2702,7 @@ class WsEmbyCover(_PluginBase):
             "page_tab": "generate-tab",
             "style_naming_v2": True,
             **profile_defaults,
-        }
+        })
 
     def get_page(self) -> List[dict]:
         pass
