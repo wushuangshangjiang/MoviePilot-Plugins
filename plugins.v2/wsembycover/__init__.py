@@ -1,4 +1,4 @@
-import base64
+﻿import base64
 import datetime
 import gc
 import hashlib
@@ -70,29 +70,29 @@ class _ManualService:
 
 
 class WsEmbyCover(_PluginBase):
-    # 插件名称
-    plugin_name = "无双Emby封面"
-    # 插件描述
-    plugin_desc = "生成媒体库动态/静态封面，支持 Emby/Jellyfin"
-    # 插件图标
+    # 鎻掍欢鍚嶇О
+    plugin_name = "鏃犲弻Emby灏侀潰"
+    # 鎻掍欢鎻忚堪
+    plugin_desc = "鐢熸垚濯掍綋搴撳姩鎬?闈欐€佸皝闈紝鏀寔 Emby/Jellyfin"
+    # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
-    # 插件版本
+    # 鎻掍欢鐗堟湰
     plugin_version = "1.66"
-    # 插件作者
+    # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
-    # 作者主页
+    # 浣滆€呬富椤?
     author_url = "https://github.com/wushuangshangjiang/MoviePilot-Plugins"
-    # 插件配置项ID前缀
+    # 鎻掍欢閰嶇疆椤笽D鍓嶇紑
     plugin_config_prefix = "wsembycover_"
-    # 加载顺序
+    # 鍔犺浇椤哄簭
     plugin_order = 2
-    # 可使用的用户级别
+    # 鍙娇鐢ㄧ殑鐢ㄦ埛绾у埆
     auth_level = 1
 
-    # 退出事件
+    # 閫€鍑轰簨浠?
     _event = threading.Event()
 
-    # 私有属性
+    # 绉佹湁灞炴€?
     _scheduler = None
     mschain = None
     mediaserver_helper = None
@@ -223,7 +223,7 @@ class WsEmbyCover(_PluginBase):
             self._en_font_path = config.get("en_font_path")
             self._cover_style = config.get("cover_style", "static_1")
 
-            # 样式命名升级兼容（仅对旧配置执行一次迁移）
+            # 鏍峰紡鍛藉悕鍗囩骇鍏煎锛堜粎瀵规棫閰嶇疆鎵ц涓€娆¤縼绉伙級
             if not config.get("style_naming_v2"):
                 if self._cover_style == 'single_1':
                     self._cover_style = 'static_1'
@@ -295,11 +295,11 @@ class WsEmbyCover(_PluginBase):
         self._bg_color_mode = (config or {}).get("bg_color_mode", "auto")
         self._custom_bg_color = (config or {}).get("custom_bg_color", "")
 
-        # 初始化分辨率配置（确保安全初始化）
+        # 鍒濆鍖栧垎杈ㄧ巼閰嶇疆锛堢‘淇濆畨鍏ㄥ垵濮嬪寲锛?
         try:
             self._resolution_config = self.__new_resolution_config(self._resolution)
         except Exception as e:
-            logger.warning(f"分辨率配置初始化失败，使用默认配置: {e}")
+            logger.warning(f"鍒嗚鲸鐜囬厤缃垵濮嬪寲澶辫触锛屼娇鐢ㄩ粯璁ら厤缃? {e}")
             self._resolution_config = self.__new_resolution_config("480p")
 
         self._servers = {}
@@ -342,9 +342,9 @@ class WsEmbyCover(_PluginBase):
             self.__update_config()
 
         if not self._servers:
-            logger.info("未配置可用媒体服务器")
+            logger.info("鏈厤缃彲鐢ㄥ獟浣撴湇鍔″櫒")
         
-        # 停止现有任务
+        # 鍋滄鐜版湁浠诲姟
         self.stop_service()
 
         cleanup_triggered = False
@@ -365,12 +365,12 @@ class WsEmbyCover(_PluginBase):
                                     run_date=datetime.datetime.now(
                                         tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
                                     )
-            logger.info(f"媒体库封面更新服务启动，立即运行一次")
-            # 关闭一次性开关
+            logger.info(f"濯掍綋搴撳皝闈㈡洿鏂版湇鍔″惎鍔紝绔嬪嵆杩愯涓€娆?)
+            # 鍏抽棴涓€娆℃€у紑鍏?
             self._update_now = False
-            # 保存配置
+            # 淇濆瓨閰嶇疆
             self.__update_config()
-            # 启动服务
+            # 鍚姩鏈嶅姟
             if self._scheduler.get_jobs():
                 self._scheduler.print_jobs()
                 self._scheduler.start()
@@ -379,12 +379,12 @@ class WsEmbyCover(_PluginBase):
         try:
             parsed = cast_type(value)
         except (ValueError, TypeError):
-            logger.warning(f"{name} 配置值非法 ({value})，已回退默认值 {default_value}")
+            logger.warning(f"{name} 閰嶇疆鍊奸潪娉?({value})锛屽凡鍥為€€榛樿鍊?{default_value}")
             return default_value
 
         if parsed < minimum or parsed > maximum:
             clamped = max(minimum, min(maximum, parsed))
-            logger.warning(f"{name} 配置值超出范围 ({parsed})，已限制为 {clamped}")
+            logger.warning(f"{name} 閰嶇疆鍊艰秴鍑鸿寖鍥?({parsed})锛屽凡闄愬埗涓?{clamped}")
             return clamped
 
         return parsed
@@ -443,7 +443,7 @@ class WsEmbyCover(_PluginBase):
         try:
             raw = yaml.safe_load(config_text) or []
         except Exception as e:
-            logger.error(f"服务器配置解析失败: {e}")
+            logger.error(f"鏈嶅姟鍣ㄩ厤缃В鏋愬け璐? {e}")
             return []
 
         items: List[Dict[str, str]] = []
@@ -468,7 +468,7 @@ class WsEmbyCover(_PluginBase):
             if isinstance(value, dict):
                 append_item(
                     name=name,
-                    host=str(value.get("host", "") or value.get("地址", "")).strip(),
+                    host=str(value.get("host", "") or value.get("鍦板潃", "")).strip(),
                     api_key=str(value.get("api_key", "") or value.get("apikey", "") or value.get("ApiKey", "")).strip(),
                     style=str(value.get("style", "static_1")).strip() or "static_1",
                 )
@@ -483,8 +483,8 @@ class WsEmbyCover(_PluginBase):
                 append_item(name=name, host=value, api_key="", style="static_1")
 
         if isinstance(raw, dict):
-            # 新格式：
-            # 服务器1:
+            # 鏂版牸寮忥細
+            # 鏈嶅姟鍣?:
             #   - http://127.0.0.1:8096
             #   - apikey
             if any(key in raw for key in ("name", "host", "api_key")):
@@ -495,13 +495,13 @@ class WsEmbyCover(_PluginBase):
                 return items
 
         if not isinstance(raw, list):
-            logger.error("服务器配置格式错误，应为列表或字典")
+            logger.error("鏈嶅姟鍣ㄩ厤缃牸寮忛敊璇紝搴斾负鍒楄〃鎴栧瓧鍏?)
             return []
 
         for one in raw:
             if not isinstance(one, dict):
                 continue
-            # 兼容列表中的新格式单项：{服务器名: [host, apikey]}
+            # 鍏煎鍒楄〃涓殑鏂版牸寮忓崟椤癸細{鏈嶅姟鍣ㄥ悕: [host, apikey]}
             if "name" not in one and "host" not in one and "api_key" not in one and len(one) == 1:
                 only_name, only_value = next(iter(one.items()))
                 parse_mapping(str(only_name), only_value)
@@ -553,34 +553,34 @@ class WsEmbyCover(_PluginBase):
 
     @staticmethod
     def __default_title_config_template() -> str:
-        return '''# 配置封面标题（支持按服务器分组）
-# 推荐格式（按服务器分组）：
+        return '''# 閰嶇疆灏侀潰鏍囬锛堟敮鎸佹寜鏈嶅姟鍣ㄥ垎缁勶級
+# 鎺ㄨ崘鏍煎紡锛堟寜鏈嶅姟鍣ㄥ垎缁勶級锛?
 #
-# 服务器1:
-#   媒体库名称:
-#     - 主标题
-#     - 副标题
-#   另一个媒体库:
-#     - 主标题
-#     - 副标题
+# 鏈嶅姟鍣?:
+#   濯掍綋搴撳悕绉?
+#     - 涓绘爣棰?
+#     - 鍓爣棰?
+#   鍙︿竴涓獟浣撳簱:
+#     - 涓绘爣棰?
+#     - 鍓爣棰?
 #
-# 兼容旧格式（不分服务器）：
-# 媒体库名称:
-#   - 主标题
-#   - 副标题
-#   - "#FF5722"  # 背景颜色（可选，必须加引号）
+# 鍏煎鏃ф牸寮忥紙涓嶅垎鏈嶅姟鍣級锛?
+# 濯掍綋搴撳悕绉?
+#   - 涓绘爣棰?
+#   - 鍓爣棰?
+#   - "#FF5722"  # 鑳屾櫙棰滆壊锛堝彲閫夛紝蹇呴』鍔犲紩鍙凤級
 #
 '''
 
     @staticmethod
     def __default_servers_config_template() -> str:
-        return '''# 配置多服务器
-# 格式如下：
+        return '''# 閰嶇疆澶氭湇鍔″櫒
+# 鏍煎紡濡備笅锛?
 #
-# 服务器1:
+# 鏈嶅姟鍣?:
 #   - http://127.0.0.1:8096
 #   - xxxxx
-# 服务器2:
+# 鏈嶅姟鍣?:
 #   - http://192.168.1.10:8096
 #   - yyyyy
 #
@@ -1066,8 +1066,8 @@ class WsEmbyCover(_PluginBase):
 
     def __get_font_presets(self) -> Tuple[List[Dict[str, str]], List[Dict[str, str]], Dict[str, Optional[str]], Dict[str, Optional[str]]]:
         zh_specs = [
-            {"title": "潮黑", "value": "chaohei", "aliases": ["chaohei", "wendao", "潮黑", "chao_hei"]},
-            {"title": "粗雅宋", "value": "yasong", "aliases": ["yasong", "粗雅宋", "multi_1_zh", "ya_song"]},
+            {"title": "娼粦", "value": "chaohei", "aliases": ["chaohei", "wendao", "娼粦", "chao_hei"]},
+            {"title": "绮楅泤瀹?, "value": "yasong", "aliases": ["yasong", "绮楅泤瀹?, "multi_1_zh", "ya_song"]},
         ]
         en_specs = [
             {"title": "EmblemaOne", "value": "EmblemaOne", "aliases": ["emblemaone", "emblema_one"]},
@@ -1142,12 +1142,12 @@ class WsEmbyCover(_PluginBase):
                         entry.unlink(missing_ok=True)
                         removed += 1
                 except Exception as e:
-                    logger.warning(f"清理图片失败 {entry}: {e}")
-        logger.info(f"清理图片完成（含旧版 covers 兼容目录），共清理 {removed} 项")
+                    logger.warning(f"娓呯悊鍥剧墖澶辫触 {entry}: {e}")
+        logger.info(f"娓呯悊鍥剧墖瀹屾垚锛堝惈鏃х増 covers 鍏煎鐩綍锛夛紝鍏辨竻鐞?{removed} 椤?)
 
     def __clean_downloaded_fonts(self):
         if not self._font_path or not Path(self._font_path).exists():
-            logger.info("清理字体：未找到字体目录，跳过")
+            logger.info("娓呯悊瀛椾綋锛氭湭鎵惧埌瀛椾綋鐩綍锛岃烦杩?)
             return
         removed = 0
         for entry in Path(self._font_path).iterdir():
@@ -1161,10 +1161,10 @@ class WsEmbyCover(_PluginBase):
                     shutil.rmtree(entry)
                     removed += 1
             except Exception as e:
-                logger.warning(f"清理字体失败 {entry}: {e}")
+                logger.warning(f"娓呯悊瀛椾綋澶辫触 {entry}: {e}")
         self._zh_font_path = ""
         self._en_font_path = ""
-        logger.info(f"清理字体完成，共清理 {removed} 项")
+        logger.info(f"娓呯悊瀛椾綋瀹屾垚锛屽叡娓呯悊 {removed} 椤?)
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
@@ -1172,7 +1172,7 @@ class WsEmbyCover(_PluginBase):
             {
                 "cmd": "/update_covers",
                 "event": EventType.PluginAction,
-                "desc": "更新媒体库封面",
+                "desc": "鏇存柊濯掍綋搴撳皝闈?,
                 "category": "",
                 "data": {"action": "update_covers"},
             }
@@ -1180,12 +1180,12 @@ class WsEmbyCover(_PluginBase):
 
     def get_api(self) -> List[Dict[str, Any]]:
         """
-        获取插件API
+        鑾峰彇鎻掍欢API
         [{
             "path": "/xx",
             "endpoint": self.xxx,
             "methods": ["GET", "POST"],
-            "summary": "API说明"
+            "summary": "API璇存槑"
         }]
         """
         return [
@@ -1194,141 +1194,141 @@ class WsEmbyCover(_PluginBase):
                 "endpoint": self.api_clean_cache,
                 "auth": "bear",
                 "methods": ["POST", "GET"],
-                "summary": "立即清理全部缓存（图片+字体）",
+                "summary": "绔嬪嵆娓呯悊鍏ㄩ儴缂撳瓨锛堝浘鐗?瀛椾綋锛?,
             },
             {
                 "path": "clean_cache",
                 "endpoint": self.api_clean_cache,
                 "auth": "bear",
                 "methods": ["POST", "GET"],
-                "summary": "立即清理全部缓存（图片+字体，兼容）",
+                "summary": "绔嬪嵆娓呯悊鍏ㄩ儴缂撳瓨锛堝浘鐗?瀛椾綋锛屽吋瀹癸級",
             },
             {
                 "path": "/clean_images",
                 "endpoint": self.api_clean_images,
                 "auth": "bear",
                 "methods": ["POST"],
-                "summary": "立即清理封面图片缓存",
+                "summary": "绔嬪嵆娓呯悊灏侀潰鍥剧墖缂撳瓨",
             },
             {
                 "path": "clean_images",
                 "endpoint": self.api_clean_images,
                 "auth": "bear",
                 "methods": ["POST"],
-                "summary": "立即清理封面图片缓存(兼容无前导斜杠)",
+                "summary": "绔嬪嵆娓呯悊灏侀潰鍥剧墖缂撳瓨(鍏煎鏃犲墠瀵兼枩鏉?",
             },
             {
                 "path": "/clean_fonts",
                 "endpoint": self.api_clean_fonts,
                 "auth": "bear",
                 "methods": ["POST"],
-                "summary": "立即清理字体缓存",
+                "summary": "绔嬪嵆娓呯悊瀛椾綋缂撳瓨",
             },
             {
                 "path": "clean_fonts",
                 "endpoint": self.api_clean_fonts,
                 "auth": "bear",
                 "methods": ["POST"],
-                "summary": "立即清理字体缓存(兼容无前导斜杠)",
+                "summary": "绔嬪嵆娓呯悊瀛椾綋缂撳瓨(鍏煎鏃犲墠瀵兼枩鏉?",
             },
             {
                 "path": "/delete_saved_cover",
                 "endpoint": self.api_delete_saved_cover,
                 "auth": "bear",
                 "methods": ["POST", "GET"],
-                "summary": "删除一张已保存封面",
+                "summary": "鍒犻櫎涓€寮犲凡淇濆瓨灏侀潰",
             },
             {
                 "path": "delete_saved_cover",
                 "endpoint": self.api_delete_saved_cover,
                 "auth": "bear",
                 "methods": ["POST", "GET"],
-                "summary": "删除一张已保存封面(兼容无前导斜杠)",
+                "summary": "鍒犻櫎涓€寮犲凡淇濆瓨灏侀潰(鍏煎鏃犲墠瀵兼枩鏉?",
             },
             {
                 "path": "/generate_now",
                 "endpoint": self.api_generate_now,
                 "auth": "bear",
                 "methods": ["POST", "GET"],
-                "summary": "立即生成媒体库封面",
+                "summary": "绔嬪嵆鐢熸垚濯掍綋搴撳皝闈?,
             },
             {
                 "path": "generate_now",
                 "endpoint": self.api_generate_now,
                 "auth": "bear",
                 "methods": ["POST", "GET"],
-                "summary": "立即生成媒体库封面(兼容无前导斜杠)",
+                "summary": "绔嬪嵆鐢熸垚濯掍綋搴撳皝闈?鍏煎鏃犲墠瀵兼枩鏉?",
             },
-            {"path": "/set_page_tab_generate", "endpoint": self.api_set_page_tab_generate, "auth": "bear", "methods": ["POST"], "summary": "切换到生成页"},
-            {"path": "/set_page_tab_history", "endpoint": self.api_set_page_tab_history, "auth": "bear", "methods": ["POST"], "summary": "切换到历史页"},
-            {"path": "/set_page_tab_clean", "endpoint": self.api_set_page_tab_clean, "auth": "bear", "methods": ["POST"], "summary": "切换到清理页"},
-            {"path": "set_page_tab_generate", "endpoint": self.api_set_page_tab_generate, "auth": "bear", "methods": ["POST"], "summary": "切换到生成页(兼容)"},
-            {"path": "set_page_tab_history", "endpoint": self.api_set_page_tab_history, "auth": "bear", "methods": ["POST"], "summary": "切换到历史页(兼容)"},
-            {"path": "set_page_tab_clean", "endpoint": self.api_set_page_tab_clean, "auth": "bear", "methods": ["POST"], "summary": "切换到清理页(兼容)"},
-            {"path": "/set_generate_style", "endpoint": self.api_set_generate_style, "auth": "bear", "methods": ["POST", "GET"], "summary": "生成页切换封面风格"},
-            {"path": "set_generate_style", "endpoint": self.api_set_generate_style, "auth": "bear", "methods": ["POST", "GET"], "summary": "生成页切换封面风格(兼容)"},
-            {"path": "/saved_cover_image", "endpoint": self.api_saved_cover_image, "methods": ["GET"], "summary": "获取已保存封面图片"},
-            {"path": "saved_cover_image", "endpoint": self.api_saved_cover_image, "methods": ["GET"], "summary": "获取已保存封面图片(兼容)"},
+            {"path": "/set_page_tab_generate", "endpoint": self.api_set_page_tab_generate, "auth": "bear", "methods": ["POST"], "summary": "鍒囨崲鍒扮敓鎴愰〉"},
+            {"path": "/set_page_tab_history", "endpoint": self.api_set_page_tab_history, "auth": "bear", "methods": ["POST"], "summary": "鍒囨崲鍒板巻鍙查〉"},
+            {"path": "/set_page_tab_clean", "endpoint": self.api_set_page_tab_clean, "auth": "bear", "methods": ["POST"], "summary": "鍒囨崲鍒版竻鐞嗛〉"},
+            {"path": "set_page_tab_generate", "endpoint": self.api_set_page_tab_generate, "auth": "bear", "methods": ["POST"], "summary": "鍒囨崲鍒扮敓鎴愰〉(鍏煎)"},
+            {"path": "set_page_tab_history", "endpoint": self.api_set_page_tab_history, "auth": "bear", "methods": ["POST"], "summary": "鍒囨崲鍒板巻鍙查〉(鍏煎)"},
+            {"path": "set_page_tab_clean", "endpoint": self.api_set_page_tab_clean, "auth": "bear", "methods": ["POST"], "summary": "鍒囨崲鍒版竻鐞嗛〉(鍏煎)"},
+            {"path": "/set_generate_style", "endpoint": self.api_set_generate_style, "auth": "bear", "methods": ["POST", "GET"], "summary": "鐢熸垚椤靛垏鎹㈠皝闈㈤鏍?},
+            {"path": "set_generate_style", "endpoint": self.api_set_generate_style, "auth": "bear", "methods": ["POST", "GET"], "summary": "鐢熸垚椤靛垏鎹㈠皝闈㈤鏍?鍏煎)"},
+            {"path": "/saved_cover_image", "endpoint": self.api_saved_cover_image, "methods": ["GET"], "summary": "鑾峰彇宸蹭繚瀛樺皝闈㈠浘鐗?},
+            {"path": "saved_cover_image", "endpoint": self.api_saved_cover_image, "methods": ["GET"], "summary": "鑾峰彇宸蹭繚瀛樺皝闈㈠浘鐗?鍏煎)"},
         ]
 
     def api_clean_images(self):
         try:
-            logger.info("【WsEmbyCover】收到立即清理图片缓存请求")
+            logger.info("銆怶sEmbyCover銆戞敹鍒扮珛鍗虫竻鐞嗗浘鐗囩紦瀛樿姹?)
             self.__clean_generated_images()
             self._clean_images = False
             self.__update_config()
-            return {"code": 0, "msg": "图片缓存清理完成"}
+            return {"code": 0, "msg": "鍥剧墖缂撳瓨娓呯悊瀹屾垚"}
         except Exception as e:
-            logger.error(f"【WsEmbyCover】立即清理图片失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"图片缓存清理失败: {e}"}
+            logger.error(f"銆怶sEmbyCover銆戠珛鍗虫竻鐞嗗浘鐗囧け璐? {e}", exc_info=True)
+            return {"code": 1, "msg": f"鍥剧墖缂撳瓨娓呯悊澶辫触: {e}"}
 
     def api_clean_fonts(self):
         try:
-            logger.info("【WsEmbyCover】收到立即清理字体缓存请求")
+            logger.info("銆怶sEmbyCover銆戞敹鍒扮珛鍗虫竻鐞嗗瓧浣撶紦瀛樿姹?)
             self.__clean_downloaded_fonts()
             self._clean_fonts = False
             self.__update_config()
-            return {"code": 0, "msg": "字体缓存清理完成"}
+            return {"code": 0, "msg": "瀛椾綋缂撳瓨娓呯悊瀹屾垚"}
         except Exception as e:
-            logger.error(f"【WsEmbyCover】立即清理字体失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"字体缓存清理失败: {e}"}
+            logger.error(f"銆怶sEmbyCover銆戠珛鍗虫竻鐞嗗瓧浣撳け璐? {e}", exc_info=True)
+            return {"code": 1, "msg": f"瀛椾綋缂撳瓨娓呯悊澶辫触: {e}"}
 
     def api_clean_cache(self):
         try:
-            logger.info("【WsEmbyCover】收到立即清理全部缓存请求（图片+字体）")
+            logger.info("銆怶sEmbyCover銆戞敹鍒扮珛鍗虫竻鐞嗗叏閮ㄧ紦瀛樿姹傦紙鍥剧墖+瀛椾綋锛?)
             self.__clean_generated_images()
             self.__clean_downloaded_fonts()
             self._clean_images = False
             self._clean_fonts = False
             self.__update_config()
-            return {"code": 0, "msg": "缓存清理完成（图片+字体）"}
+            return {"code": 0, "msg": "缂撳瓨娓呯悊瀹屾垚锛堝浘鐗?瀛椾綋锛?}
         except Exception as e:
-            logger.error(f"【WsEmbyCover】立即清理全部缓存失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"缓存清理失败: {e}"}
+            logger.error(f"銆怶sEmbyCover銆戠珛鍗虫竻鐞嗗叏閮ㄧ紦瀛樺け璐? {e}", exc_info=True)
+            return {"code": 1, "msg": f"缂撳瓨娓呯悊澶辫触: {e}"}
 
     def api_delete_saved_cover(self, file: str = ""):
         try:
             target_file = self.__resolve_saved_cover_path(file)
             if not target_file:
-                return {"code": 1, "msg": "无效文件路径"}
+                return {"code": 1, "msg": "鏃犳晥鏂囦欢璺緞"}
             if not target_file.exists() or not target_file.is_file():
-                return {"code": 1, "msg": "文件不存在"}
+                return {"code": 1, "msg": "鏂囦欢涓嶅瓨鍦?}
             target_file.unlink(missing_ok=True)
-            logger.info(f"【WsEmbyCover】已删除封面文件: {target_file}")
-            return {"code": 0, "msg": "封面文件删除成功"}
+            logger.info(f"銆怶sEmbyCover銆戝凡鍒犻櫎灏侀潰鏂囦欢: {target_file}")
+            return {"code": 0, "msg": "灏侀潰鏂囦欢鍒犻櫎鎴愬姛"}
         except Exception as e:
-            logger.error(f"【WsEmbyCover】删除封面文件失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"封面文件删除失败: {e}"}
+            logger.error(f"銆怶sEmbyCover銆戝垹闄ゅ皝闈㈡枃浠跺け璐? {e}", exc_info=True)
+            return {"code": 1, "msg": f"灏侀潰鏂囦欢鍒犻櫎澶辫触: {e}"}
 
     def api_generate_now(self, style: str = ""):
         old_style = self._cover_style
         try:
             if not self._enabled:
-                logger.warning("【WsEmbyCover】立即生成失败：插件未启用，请先在设置页启用插件并保存")
-                return {"code": 1, "msg": "插件未启用，请先在设置页启用插件并保存"}
+                logger.warning("銆怶sEmbyCover銆戠珛鍗崇敓鎴愬け璐ワ細鎻掍欢鏈惎鐢紝璇峰厛鍦ㄨ缃〉鍚敤鎻掍欢骞朵繚瀛?)
+                return {"code": 1, "msg": "鎻掍欢鏈惎鐢紝璇峰厛鍦ㄨ缃〉鍚敤鎻掍欢骞朵繚瀛?}
             if not self._servers:
-                logger.warning("【WsEmbyCover】立即生成失败：未配置媒体服务器，请先在设置页填写并保存")
-                return {"code": 1, "msg": "未配置媒体服务器，请先在设置页填写并保存"}
+                logger.warning("銆怶sEmbyCover銆戠珛鍗崇敓鎴愬け璐ワ細鏈厤缃獟浣撴湇鍔″櫒锛岃鍏堝湪璁剧疆椤靛～鍐欏苟淇濆瓨")
+                return {"code": 1, "msg": "鏈厤缃獟浣撴湇鍔″櫒锛岃鍏堝湪璁剧疆椤靛～鍐欏苟淇濆瓨"}
 
             target_style = (style or "").strip()
             allowed_styles = {
@@ -1336,53 +1336,53 @@ class WsEmbyCover(_PluginBase):
             }
             if target_style:
                 if target_style not in allowed_styles:
-                    return {"code": 1, "msg": f"不支持的风格: {target_style}"}
+                    return {"code": 1, "msg": f"涓嶆敮鎸佺殑椋庢牸: {target_style}"}
                 self._cover_style = target_style
-            logger.info(f"【WsEmbyCover】收到立即生成请求，风格: {self._cover_style}")
+            logger.info(f"銆怶sEmbyCover銆戞敹鍒扮珛鍗崇敓鎴愯姹傦紝椋庢牸: {self._cover_style}")
             tips = self.__update_all_libraries()
-            return {"code": 0, "msg": tips or "封面生成任务已完成"}
+            return {"code": 0, "msg": tips or "灏侀潰鐢熸垚浠诲姟宸插畬鎴?}
         except Exception as e:
-            logger.error(f"【WsEmbyCover】立即生成失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"封面生成失败: {e}"}
+            logger.error(f"銆怶sEmbyCover銆戠珛鍗崇敓鎴愬け璐? {e}", exc_info=True)
+            return {"code": 1, "msg": f"灏侀潰鐢熸垚澶辫触: {e}"}
         finally:
             self._cover_style = old_style
 
     def __set_page_tab(self, tab: str):
         self._page_tab = tab if tab in ["generate-tab", "history-tab", "clean-tab"] else "generate-tab"
-        logger.info(f"【WsEmbyCover】已切换页面Tab: {self._page_tab}")
+        logger.info(f"銆怶sEmbyCover銆戝凡鍒囨崲椤甸潰Tab: {self._page_tab}")
 
     def api_set_page_tab_generate(self):
         self.__set_page_tab("generate-tab")
-        return {"code": 0, "msg": "已切换到封面生成"}
+        return {"code": 0, "msg": "宸插垏鎹㈠埌灏侀潰鐢熸垚"}
 
     def api_set_page_tab_history(self):
         self.__set_page_tab("history-tab")
-        return {"code": 0, "msg": "已切换到历史封面"}
+        return {"code": 0, "msg": "宸插垏鎹㈠埌鍘嗗彶灏侀潰"}
 
     def api_set_page_tab_clean(self):
         self.__set_page_tab("clean-tab")
-        return {"code": 0, "msg": "已切换到清理缓存"}
+        return {"code": 0, "msg": "宸插垏鎹㈠埌娓呯悊缂撳瓨"}
 
     def api_set_generate_style(self, style: str = ""):
         try:
             target_style = str(style or "").strip()
             if target_style not in {"static_1", "static_2"}:
-                return {"code": 1, "msg": f"不支持的风格: {target_style}"}
+                return {"code": 1, "msg": f"涓嶆敮鎸佺殑椋庢牸: {target_style}"}
             self._cover_style = target_style
             self._cover_style_base = target_style
             self._active_server_style = target_style
             self.__sync_profile_styles_with_selected_style()
             self.__update_config()
-            logger.info(f"【WsEmbyCover】生成页已切换风格: {target_style}")
-            return {"code": 0, "msg": f"已切换到 {target_style}"}
+            logger.info(f"銆怶sEmbyCover銆戠敓鎴愰〉宸插垏鎹㈤鏍? {target_style}")
+            return {"code": 0, "msg": f"宸插垏鎹㈠埌 {target_style}"}
         except Exception as e:
-            logger.error(f"【WsEmbyCover】生成页切换风格失败: {e}", exc_info=True)
-            return {"code": 1, "msg": f"切换失败: {e}"}
+            logger.error(f"銆怶sEmbyCover銆戠敓鎴愰〉鍒囨崲椋庢牸澶辫触: {e}", exc_info=True)
+            return {"code": 1, "msg": f"鍒囨崲澶辫触: {e}"}
 
     def api_saved_cover_image(self, file: str = ""):
         target_file = self.__resolve_saved_cover_path(file)
         if not target_file or not target_file.exists() or not target_file.is_file():
-            return {"code": 1, "msg": "图片不存在"}
+            return {"code": 1, "msg": "鍥剧墖涓嶅瓨鍦?}
         mime_type, _ = mimetypes.guess_type(str(target_file))
         if not mime_type:
             mime_type = "image/jpeg"
@@ -1394,27 +1394,27 @@ class WsEmbyCover(_PluginBase):
                 from starlette.responses import FileResponse
                 return FileResponse(path=str(target_file), media_type=mime_type)
             except Exception as e:
-                logger.error(f"【WsEmbyCover】返回图片失败: {e}")
-                return {"code": 1, "msg": "返回图片失败"}
+                logger.error(f"銆怶sEmbyCover銆戣繑鍥炲浘鐗囧け璐? {e}")
+                return {"code": 1, "msg": "杩斿洖鍥剧墖澶辫触"}
 
     def get_service(self) -> List[Dict[str, Any]]:
         """
-        注册插件公共服务
+        娉ㄥ唽鎻掍欢鍏叡鏈嶅姟
         """
         services = []
         if self._enabled and self._cron:
             services.append({
                 "id": "WsEmbyCover",
-                "name": "媒体库封面更新服务",
+                "name": "濯掍綋搴撳皝闈㈡洿鏂版湇鍔?,
                 "trigger": CronTrigger.from_crontab(self._cron),
                 "func": self.__update_all_libraries,
                 "kwargs": {}
             })
         
-        # 总是显示停止按钮，以便中断长时间运行的任务
+        # 鎬绘槸鏄剧ず鍋滄鎸夐挳锛屼互渚夸腑鏂暱鏃堕棿杩愯鐨勪换鍔?
         services.append({
             "id": "StopWsEmbyCover",
-            "name": "停止当前更新任务",
+            "name": "鍋滄褰撳墠鏇存柊浠诲姟",
             "trigger": None,
             "func": self.stop_task,
             "kwargs": {}
@@ -1423,19 +1423,19 @@ class WsEmbyCover(_PluginBase):
 
     def stop_task(self):
         """
-        手动停止当前正在执行的任务
+        鎵嬪姩鍋滄褰撳墠姝ｅ湪鎵ц鐨勪换鍔?
         """
         if not self._event.is_set():
-            logger.info("正在发送停止任务信号...")
+            logger.info("姝ｅ湪鍙戦€佸仠姝换鍔′俊鍙?..")
             self._event.set()
-            return True, "已发送停止停止信号，请等待当前操作清理完成"
-        return True, "任务已处于停止状态或正在停止中"
+            return True, "宸插彂閫佸仠姝㈠仠姝俊鍙凤紝璇风瓑寰呭綋鍓嶆搷浣滄竻鐞嗗畬鎴?
+        return True, "浠诲姟宸插浜庡仠姝㈢姸鎬佹垨姝ｅ湪鍋滄涓?
 
     def get_form(self) -> Tuple[List[dict], Dict[str, Any]]:
         """
-        拼装插件配置页面
+        鎷艰鎻掍欢閰嶇疆椤甸潰
         """
-        # 每次用户打开插件设置页面时，强制重置回封面生成页签，满足不记忆页签的需求
+        # 姣忔鐢ㄦ埛鎵撳紑鎻掍欢璁剧疆椤甸潰鏃讹紝寮哄埗閲嶇疆鍥炲皝闈㈢敓鎴愰〉绛撅紝婊¤冻涓嶈蹇嗛〉绛剧殑闇€姹?
         self._page_tab = "generate-tab"
         
         zh_font_items, en_font_items, _, _ = self.__get_font_presets()
@@ -1456,7 +1456,7 @@ class WsEmbyCover(_PluginBase):
                                     'lang': 'yaml',
                                     'theme': 'monokai',
                                     'style': 'height: 18rem',
-                                    'label': '多服务器配置',
+                                    'label': '澶氭湇鍔″櫒閰嶇疆',
                                     'placeholder': self.__default_servers_config_template()
                                  }
                              }
@@ -1466,7 +1466,7 @@ class WsEmbyCover(_PluginBase):
             },
         ]
 
-        # 标题配置
+        # 鏍囬閰嶇疆
         title_tab = [
             {
                 'component': 'VRow',
@@ -1484,13 +1484,13 @@ class WsEmbyCover(_PluginBase):
                                     'lang': 'yaml',
                                     'theme': 'monokai',
                                     'style': 'height: 30rem',
-                                    'label': '中英标题配置',
-                                    'placeholder': '''服务器1:
-  动画电影:
-    - 动画电影
+                                    'label': '涓嫳鏍囬閰嶇疆',
+                                    'placeholder': '''鏈嶅姟鍣?:
+  鍔ㄧ敾鐢靛奖:
+    - 鍔ㄧ敾鐢靛奖
     - ANI MOVIE
-  华语电影:
-    - 华语电影
+  鍗庤鐢靛奖:
+    - 鍗庤鐢靛奖
     - CHN MOVIE'''
                                  }
                              }
@@ -1500,7 +1500,7 @@ class WsEmbyCover(_PluginBase):
             },
         ]
 
-        # 其他设置标签
+        # 鍏朵粬璁剧疆鏍囩
         others_tab = [
             
             {
@@ -1517,7 +1517,7 @@ class WsEmbyCover(_PluginBase):
                                 'props': {
                                     'type': 'info',
                                     'variant': 'tonal',
-                                    'text': '自定义图片目录：请将图片存于与媒体库同名的子目录下，例如：/mnt/custom_images/华语电影/1.jpg，填写 /mnt/custom_images 即可。多图模式下，文件名须为 1.jpg, 2.jpg, ...9.jpg，不满足的会被重命名，不够的会随机复制填满9张'
+                                    'text': '鑷畾涔夊浘鐗囩洰褰曪細璇峰皢鍥剧墖瀛樹簬涓庡獟浣撳簱鍚屽悕鐨勫瓙鐩綍涓嬶紝渚嬪锛?mnt/custom_images/鍗庤鐢靛奖/1.jpg锛屽～鍐?/mnt/custom_images 鍗冲彲銆傚鍥炬ā寮忎笅锛屾枃浠跺悕椤讳负 1.jpg, 2.jpg, ...9.jpg锛屼笉婊¤冻鐨勪細琚噸鍛藉悕锛屼笉澶熺殑浼氶殢鏈哄鍒跺～婊?寮?
                                 }
                             }
                         ]
@@ -1533,9 +1533,9 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'covers_input',
-                                    'label': '自定义图片目录（可选）',
+                                    'label': '鑷畾涔夊浘鐗囩洰褰曪紙鍙€夛級',
                                     'prependInnerIcon': 'mdi-file-image',
-                                    'hint': '使用你指定的图片生成封面，图片放在与媒体库同名的文件夹下',
+                                    'hint': '浣跨敤浣犳寚瀹氱殑鍥剧墖鐢熸垚灏侀潰锛屽浘鐗囨斁鍦ㄤ笌濯掍綋搴撳悓鍚嶇殑鏂囦欢澶逛笅',
                                     'persistentHint': True
                                 }
                             }
@@ -1553,9 +1553,9 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'covers_output',
-                                    'label': '历史封面保存目录（可选）',
+                                    'label': '鍘嗗彶灏侀潰淇濆瓨鐩綍锛堝彲閫夛級',
                                     'prependInnerIcon': 'mdi-file-image',
-                                    'hint': '生成的封面默认保存在本插件数据目录下',
+                                    'hint': '鐢熸垚鐨勫皝闈㈤粯璁や繚瀛樺湪鏈彃浠舵暟鎹洰褰曚笅',
                                     'persistentHint': True
                                 }
                             }
@@ -1572,8 +1572,8 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VSwitch',
                                 'props': {
                                     'model': 'save_recent_covers',
-                                    'label': '保存最近生成的封面',
-                                    'hint': '默认开启，保存历史封面',
+                                    'label': '淇濆瓨鏈€杩戠敓鎴愮殑灏侀潰',
+                                    'hint': '榛樿寮€鍚紝淇濆瓨鍘嗗彶灏侀潰',
                                     'persistentHint': True
                                 }
                             }
@@ -1590,9 +1590,9 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'covers_history_limit_per_library',
-                                    'label': '媒体库历史封面数量',
+                                    'label': '濯掍綋搴撳巻鍙插皝闈㈡暟閲?,
                                     'prependInnerIcon': 'mdi-history',
-                                    'hint': '单个媒体库封面保留上限，默认 10',
+                                    'hint': '鍗曚釜濯掍綋搴撳皝闈繚鐣欎笂闄愶紝榛樿 10',
                                     'persistentHint': True
                                 }
                             }
@@ -1609,9 +1609,9 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'covers_page_history_limit',
-                                    'label': '历史封面显示数量',
+                                    'label': '鍘嗗彶灏侀潰鏄剧ず鏁伴噺',
                                     'prependInnerIcon': 'mdi-image-multiple-outline',
-                                    'hint': '历史封面「显示数量」，默认 50',
+                                    'hint': '鍘嗗彶灏侀潰銆屾樉绀烘暟閲忋€嶏紝榛樿 50',
                                     'persistentHint': True
                                 },
                             }
@@ -1621,7 +1621,7 @@ class WsEmbyCover(_PluginBase):
             },
             
         ]
-        # 更多参数标签
+        # 鏇村鍙傛暟鏍囩
         single_tab = [
             {
                 'component': 'VRow',
@@ -1637,7 +1637,7 @@ class WsEmbyCover(_PluginBase):
                                 'props': {
                                     'type': 'info',
                                     'variant': 'tonal',
-                                    'text': '字体设置为可选项。若字体无法下载，可以手动下载并填写本地路径。主标题和副标题可以使用不同的字体。'
+                                    'text': '瀛椾綋璁剧疆涓哄彲閫夐」銆傝嫢瀛椾綋鏃犳硶涓嬭浇锛屽彲浠ユ墜鍔ㄤ笅杞藉苟濉啓鏈湴璺緞銆備富鏍囬鍜屽壇鏍囬鍙互浣跨敤涓嶅悓鐨勫瓧浣撱€?
                                 }
                             }
                         ]
@@ -1655,7 +1655,7 @@ class WsEmbyCover(_PluginBase):
                                     'chips': False,
                                     'multiple': False,
                                     'model': 'zh_font_preset',
-                                    'label': '主标题字体预设',
+                                    'label': '涓绘爣棰樺瓧浣撻璁?,
                                     'prependInnerIcon': 'mdi-ideogram-cjk',
                                     'items': zh_font_items
                                 }
@@ -1675,7 +1675,7 @@ class WsEmbyCover(_PluginBase):
                                     'chips': False,
                                     'multiple': False,
                                     'model': 'en_font_preset',
-                                    'label': '副标题字体预设',
+                                    'label': '鍓爣棰樺瓧浣撻璁?,
                                     'prependInnerIcon': 'mdi-format-font',
                                     'items': en_font_items
                                 }
@@ -1693,10 +1693,10 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'zh_font_custom',
-                                    'label': '自定义主标题字体',
+                                    'label': '鑷畾涔変富鏍囬瀛椾綋',
                                     'prependInnerIcon': 'mdi-ideogram-cjk',
-                                    'placeholder': '留空使用预设字体',
-                                    'hint': '字体链接 / 路径',
+                                    'placeholder': '鐣欑┖浣跨敤棰勮瀛椾綋',
+                                    'hint': '瀛椾綋閾炬帴 / 璺緞',
                                     'persistentHint': True
                                 }
                             }
@@ -1713,10 +1713,10 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'en_font_custom',
-                                    'label': '自定义副标题字体',
+                                    'label': '鑷畾涔夊壇鏍囬瀛椾綋',
                                     'prependInnerIcon': 'mdi-format-font',
-                                    'placeholder': '留空使用预设字体',
-                                    'hint': '字体链接 / 路径',
+                                    'placeholder': '鐣欑┖浣跨敤棰勮瀛椾綋',
+                                    'hint': '瀛椾綋閾炬帴 / 璺緞',
                                     'persistentHint': True
                                 }
                             }
@@ -1733,10 +1733,10 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'zh_font_size',
-                                    'label': '主标题字体大小',
+                                    'label': '涓绘爣棰樺瓧浣撳ぇ灏?,
                                     'prependInnerIcon': 'mdi-format-size',
-                                    'placeholder': '留空使用预设尺寸',
-                                    'hint': '根据自己喜好设置，默认 180',
+                                    'placeholder': '鐣欑┖浣跨敤棰勮灏哄',
+                                    'hint': '鏍规嵁鑷繁鍠滃ソ璁剧疆锛岄粯璁?180',
                                     'persistentHint': True
                                 }
                             }
@@ -1753,10 +1753,10 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'en_font_size',
-                                    'label': '副标题字体大小',
+                                    'label': '鍓爣棰樺瓧浣撳ぇ灏?,
                                     'prependInnerIcon': 'mdi-format-size',
-                                    'placeholder': '留空使用预设尺寸',
-                                    'hint': '根据自己喜好设置，默认 75',
+                                    'placeholder': '鐣欑┖浣跨敤棰勮灏哄',
+                                    'hint': '鏍规嵁鑷繁鍠滃ソ璁剧疆锛岄粯璁?75',
                                     'persistentHint': True
                                 }
                             }
@@ -1773,10 +1773,10 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'blur_size',
-                                    'label': '背景模糊尺寸',
+                                    'label': '鑳屾櫙妯＄硦灏哄',
                                     'prependInnerIcon': 'mdi-blur',
-                                    'placeholder': '留空使用预设尺寸',
-                                    'hint': '数字越大越模糊，默认 50',
+                                    'placeholder': '鐣欑┖浣跨敤棰勮灏哄',
+                                    'hint': '鏁板瓧瓒婂ぇ瓒婃ā绯婏紝榛樿 50',
                                     'persistentHint': True
                                 }
                             }
@@ -1793,10 +1793,10 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'color_ratio',
-                                    'label': '背景颜色混合占比',
+                                    'label': '鑳屾櫙棰滆壊娣峰悎鍗犳瘮',
                                     'prependInnerIcon': 'mdi-format-color-fill',
-                                    'placeholder': '留空使用预设占比',
-                                    'hint': '颜色所占的比例，0-1，默认 0.8',
+                                    'placeholder': '鐣欑┖浣跨敤棰勮鍗犳瘮',
+                                    'hint': '棰滆壊鎵€鍗犵殑姣斾緥锛?-1锛岄粯璁?0.8',
                                     'persistentHint': True
                                 }
                             }
@@ -1813,10 +1813,10 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'title_scale',
-                                    'label': '标题整体缩放',
+                                    'label': '鏍囬鏁翠綋缂╂斁',
                                     'prependInnerIcon': 'mdi-arrow-expand-all',
-                                    'placeholder': '留空使用预设比例',
-                                    'hint': '以 1080p 为基准，1.0 为默认',
+                                    'placeholder': '鐣欑┖浣跨敤棰勮姣斾緥',
+                                    'hint': '浠?1080p 涓哄熀鍑嗭紝1.0 涓洪粯璁?,
                                     'persistentHint': True
                                 }
                             }
@@ -1833,10 +1833,10 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'zh_font_offset',
-                                    'label': '主标题偏移量',
+                                    'label': '涓绘爣棰樺亸绉婚噺',
                                     'prependInnerIcon': 'mdi-arrow-up-down',
-                                    'placeholder': '留空使用预设尺寸',
-                                    'hint': '上移为负值，下移为正值',
+                                    'placeholder': '鐣欑┖浣跨敤棰勮灏哄',
+                                    'hint': '涓婄Щ涓鸿礋鍊硷紝涓嬬Щ涓烘鍊?,
                                     'persistentHint': True
                                 }
                             }
@@ -1853,10 +1853,10 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'title_spacing',
-                                    'label': '主副标题间距',
+                                    'label': '涓诲壇鏍囬闂磋窛',
                                     'prependInnerIcon': 'mdi-arrow-up-down',
-                                    'placeholder': '留空使用预设尺寸',
-                                    'hint': '大于 0，默认 40',
+                                    'placeholder': '鐣欑┖浣跨敤棰勮灏哄',
+                                    'hint': '澶т簬 0锛岄粯璁?40',
                                     'persistentHint': True
                                 }
                             }
@@ -1873,10 +1873,10 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VTextField',
                                 'props': {
                                     'model': 'en_line_spacing',
-                                    'label': '副标题行间距',
+                                    'label': '鍓爣棰樿闂磋窛',
                                     'prependInnerIcon': 'mdi-format-line-height',
-                                    'placeholder': '留空使用预设尺寸',
-                                    'hint': '大于 0，默认 40',
+                                    'placeholder': '鐣欑┖浣跨敤棰勮灏哄',
+                                    'hint': '澶т簬 0锛岄粯璁?40',
                                     'persistentHint': True
                                 }
                             }
@@ -1916,7 +1916,7 @@ class WsEmbyCover(_PluginBase):
             profile_defaults[f"{key}_use_primary"] = bool(profile.get("use_primary", self._use_primary))
             profile_defaults[f"{key}_multi_1_blur"] = bool(profile.get("multi_1_blur", self._multi_1_blur))
             profile_defaults[f"{key}_resolution"] = str(profile.get("resolution", "480p") or "480p")
-            panel_title = "新增服务器" if profile_name == "__new__" else f"服务器：{profile_name}"
+            panel_title = "鏂板鏈嶅姟鍣? if profile_name == "__new__" else f"鏈嶅姟鍣細{profile_name}"
             server_profile_panels.append(
                 {
                     "component": "VExpansionPanel",
@@ -1929,13 +1929,13 @@ class WsEmbyCover(_PluginBase):
                                 {
                                     "component": "VRow",
                                     "content": [
-                                        {"component": "VCol", "props": {"cols": 12, "md": 3}, "content": [{"component": "VTextField", "props": {"model": f"{key}_name", "label": "服务器名称"}}]},
-                                        {"component": "VCol", "props": {"cols": 12, "md": 4}, "content": [{"component": "VTextField", "props": {"model": f"{key}_host", "label": "服务器地址"}}]},
+                                        {"component": "VCol", "props": {"cols": 12, "md": 3}, "content": [{"component": "VTextField", "props": {"model": f"{key}_name", "label": "鏈嶅姟鍣ㄥ悕绉?}}]},
+                                        {"component": "VCol", "props": {"cols": 12, "md": 4}, "content": [{"component": "VTextField", "props": {"model": f"{key}_host", "label": "鏈嶅姟鍣ㄥ湴鍧€"}}]},
                                         {"component": "VCol", "props": {"cols": 12, "md": 3}, "content": [{"component": "VTextField", "props": {"model": f"{key}_api_key", "label": "API Key"}}]},
-                                        {"component": "VCol", "props": {"cols": 12, "md": 2}, "content": [{"component": "VSelect", "props": {"model": f"{key}_style", "label": "风格", "items": [{"title": "style1", "value": "static_1"}, {"title": "style2", "value": "static_2"}]}}]},
-                                        {"component": "VCol", "props": {"cols": 12, "md": 4}, "content": [{"component": "VSelect", "props": {"model": f"{key}_sort_by", "label": "封面来源排序", "items": [{"title": "随机", "value": "Random"}, {"title": "最新入库", "value": "DateCreated"}, {"title": "最新发行", "value": "PremiereDate"}]}}]},
-                                        {"component": "VCol", "props": {"cols": 12, "md": 4}, "content": [{"component": "VTextField", "props": {"model": f"{key}_covers_input", "label": "自定义图片目录（可选）"}}]},
-                                        {"component": "VCol", "props": {"cols": 12, "md": 4}, "content": [{"component": "VTextField", "props": {"model": f"{key}_covers_output", "label": "历史封面保存目录（可选）"}}]},
+                                        {"component": "VCol", "props": {"cols": 12, "md": 2}, "content": [{"component": "VSelect", "props": {"model": f"{key}_style", "label": "椋庢牸", "items": [{"title": "style1", "value": "static_1"}, {"title": "style2", "value": "static_2"}]}}]},
+                                        {"component": "VCol", "props": {"cols": 12, "md": 4}, "content": [{"component": "VSelect", "props": {"model": f"{key}_sort_by", "label": "灏侀潰鏉ユ簮鎺掑簭", "items": [{"title": "闅忔満", "value": "Random"}, {"title": "鏈€鏂板叆搴?, "value": "DateCreated"}, {"title": "鏈€鏂板彂琛?, "value": "PremiereDate"}]}}]},
+                                        {"component": "VCol", "props": {"cols": 12, "md": 4}, "content": [{"component": "VTextField", "props": {"model": f"{key}_covers_input", "label": "鑷畾涔夊浘鐗囩洰褰曪紙鍙€夛級"}}]},
+                                        {"component": "VCol", "props": {"cols": 12, "md": 4}, "content": [{"component": "VTextField", "props": {"model": f"{key}_covers_output", "label": "鍘嗗彶灏侀潰淇濆瓨鐩綍锛堝彲閫夛級"}}]},
                                     ],
                                 },
                                 {
@@ -1945,7 +1945,7 @@ class WsEmbyCover(_PluginBase):
                                         "lang": "yaml",
                                         "theme": "monokai",
                                         "style": "height: 16rem",
-                                        "label": "封面标题（该服务器独立）",
+                                        "label": "灏侀潰鏍囬锛堣鏈嶅姟鍣ㄧ嫭绔嬶級",
                                     },
                                 },
                             ],
@@ -1964,7 +1964,7 @@ class WsEmbyCover(_PluginBase):
                     'prependIcon': 'mdi-image-outline',
                     'class': 'text-none',
                 },
-                'text': '静态'
+                'text': '闈欐€?
             },
             {
                 'component': 'VBtn',
@@ -1975,7 +1975,7 @@ class WsEmbyCover(_PluginBase):
                     'prependIcon': 'mdi-play-box-multiple-outline',
                     'class': 'text-none',
                 },
-                'text': '动态'
+                'text': '鍔ㄦ€?
             }
         ]
 
@@ -2032,7 +2032,7 @@ class WsEmbyCover(_PluginBase):
                 }
             )
 
-        # 封面风格设置标签
+        # 灏侀潰椋庢牸璁剧疆鏍囩
         style_tab = [
             {
                 'component': 'VRadioGroup',
@@ -2066,7 +2066,7 @@ class WsEmbyCover(_PluginBase):
                                 'props': {
                                     'class': 'font-weight-medium'
                                 },
-                                'text': '基本参数'
+                                'text': '鍩烘湰鍙傛暟'
                             },
                             {
                                 'component': 'VExpansionPanelText',
@@ -2095,7 +2095,7 @@ class WsEmbyCover(_PluginBase):
                                                                     'color': 'primary',
                                                                     'class': 'text-none'
                                                                 },
-                                                                'text': '海报图'
+                                                                'text': '娴锋姤鍥?
                                                             },
                                                             {
                                                                 'component': 'VBtn',
@@ -2105,7 +2105,7 @@ class WsEmbyCover(_PluginBase):
                                                                     'color': 'primary',
                                                                     'class': 'text-none'
                                                                 },
-                                                                'text': '背景图'
+                                                                'text': '鑳屾櫙鍥?
                                                             }
                                                         ]
                                                     },
@@ -2115,7 +2115,7 @@ class WsEmbyCover(_PluginBase):
                                                             'class': 'text-caption text-medium-emphasis mt-1 d-inline-block'
                                                         }
                                                         ,
-                                                        'text': '选图优先来源'
+                                                        'text': '閫夊浘浼樺厛鏉ユ簮'
                                                     }
                                                 ]
                                             },
@@ -2140,7 +2140,7 @@ class WsEmbyCover(_PluginBase):
                                                                     'color': 'primary',
                                                                     'class': 'text-none'
                                                                 },
-                                                                'text': '模糊背景'
+                                                                'text': '妯＄硦鑳屾櫙'
                                                             },
                                                             {
                                                                 'component': 'VBtn',
@@ -2150,7 +2150,7 @@ class WsEmbyCover(_PluginBase):
                                                                     'color': 'primary',
                                                                     'class': 'text-none'
                                                                 },
-                                                                'text': '纯色渐变'
+                                                                'text': '绾壊娓愬彉'
                                                             }
                                                         ]
                                                     },
@@ -2160,7 +2160,7 @@ class WsEmbyCover(_PluginBase):
                                                             'class': 'text-caption text-medium-emphasis mt-1 d-inline-block'
                                                         }
                                                         ,
-                                                        'text': '针对九宫格海报'
+                                                        'text': '閽堝涔濆鏍兼捣鎶?
                                                     }
                                                 ]
                                             },
@@ -2174,14 +2174,14 @@ class WsEmbyCover(_PluginBase):
                                                             'chips': False,
                                                             'multiple': False,
                                                             'model': 'resolution',
-                                                            'label': '静态分辨率',
+                                                            'label': '闈欐€佸垎杈ㄧ巼',
                                                             'prependInnerIcon': 'mdi-monitor-screenshot',
                                                             'items': [
                                                                 {'title': '1080p (1920x1080)', 'value': '1080p'},
                                                                 {'title': '720p (1280x720)', 'value': '720p'},
                                                                 {'title': '480p (854x480)', 'value': '480p'}
                                                             ],
-                                                            'hint': '动态分辨率默认320*180',
+                                                            'hint': '鍔ㄦ€佸垎杈ㄧ巼榛樿320*180',
                                                             'persistentHint': True
                                                         }
                                                     }
@@ -2206,7 +2206,7 @@ class WsEmbyCover(_PluginBase):
                                                 'content': [
                                                     {
                                                         'component': 'VExpansionPanelTitle',
-                                                        'text': '背景颜色设置（全部风格生效）'
+                                                        'text': '鑳屾櫙棰滆壊璁剧疆锛堝叏閮ㄩ鏍肩敓鏁堬級'
                                                     },
                                                     {
                                                         'component': 'VExpansionPanelText',
@@ -2222,12 +2222,12 @@ class WsEmbyCover(_PluginBase):
                                                                                 'component': 'VSelect',
                                                                                 'props': {
                                                                                     'model': 'bg_color_mode',
-                                                                                    'label': '背景颜色来源',
+                                                                                    'label': '鑳屾櫙棰滆壊鏉ユ簮',
                                                                                     'prependInnerIcon': 'mdi-palette',
                                                                                     'items': [
-                                                                                        {'title': '自动从图片提取', 'value': 'auto'},
-                                                                                        {'title': '自定义（全局统一）', 'value': 'custom'},
-                                                                                        {'title': '从配置获取', 'value': 'config'}
+                                                                                        {'title': '鑷姩浠庡浘鐗囨彁鍙?, 'value': 'auto'},
+                                                                                        {'title': '鑷畾涔夛紙鍏ㄥ眬缁熶竴锛?, 'value': 'custom'},
+                                                                                        {'title': '浠庨厤缃幏鍙?, 'value': 'config'}
                                                                                     ]
                                                                                 }
                                                                             }
@@ -2241,10 +2241,10 @@ class WsEmbyCover(_PluginBase):
                                                                                 'component': 'VTextField',
                                                                                 'props': {
                                                                                     'model': 'custom_bg_color',
-                                                                                    'label': '自定义背景色',
+                                                                                    'label': '鑷畾涔夎儗鏅壊',
                                                                                     'prependInnerIcon': 'mdi-eyedropper',
                                                                                     'placeholder': '#FF5722',
-                                                                                    'hint': '支持 #十六进制、rgb(...)、颜色英文名',
+                                                                                    'hint': '鏀寔 #鍗佸叚杩涘埗銆乺gb(...)銆侀鑹茶嫳鏂囧悕',
                                                                                     'persistentHint': True
                                                                                 }
                                                                             },
@@ -2296,7 +2296,7 @@ class WsEmbyCover(_PluginBase):
                                     "class": "mr-2",
                                 },
                             },
-                            {"component": "span", "text": "基础设置"},
+                            {"component": "span", "text": "鍩虹璁剧疆"},
                         ],
                     },
                     {"component": "VDivider"},
@@ -2320,7 +2320,7 @@ class WsEmbyCover(_PluginBase):
                                                         'component': 'VSwitch',
                                                         'props': {
                                                             'model': 'enabled',
-                                                            'label': '启用插件',
+                                                            'label': '鍚敤鎻掍欢',
                                                         }
                                                     }
                                                 ]
@@ -2336,7 +2336,7 @@ class WsEmbyCover(_PluginBase):
                                                         'component': 'VSwitch',
                                                         'props': {
                                                             'model': 'update_now',
-                                                            'label': '立即更新封面',
+                                                            'label': '绔嬪嵆鏇存柊灏侀潰',
                                                         }
                                                     }
                                                 ]
@@ -2352,7 +2352,7 @@ class WsEmbyCover(_PluginBase):
                                                         'component': 'VSwitch',
                                                         'props': {
                                                             'model': 'transfer_monitor',
-                                                            'label': '入库监控',
+                                                            'label': '鍏ュ簱鐩戞帶',
                                                         }
                                                     }
                                                 ]
@@ -2368,7 +2368,7 @@ class WsEmbyCover(_PluginBase):
                                                         'component': 'VSwitch',
                                                         'props': {
                                                             'model': 'debug_mode',
-                                                            'label': '调试模式',
+                                                            'label': '璋冭瘯妯″紡',
                                                             'color': 'warning',
                                                         }
                                                     }
@@ -2390,7 +2390,7 @@ class WsEmbyCover(_PluginBase):
                                                         'component': 'VTextField',
                                                         'props': {
                                                             'model': 'delay',
-                                                            'label': '入库延迟（秒）',
+                                                            'label': '鍏ュ簱寤惰繜锛堢锛?,
                                                             'placeholder': '60',
                                                         }
                                                     }
@@ -2407,8 +2407,8 @@ class WsEmbyCover(_PluginBase):
                                                         'component': 'VCronField',
                                                         'props': {
                                                             'model': 'cron',
-                                                            'label': '定时更新封面',
-                                                            'placeholder': '5位cron表达式'
+                                                            'label': '瀹氭椂鏇存柊灏侀潰',
+                                                            'placeholder': '5浣峜ron琛ㄨ揪寮?
                                                         }
                                                     }
                                                 ]
@@ -2426,11 +2426,11 @@ class WsEmbyCover(_PluginBase):
                                                             'chips': False,
                                                             'multiple': False,
                                                             'model': 'sort_by',
-                                                            'label': '封面来源排序，默认随机',
+                                                            'label': '灏侀潰鏉ユ簮鎺掑簭锛岄粯璁ら殢鏈?,
                                                             'items': [
-                                                                {"title": "随机", "value": "Random"},
-                                                                {"title": "最新入库", "value": "DateCreated"},
-                                                                {"title": "最新发行", "value": "PremiereDate"}
+                                                                {"title": "闅忔満", "value": "Random"},
+                                                                {"title": "鏈€鏂板叆搴?, "value": "DateCreated"},
+                                                                {"title": "鏈€鏂板彂琛?, "value": "PremiereDate"}
                                                             ]
                                                         }
                                                     }
@@ -2450,7 +2450,7 @@ class WsEmbyCover(_PluginBase):
                                                             'multiple': True,
                                                             'clearable': True,
                                                             'model': 'selected_libraries',
-                                                            'label': '指定媒体库',
+                                                            'label': '鎸囧畾濯掍綋搴?,
                                                             'items': library_items,
                                                             'counter': True,
                                                         }
@@ -2473,7 +2473,7 @@ class WsEmbyCover(_PluginBase):
                                                             'class': 'text-none w-100',
                                                             'type': 'button'
                                                         },
-                                                        'text': '立即清理缓存（图片+字体）',
+                                                        'text': '绔嬪嵆娓呯悊缂撳瓨锛堝浘鐗?瀛椾綋锛?,
                                                         'events': {
                                                             'click': {
                                                                 'api': 'plugin/WsEmbyCover/clean_cache',
@@ -2512,7 +2512,7 @@ class WsEmbyCover(_PluginBase):
                                             "color": "#cc76d1",
                                         },
                                     },
-                                    {"component": "span", "text": "封面风格"},
+                                    {"component": "span", "text": "灏侀潰椋庢牸"},
                                 ],
                             },
                             {
@@ -2527,7 +2527,7 @@ class WsEmbyCover(_PluginBase):
                                             "color": "#26A69A",
                                         },
                                     },
-                                    {"component": "span", "text": "多服务器"},
+                                    {"component": "span", "text": "澶氭湇鍔″櫒"},
                                 ],
                             },
                             {
@@ -2542,7 +2542,7 @@ class WsEmbyCover(_PluginBase):
                                             "color": "#1976D2",
                                         },
                                     },
-                                    {"component": "span", "text": "封面标题"},
+                                    {"component": "span", "text": "灏侀潰鏍囬"},
                                 ],
                             },
                             {
@@ -2557,7 +2557,7 @@ class WsEmbyCover(_PluginBase):
                                             "color": "#f3afe4",
                                         },
                                     },
-                                    {"component": "span", "text": "更多参数"},
+                                    {"component": "span", "text": "鏇村鍙傛暟"},
                                 ],
                             },
                         ],
@@ -2675,317 +2675,8 @@ class WsEmbyCover(_PluginBase):
         }
 
     def get_page(self) -> List[dict]:
-        pass
+        return []
 
-        limit = self.__clamp_value(
-            self._covers_page_history_limit,
-            1,
-            500,
-            50,
-            "covers_page_history_limit[get_page]",
-            int,
-        )
-        setup_warnings: List[str] = []
-        if not self._enabled:
-            setup_warnings.append("插件未启用，请先在设置页启用插件并保存。")
-        if not self._servers:
-            setup_warnings.append("未配置媒体服务器，请先在设置页填写服务器名称、地址、APIKey并保存。")
-
-        # 永远默认首先访问封面生成页，不记忆用户的最后一次Tab选择，以提升开启速度
-        page_tab = "generate-tab"
-        
-        # 仅当明确切换到了历史封面页时，才执行耗时的图片加载逻辑
-        cover_rows = []
-        if self._page_tab == "history-tab":
-            page_tab = "history-tab"
-            recent_covers = self.__get_recent_generated_covers(limit=limit)
-            if recent_covers:
-                for item in recent_covers:
-                    delete_api = f"plugin/WsEmbyCover/delete_saved_cover?file={quote(item['path'])}"
-                    cover_rows.append(
-                        {
-                            "component": "VCol",
-                            "props": {"cols": 12, "sm": 6, "md": 3},
-                            "content": [
-                                {
-                                    "component": "VCard",
-                                    "props": {
-                                        "variant": "flat",
-                                        "elevation": 2,
-                                        "class": "rounded-lg",
-                                    },
-                                    "content": [
-                                        {
-                                            "component": "VImg",
-                                            "props": {
-                                                "src": item["src"],
-                                                "aspect-ratio": "16/9",
-                                                "cover": True,
-                                            },
-                                        },
-                                        {
-                                            "component": "VCardText",
-                                            "props": {"class": "py-2"},
-                                            "content": [
-                                                {
-                                                    "component": "VRow",
-                                                    "props": {"class": "align-center", "noGutters": True},
-                                                    "content": [
-                                                        {
-                                                            "component": "VCol",
-                                                            "props": {"cols": 9},
-                                                            "content": [
-                                                                {
-                                                                    "component": "div",
-                                                                    "props": {
-                                                                        "class": "text-body-2",
-                                                                        "style": "display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.2rem; min-height: 2.4rem;"
-                                                                    },
-                                                                    "text": item["name"],
-                                                                },
-                                                                {
-                                                                    "component": "div",
-                                                                    "props": {"class": "text-caption text-medium-emphasis mt-1"},
-                                                                    "text": item["size"],
-                                                                },
-                                                            ],
-                                                        },
-                                                        {
-                                                            "component": "VCol",
-                                                            "props": {"cols": 3, "class": "text-right"},
-                                                            "content": [
-                                                                {
-                                                                    "component": "VBtn",
-                                                                    "props": {
-                                                                        "color": "error",
-                                                                        "variant": "text",
-                                                                        "size": "small",
-                                                                        "title": "删除",
-                                                                        "class": "text-none",
-                                                                    },
-                                                                    "text": "删除",
-                                                                    "events": {
-                                                                        "click": {
-                                                                            "api": delete_api,
-                                                                            "method": "post",
-                                                                        }
-                                                                    },
-                                                                }
-                                                            ],
-                                                        },
-                                                    ],
-                                                }
-                                            ],
-                                        },
-                                    ],
-                                }
-                            ],
-                        }
-                    )
-        elif self._page_tab == "history-tab":
-            cover_rows.append(
-                {
-                    "component": "VAlert",
-                    "props": {
-                        "type": "info",
-                        "variant": "tonal",
-                        "density": "compact",
-                    },
-                    "text": "未发现最近生成的封面文件。请先执行一次封面生成，或检查“封面另存目录”是否已配置。",
-                }
-            )
-            
-        if self._page_tab == "clean-tab":
-            page_tab = "clean-tab"
-
-        header_card = {
-            "component": "VCard",
-            "content": [
-                {
-                    "component": "VTabs",
-                    "props": {"grow": True, "modelValue": page_tab},
-                    "content": [
-                        {
-                            "component": "VTab",
-                            "props": {"value": "generate-tab"},
-                            "text": "封面生成",
-                            "events": {"click": {"api": "plugin/WsEmbyCover/set_page_tab_generate", "method": "post"}},
-                        },
-                        {
-                            "component": "VTab",
-                            "props": {"value": "history-tab"},
-                            "text": "历史封面",
-                            "events": {"click": {"api": "plugin/WsEmbyCover/set_page_tab_history", "method": "post"}},
-                        },
-                        {
-                            "component": "VTab",
-                            "props": {"value": "clean-tab"},
-                            "text": "清理缓存",
-                            "events": {"click": {"api": "plugin/WsEmbyCover/set_page_tab_clean", "method": "post"}},
-                        },
-                    ],
-                },
-                {"component": "VDivider"},
-            ],
-        }
-
-        if page_tab == "generate-tab":
-            generate_content: List[Dict[str, Any]] = []
-            if setup_warnings:
-                generate_content.extend(
-                    [
-                        {
-                            "component": "VAlert",
-                            "props": {
-                                "type": "warning",
-                                "variant": "tonal",
-                                "density": "compact",
-                                "class": "mb-3",
-                            },
-                            "text": "首次运行请先完成设置",
-                        },
-                        {
-                            "component": "div",
-                            "props": {"class": "text-caption text-medium-emphasis mb-2"},
-                            "text": "；".join(setup_warnings),
-                        },
-                    ]
-                )
-            current_style = "static_2" if str(self._cover_style or self._cover_style_base) == "static_2" else "static_1"
-            style_cards: List[Dict[str, Any]] = []
-            for style_value, style_index in [
-                ("static_1", 1),
-                ("static_2", 2),
-            ]:
-                is_current = (style_value == current_style)
-                style_cards.append(
-                    {
-                        "component": "VCol",
-                        "props": {"cols": 12, "sm": 6, "md": 3},
-                        "content": [
-                            {
-                                "component": "VCard",
-                                "props": {
-                                    "variant": "flat",
-                                    "class": "rounded-lg overflow-hidden mb-2 cursor-pointer mx-auto",
-                                    "style": "position: relative; width: 260px; max-width: 100%;",
-                                },
-                                "events": {
-                                    "click": {
-                                        "api": f"plugin/WsEmbyCover/set_generate_style?style={style_value}",
-                                        "method": "post",
-                                    }
-                                },
-                                "content": [
-                                    {
-                                        "component": "VImg",
-                                        "props": {
-                                            "src": self.__style_preview_src(style_index),
-                                            "aspect-ratio": "16/9",
-                                            "cover": True,
-                                        },
-                                    },
-                                    *(
-                                        [
-                                            {
-                                                "component": "VIcon",
-                                                "props": {
-                                                    "icon": "mdi-check-circle",
-                                                    "color": "#7CFC00",
-                                                    "class": "position-absolute",
-                                                    "style": "top: 8px; right: 8px; z-index: 2; font-size: 28px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.45)); pointer-events: none;",
-                                                },
-                                            }
-                                        ]
-                                        if is_current else []
-                                    ),
-                                ],
-                            }
-                        ],
-                    }
-                )
-            generate_content.append(
-                {
-                    "component": "VRow",
-                    "content": style_cards,
-                }
-            )
-            generate_content.append(
-                {
-                    "component": "VRow",
-                    "content": [
-                        {
-                            "component": "VCol",
-                            "props": {"cols": 12},
-                            "content": [
-                                {
-                                    "component": "div",
-                                    "props": {"class": "text-caption text-medium-emphasis mb-2"},
-                                    "text": "更多参数请点击右下角齿轮设置",
-                                },
-                            ],
-                        }
-                    ],
-                }
-            )
-            body_card = {
-                "component": "VCard",
-                "props": {"variant": "outlined", "class": "mt-3"},
-                "content": [{"component": "VCardText", "content": generate_content}],
-            }
-        elif page_tab == "history-tab":
-            body_card = {
-                "component": "VCard",
-                "props": {"variant": "outlined", "class": "mt-3"},
-                "content": [
-                    {"component": "VCardTitle", "text": f"最近生成的封面（最多 {limit} 条）"},
-                    {"component": "VCardText", "content": [{"component": "VRow", "content": cover_rows}]},
-                ],
-            }
-        else:
-            body_card = {
-                "component": "VCard",
-                "props": {"variant": "outlined", "class": "mt-3"},
-                "content": [
-                    {
-                        "component": "VCardText",
-                        "props": {"class": "pa-6 d-flex flex-column align-center"},
-                        "content": [
-                            {
-                                "component": "VBtn",
-                                "props": {
-                                    "color": "error",
-                                    "variant": "flat",
-                                    "size": "large",
-                                    "prepend-icon": "mdi-image-remove",
-                                    "class": "mb-3 text-none",
-                                },
-                                "text": "立即清理图片缓存",
-                                "events": {"click": {"api": "plugin/WsEmbyCover/clean_images", "method": "post"}},
-                            },
-                            {
-                                "component": "VBtn",
-                                "props": {
-                                    "color": "error",
-                                    "variant": "flat",
-                                    "size": "large",
-                                    "prepend-icon": "mdi-format-font",
-                                    "class": "mb-3 text-none",
-                                },
-                                "text": "立即清理字体缓存",
-                                "events": {"click": {"api": "plugin/WsEmbyCover/clean_fonts", "method": "post"}},
-                            },
-                            {
-                                "component": "div",
-                                "props": {"class": "text-caption text-medium-emphasis"},
-                                "text": "点击后立即执行，无需保存配置。",
-                            },
-                        ],
-                    }
-                ],
-            }
-
-        return [header_card, body_card]
     @staticmethod
     def __style_preview_src(index: int) -> str:
 
@@ -3029,9 +2720,9 @@ class WsEmbyCover(_PluginBase):
                         from io import BytesIO
                         import base64
                         
-                        # 动态生成缩略图进行 Base64 传输
-                        # 1. 彻底绕开 /api/v1/plugin 外部接口存在的 401 鉴权问题
-                        # 2. 将几十 MB 的动图压缩为了几十 KB 的缩略图，解决前端加载卡死问题
+                        # 鍔ㄦ€佺敓鎴愮缉鐣ュ浘杩涜 Base64 浼犺緭
+                        # 1. 褰诲簳缁曞紑 /api/v1/plugin 澶栭儴鎺ュ彛瀛樺湪鐨?401 閴存潈闂
+                        # 2. 灏嗗嚑鍗?MB 鐨勫姩鍥惧帇缂╀负浜嗗嚑鍗?KB 鐨勭缉鐣ュ浘锛岃В鍐冲墠绔姞杞藉崱姝婚棶棰?
                         with Image.open(file_path) as img:
                             if hasattr(img, 'is_animated') and img.is_animated:
                                 img.seek(0)
@@ -3047,7 +2738,7 @@ class WsEmbyCover(_PluginBase):
                             image_src = f"data:image/jpeg;base64,{image_b64}"
                             
                     except Exception as img_err:
-                        logger.debug(f"生成缩略图失败 {file_path}: {img_err}")
+                        logger.debug(f"鐢熸垚缂╃暐鍥惧け璐?{file_path}: {img_err}")
                         continue
 
                     items.append(
@@ -3061,7 +2752,7 @@ class WsEmbyCover(_PluginBase):
                         }
                     )
                 except Exception as e:
-                    logger.debug(f"读取封面文件信息失败: {file_path} -> {e}")
+                    logger.debug(f"璇诲彇灏侀潰鏂囦欢淇℃伅澶辫触: {file_path} -> {e}")
 
         items.sort(key=lambda x: x.get("mtime_ts", 0.0), reverse=True)
         return items[:max(1, int(limit))]
@@ -3122,7 +2813,7 @@ class WsEmbyCover(_PluginBase):
     @eventmanager.register(EventType.PluginAction)
     def update_covers(self, event: Event):
         """
-        远程全量同步
+        杩滅▼鍏ㄩ噺鍚屾
         """
         if event:
             event_data = event.event_data
@@ -3130,7 +2821,7 @@ class WsEmbyCover(_PluginBase):
                 return
             self.post_message(
                 channel=event.event_data.get("channel"),
-                title="开始更新媒体库封面 ...",
+                title="寮€濮嬫洿鏂板獟浣撳簱灏侀潰 ...",
                 userid=event.event_data.get("user"),
             )
         tips = self.__update_all_libraries()
@@ -3144,7 +2835,7 @@ class WsEmbyCover(_PluginBase):
     @eventmanager.register(EventType.TransferComplete)
     def update_library_cover(self, event: Event):
         """
-        媒体整理完成后，更新所在库封面
+        濯掍綋鏁寸悊瀹屾垚鍚庯紝鏇存柊鎵€鍦ㄥ簱灏侀潰
         """
         if not self._enabled:
             return
@@ -3159,19 +2850,19 @@ class WsEmbyCover(_PluginBase):
         # Event data
         mediainfo: MediaInfo = event_data.get("mediainfo")
 
-        # logger.info(f"转移信息：{transfer}")
-        # logger.info(f"元数据：{meta}")
-        # logger.info(f"媒体信息：{mediainfo}")
-        # logger.info(f"监控到的媒体信息：{mediainfo}")
+        # logger.info(f"杞Щ淇℃伅锛歿transfer}")
+        # logger.info(f"鍏冩暟鎹細{meta}")
+        # logger.info(f"濯掍綋淇℃伅锛歿mediainfo}")
+        # logger.info(f"鐩戞帶鍒扮殑濯掍綋淇℃伅锛歿mediainfo}")
         if not mediainfo:
             return
             
-        # 开始前清理可能遗留的停止信号，防止阻塞监控
+        # 寮€濮嬪墠娓呯悊鍙兘閬楃暀鐨勫仠姝俊鍙凤紝闃叉闃诲鐩戞帶
         self._event.clear()
 
         # Delay
         if self._delay:
-            logger.info(f"延迟 {self._delay} 秒后开始更新封面")
+            logger.info(f"寤惰繜 {self._delay} 绉掑悗寮€濮嬫洿鏂板皝闈?)
             time.sleep(int(self._delay))
             
         # Query the item in media server
@@ -3180,14 +2871,14 @@ class WsEmbyCover(_PluginBase):
             self.mschain.sync()
             existsinfo = self.mschain.media_exists(mediainfo=mediainfo)
             if not existsinfo:
-                logger.warning(f"{mediainfo.title_year} 不存在媒体库中，可能服务器还未扫描完成，建议设置合适的延迟时间")
+                logger.warning(f"{mediainfo.title_year} 涓嶅瓨鍦ㄥ獟浣撳簱涓紝鍙兘鏈嶅姟鍣ㄨ繕鏈壂鎻忓畬鎴愶紝寤鸿璁剧疆鍚堥€傜殑寤惰繜鏃堕棿")
                 return
         
         # Get item details including backdrop
         iteminfo = self.mschain.iteminfo(server=existsinfo.server, item_id=existsinfo.itemid)
-        # logger.info(f"获取到媒体项 {mediainfo.title_year} 详情：{iteminfo}")
+        # logger.info(f"鑾峰彇鍒板獟浣撻」 {mediainfo.title_year} 璇︽儏锛歿iteminfo}")
         if not iteminfo:
-            logger.warning(f"获取 {mediainfo.title_year} 详情失败")
+            logger.warning(f"鑾峰彇 {mediainfo.title_year} 璇︽儏澶辫触")
             return
             
         # Try to get library ID
@@ -3208,7 +2899,7 @@ class WsEmbyCover(_PluginBase):
             )
         
         if not library:
-            logger.warning(f"找不到 {mediainfo.title_year} 所在媒体库")
+            logger.warning(f"鎵句笉鍒?{mediainfo.title_year} 鎵€鍦ㄥ獟浣撳簱")
             return
         if service.type == 'emby':
             library_id = library.get("Id")
@@ -3217,58 +2908,58 @@ class WsEmbyCover(_PluginBase):
 
         update_key = (server, item_id)
         if update_key in self._current_updating_items:
-            logger.info(f"媒体库 {server}：{library['Name']} 的项目 {mediainfo.title_year} 正在更新中，跳过此次更新")
+            logger.info(f"濯掍綋搴?{server}锛歿library['Name']} 鐨勯」鐩?{mediainfo.title_year} 姝ｅ湪鏇存柊涓紝璺宠繃姝ゆ鏇存柊")
             return
         # self.clean_cover_history(save=True)
         old_history = self.get_data('cover_history') or []
-        # 新增去重判断逻辑
+        # 鏂板鍘婚噸鍒ゆ柇閫昏緫
         latest_item = max(
             (item for item in old_history if str(item.get("library_id")) == str(library_id)),
             key=lambda x: x["timestamp"],
             default=None
         )
         if latest_item and str(latest_item.get("item_id")) == str(item_id):
-            logger.info(f"媒体 {mediainfo.title_year} 在库中是最新记录，不更新封面图")
+            logger.info(f"濯掍綋 {mediainfo.title_year} 鍦ㄥ簱涓槸鏈€鏂拌褰曪紝涓嶆洿鏂板皝闈㈠浘")
             return
         
-        # 安全地获取字体和翻译
+        # 瀹夊叏鍦拌幏鍙栧瓧浣撳拰缈昏瘧
         try:
             self.__get_fonts()
         except Exception as e:
-            logger.error(f"初始化字体或翻译时出错: {e}")
-            # 继续执行，但可能会影响封面生成质量
+            logger.error(f"鍒濆鍖栧瓧浣撴垨缈昏瘧鏃跺嚭閿? {e}")
+            # 缁х画鎵ц锛屼絾鍙兘浼氬奖鍝嶅皝闈㈢敓鎴愯川閲?
         new_history = self.update_cover_history(
             server=server, 
             library_id=library_id, 
             item_id=item_id
         )
-        # logger.info(f"最新数据： {new_history}")
+        # logger.info(f"鏈€鏂版暟鎹細 {new_history}")
         self._monitor_sort = 'DateCreated'
         self._current_updating_items.add(update_key)
         if self.__update_library(service, library):
             self._monitor_sort = ''
             self._current_updating_items.remove(update_key)
-            logger.info(f"媒体库 {server}：{library['Name']} 封面更新成功")
+            logger.info(f"濯掍綋搴?{server}锛歿library['Name']} 灏侀潰鏇存柊鎴愬姛")
 
     
     def __update_all_libraries(self):
         """
-        更新所有媒体库封面
+        鏇存柊鎵€鏈夊獟浣撳簱灏侀潰
         """
         if not self._enabled:
             return
-        # 所有媒体服务器
+        # 鎵€鏈夊獟浣撴湇鍔″櫒
         if not self._servers:
             return
-        logger.info("开始检查字体 ...")
+        logger.info("寮€濮嬫鏌ュ瓧浣?...")
         try:
             self.__get_fonts()
         except Exception as e:
-            logger.error(f"初始化过程中出错: {e}")
-            logger.warning("将尝试继续执行，但可能影响封面生成质量")
-        logger.info("开始更新媒体库封面 ...")
-        self.__debug_log(f"调试模式开启：selected_libraries={self._selected_libraries}")
-        # 开始前确保停止信号已清除
+            logger.error(f"鍒濆鍖栬繃绋嬩腑鍑洪敊: {e}")
+            logger.warning("灏嗗皾璇曠户缁墽琛岋紝浣嗗彲鑳藉奖鍝嶅皝闈㈢敓鎴愯川閲?)
+        logger.info("寮€濮嬫洿鏂板獟浣撳簱灏侀潰 ...")
+        self.__debug_log(f"璋冭瘯妯″紡寮€鍚細selected_libraries={self._selected_libraries}")
+        # 寮€濮嬪墠纭繚鍋滄淇″彿宸叉竻闄?
         self._event.clear()
         global_style = self._cover_style
         total_success_count = 0
@@ -3279,22 +2970,22 @@ class WsEmbyCover(_PluginBase):
             if selected_servers and server not in selected_servers:
                 continue
             self.__apply_server_profile(server)
-            # 扫描所有媒体库
-            logger.info(f"当前服务器 {server}")
+            # 鎵弿鎵€鏈夊獟浣撳簱
+            logger.info(f"褰撳墠鏈嶅姟鍣?{server}")
             cover_style = {
-                "static_1": "静态 1",
-                "static_2": "静态 2",
-            }.get(self._cover_style, "静态 1")
-            logger.info(f"当前风格 {cover_style}")
-            # 获取媒体库列表
+                "static_1": "闈欐€?1",
+                "static_2": "闈欐€?2",
+            }.get(self._cover_style, "闈欐€?1")
+            logger.info(f"褰撳墠椋庢牸 {cover_style}")
+            # 鑾峰彇濯掍綋搴撳垪琛?
             libraries = self.__get_server_libraries(service)
             if not libraries:
-                logger.warning(f"服务器 {server} 的媒体库列表获取失败")
+                logger.warning(f"鏈嶅姟鍣?{server} 鐨勫獟浣撳簱鍒楄〃鑾峰彇澶辫触")
                 continue
-            self.__debug_log(f"服务器 {server} 可用媒体库数量={len(libraries)}")
+            self.__debug_log(f"鏈嶅姟鍣?{server} 鍙敤濯掍綋搴撴暟閲?{len(libraries)}")
             selected_library_ids = {library_id for srv, library_id in selected_pairs if srv == server}
             if selected_library_ids:
-                self.__debug_log(f"服务器 {server} 指定媒体库过滤={sorted(selected_library_ids)}")
+                self.__debug_log(f"鏈嶅姟鍣?{server} 鎸囧畾濯掍綋搴撹繃婊?{sorted(selected_library_ids)}")
                 filtered_libraries = []
                 for library in libraries:
                     current_library_id = library.get("Id") if service.type == 'emby' else library.get("ItemId")
@@ -3302,41 +2993,41 @@ class WsEmbyCover(_PluginBase):
                         filtered_libraries.append(library)
                 libraries = filtered_libraries
                 if not libraries:
-                    logger.warning(f"服务器 {server} 中未找到已选择的媒体库，已跳过")
+                    logger.warning(f"鏈嶅姟鍣?{server} 涓湭鎵惧埌宸查€夋嫨鐨勫獟浣撳簱锛屽凡璺宠繃")
                     continue
             success_count = 0
             fail_count = 0
             for library in libraries:
                 if self._event.is_set():
-                    logger.info("媒体库封面更新服务停止")
+                    logger.info("濯掍綋搴撳皝闈㈡洿鏂版湇鍔″仠姝?)
                     self._event.clear()
                     return
-                library_name = str(library.get("Name") or "").strip() or "未知媒体库"
-                logger.info(f"当前执行：{server} -> {library_name}")
+                library_name = str(library.get("Name") or "").strip() or "鏈煡濯掍綋搴?
+                logger.info(f"褰撳墠鎵ц锛歿server} -> {library_name}")
                 if service.type == 'emby':
                     library_id = library.get("Id")
                 else:
                     library_id = library.get("ItemId")
                 if self.__update_library(service, library):
-                    logger.info(f"媒体库 {server}：{library['Name']} 封面更新成功")
+                    logger.info(f"濯掍綋搴?{server}锛歿library['Name']} 灏侀潰鏇存柊鎴愬姛")
                     success_count += 1
                 else:
-                    logger.warning(f"媒体库 {server}：{library['Name']} 封面更新失败")
+                    logger.warning(f"濯掍綋搴?{server}锛歿library['Name']} 灏侀潰鏇存柊澶辫触")
                     fail_count += 1
             total_success_count += success_count
             total_fail_count += fail_count
         self._cover_style = global_style
-        tips = f"媒体库封面更新任务结束，成功 {total_success_count} 个，失败 {total_fail_count} 个"
+        tips = f"濯掍綋搴撳皝闈㈡洿鏂颁换鍔＄粨鏉燂紝鎴愬姛 {total_success_count} 涓紝澶辫触 {total_fail_count} 涓?
         logger.info(tips)
         return tips
                  
 
     def __update_library(self, service, library):
         library_name = library['Name']
-        logger.info(f"媒体库 {service.name}：{library_name} 开始准备更新封面")
-        # 自定义图像路径
+        logger.info(f"濯掍綋搴?{service.name}锛歿library_name} 寮€濮嬪噯澶囨洿鏂板皝闈?)
+        # 鑷畾涔夊浘鍍忚矾寰?
         image_path = self.__check_custom_image(library_name)
-        # 从配置获取标题和背景颜色
+        # 浠庨厤缃幏鍙栨爣棰樺拰鑳屾櫙棰滆壊
         title_result = self.__get_title_from_config(library_name, service.name)
         if len(title_result) == 3:
             title = (title_result[0], title_result[1])
@@ -3345,7 +3036,7 @@ class WsEmbyCover(_PluginBase):
             title = title_result
             config_bg_color = None
         if image_path:
-            logger.info(f"媒体库 {service.name}：{library_name} 从自定义路径获取封面")
+            logger.info(f"濯掍綋搴?{service.name}锛歿library_name} 浠庤嚜瀹氫箟璺緞鑾峰彇灏侀潰")
             image_data = self.__generate_image_from_path(service.name, library_name, title, image_path[0], config_bg_color)
         else:
             image_data = self.__generate_from_server(service, library, title)
@@ -3357,7 +3048,7 @@ class WsEmbyCover(_PluginBase):
         if not self._covers_input:
             return None
 
-        # 使用安全的文件名
+        # 浣跨敤瀹夊叏鐨勬枃浠跺悕
         safe_library_name = self.__sanitize_filename(library_name)
         library_dir = os.path.join(self._covers_input, safe_library_name)
         if not os.path.isdir(library_dir):
@@ -3369,34 +3060,34 @@ class WsEmbyCover(_PluginBase):
             if f.lower().endswith((".jpg", ".jpeg", ".png", ".bmp", ".gif", ".webp"))
         ])
         
-        return images if images else None  # 或改为 return images if images else False
+        return images if images else None  # 鎴栨敼涓?return images if images else False
 
     def __generate_image_from_path(self, server, library_name, title, image_path=None, config_bg_color=None):
         gc.collect()
-        logger.info(f"媒体库 {server}：{library_name} 正在生成封面图 ...")
+        logger.info(f"濯掍綋搴?{server}锛歿library_name} 姝ｅ湪鐢熸垚灏侀潰鍥?...")
         image_data = False
 
-        # 执行健康检查
+        # 鎵ц鍋ュ悍妫€鏌?
         if not self.health_check():
-            logger.error("插件健康检查失败，无法生成封面")
+            logger.error("鎻掍欢鍋ュ悍妫€鏌ュけ璐ワ紝鏃犳硶鐢熸垚灏侀潰")
             return False
 
-        # 确保分辨率配置已初始化
+        # 纭繚鍒嗚鲸鐜囬厤缃凡鍒濆鍖?
         if not hasattr(self, '_resolution_config') or self._resolution_config is None:
-            logger.warning("分辨率配置未初始化，重新初始化")
-            # 使用用户设置的分辨率，而不是硬编码的1080p
+            logger.warning("鍒嗚鲸鐜囬厤缃湭鍒濆鍖栵紝閲嶆柊鍒濆鍖?)
+            # 浣跨敤鐢ㄦ埛璁剧疆鐨勫垎杈ㄧ巼锛岃€屼笉鏄‖缂栫爜鐨?080p
             if self._resolution == "custom":
                 try:
                     custom_w = int(self._custom_width)
                     custom_h = int(self._custom_height)
                     self._resolution_config = self.__new_resolution_config((custom_w, custom_h))
                 except ValueError:
-                    logger.warning(f"自定义分辨率参数无效: {self._custom_width}x{self._custom_height}, 使用默认1080p")
+                    logger.warning(f"鑷畾涔夊垎杈ㄧ巼鍙傛暟鏃犳晥: {self._custom_width}x{self._custom_height}, 浣跨敤榛樿1080p")
                     self._resolution_config = self.__new_resolution_config("1080p")
             else:
                 self._resolution_config = self.__new_resolution_config(self._resolution)
 
-        # 使用分辨率配置计算字体大小
+        # 浣跨敤鍒嗚鲸鐜囬厤缃绠楀瓧浣撳ぇ灏?
         try:
             base_zh_font_size = float(self._zh_font_size) if self._zh_font_size else 170
         except ValueError:
@@ -3417,25 +3108,25 @@ class WsEmbyCover(_PluginBase):
             zh_font_size = float(base_zh_font_size) * title_scale
             en_font_size = float(base_en_font_size) * title_scale
         else:
-            # 静态风格按当前分辨率缩放
+            # 闈欐€侀鏍兼寜褰撳墠鍒嗚鲸鐜囩缉鏀?
             zh_font_size = self._resolution_config.get_font_size(base_zh_font_size) * title_scale
             en_font_size = self._resolution_config.get_font_size(base_en_font_size) * title_scale
 
         blur_size = self._blur_size or 50
         color_ratio = self._color_ratio or 0.8
 
-        # 检查字体路径是否有效
+        # 妫€鏌ュ瓧浣撹矾寰勬槸鍚︽湁鏁?
         if not self._zh_font_path or not self._en_font_path:
-            logger.error("字体路径未设置或无效，无法生成封面")
+            logger.error("瀛椾綋璺緞鏈缃垨鏃犳晥锛屾棤娉曠敓鎴愬皝闈?)
             return False
 
-        # 验证字体文件是否存在
+        # 楠岃瘉瀛椾綋鏂囦欢鏄惁瀛樺湪
         if not self.__validate_font_file(Path(self._zh_font_path)):
-            logger.error(f"主标题字体文件无效: {self._zh_font_path}")
+            logger.error(f"涓绘爣棰樺瓧浣撴枃浠舵棤鏁? {self._zh_font_path}")
             return False
 
         if not self.__validate_font_file(Path(self._en_font_path)):
-            logger.error(f"副标题字体文件无效: {self._en_font_path}")
+            logger.error(f"鍓爣棰樺瓧浣撴枃浠舵棤鏁? {self._en_font_path}")
             return False
 
         font_path = (str(self._zh_font_path), str(self._en_font_path))
@@ -3446,17 +3137,17 @@ class WsEmbyCover(_PluginBase):
         en_line_spacing = float(self._en_line_spacing or 40) * title_scale
         font_offset = (float(zh_font_offset), float(title_spacing), float(en_line_spacing))
 
-        # 记录分辨率配置信息
-        logger.info(f"当前分辨率配置: {self._resolution_config}")
+        # 璁板綍鍒嗚鲸鐜囬厤缃俊鎭?
+        logger.info(f"褰撳墠鍒嗚鲸鐜囬厤缃? {self._resolution_config}")
 
-        # 准备背景颜色配置
+        # 鍑嗗鑳屾櫙棰滆壊閰嶇疆
         bg_color_config = {
             'mode': self._bg_color_mode,
             'custom_color': self._custom_bg_color,
             'config_color': config_bg_color
         }
 
-        # 传递分辨率配置给图像生成函数
+        # 浼犻€掑垎杈ㄧ巼閰嶇疆缁欏浘鍍忕敓鎴愬嚱鏁?
         if self._cover_style == 'static_1':
             create_style_static_1 = self.__load_style_creator("style_static_1", "create_style_static_1")
             safe_library_name = self.__sanitize_filename(library_name)
@@ -3464,9 +3155,9 @@ class WsEmbyCover(_PluginBase):
                 library_dir = Path(self._covers_input) / safe_library_name
             else:
                 library_dir = Path(self._covers_path) / safe_library_name
-            logger.info(f"static_1: 准备图片目录 {library_dir}")
+            logger.info(f"static_1: 鍑嗗鍥剧墖鐩綍 {library_dir}")
             if self.prepare_library_images(library_dir, required_items=9):
-                logger.info("static_1: 图片目录准备完成，开始生成封面")
+                logger.info("static_1: 鍥剧墖鐩綍鍑嗗瀹屾垚锛屽紑濮嬬敓鎴愬皝闈?)
                 image_data = create_style_static_1(
                     library_dir, title, font_path,
                     font_size=font_size,
@@ -3477,7 +3168,7 @@ class WsEmbyCover(_PluginBase):
                     resolution_config=self._resolution_config,
                     bg_color_config=bg_color_config)
             else:
-                logger.warning(f"static_1: 图片目录准备失败 {library_dir}")
+                logger.warning(f"static_1: 鍥剧墖鐩綍鍑嗗澶辫触 {library_dir}")
         elif self._cover_style == 'static_2':
             create_style_static_2 = self.__load_style_creator("style_static_2", "create_style_static_2")
             safe_library_name = self.__sanitize_filename(library_name)
@@ -3490,9 +3181,9 @@ class WsEmbyCover(_PluginBase):
                 library_dir = custom_library_dir
             else:
                 library_dir = cache_library_dir
-            logger.info(f"static_2: 准备图片目录 {library_dir}")
+            logger.info(f"static_2: 鍑嗗鍥剧墖鐩綍 {library_dir}")
             if self.prepare_library_images(library_dir, required_items=6):
-                logger.info("static_2: 图片目录准备完成，开始生成封面")
+                logger.info("static_2: 鍥剧墖鐩綍鍑嗗瀹屾垚锛屽紑濮嬬敓鎴愬皝闈?)
                 image_data = create_style_static_2(
                     image_path=image_path,
                     library_dir=library_dir,
@@ -3506,21 +3197,21 @@ class WsEmbyCover(_PluginBase):
                     bg_color_config=bg_color_config,
                 )
             else:
-                logger.warning(f"static_2: 图片目录准备失败 {library_dir}")
+                logger.warning(f"static_2: 鍥剧墖鐩綍鍑嗗澶辫触 {library_dir}")
         gc.collect()
         return image_data
     
     def __generate_from_server(self, service, library, title):
 
-        logger.info(f"媒体库 {service.name}：{library['Name']} 开始筛选媒体项")
+        logger.info(f"濯掍綋搴?{service.name}锛歿library['Name']} 寮€濮嬬瓫閫夊獟浣撻」")
         required_items = self.__get_required_items()
         target_items = self.__get_fetch_target_count()
         
-        # 获取项目集合
+        # 鑾峰彇椤圭洰闆嗗悎
         items = []
         offset = 0
-        batch_size = 50  # 每次获取的项目数量
-        max_attempts = 20  # 最大尝试次数，防止无限循环
+        batch_size = 50  # 姣忔鑾峰彇鐨勯」鐩暟閲?
+        max_attempts = 20  # 鏈€澶у皾璇曟鏁帮紝闃叉鏃犻檺寰幆
         
         library_type = library.get('CollectionType')
         if service.type == 'emby':
@@ -3529,7 +3220,7 @@ class WsEmbyCover(_PluginBase):
             library_id = library.get("ItemId")
         parent_id = library_id
         
-        # 处理合集类型的特殊情况
+        # 澶勭悊鍚堥泦绫诲瀷鐨勭壒娈婃儏鍐?
         if library_type == "boxsets":
             return self.__handle_boxset_library(service, library, title)
         elif library_type == "playlists":
@@ -3537,7 +3228,7 @@ class WsEmbyCover(_PluginBase):
         elif library_type == "music":
             include_types = 'MusicAlbum,Audio'
         else:
-            # 基础类型映射
+            # 鍩虹绫诲瀷鏄犲皠
             if self.__is_single_image_style():
                 include_types = {
                     "PremiereDate": "Movie,Series",
@@ -3545,17 +3236,17 @@ class WsEmbyCover(_PluginBase):
                     "Random": "Movie,Series"
                 }.get(self._sort_by, "Movie,Series")
             else:
-                # 对于多图样式，如果按最新入库排序（DateCreated），也要包含 Episode 以展示剧集的最新动态
+                # 瀵逛簬澶氬浘鏍峰紡锛屽鏋滄寜鏈€鏂板叆搴撴帓搴忥紙DateCreated锛夛紝涔熻鍖呭惈 Episode 浠ュ睍绀哄墽闆嗙殑鏈€鏂板姩鎬?
                 if self._sort_by == "DateCreated":
                     include_types = "Movie,Episode"
                 else:
-                    # 其他排序方式默认使用 Series 获取海报
+                    # 鍏朵粬鎺掑簭鏂瑰紡榛樿浣跨敤 Series 鑾峰彇娴锋姤
                     include_types = "Movie,Series"
-            logger.debug(f"媒体库筛选类型: {include_types}, 排序方式: {self._sort_by}")
+            logger.debug(f"濯掍綋搴撶瓫閫夌被鍨? {include_types}, 鎺掑簭鏂瑰紡: {self._sort_by}")
         self._seen_keys = set()
         for attempt in range(max_attempts):
             if self._event.is_set():
-                logger.info("检测到停止信号，中断媒体项获取 ...")
+                logger.info("妫€娴嬪埌鍋滄淇″彿锛屼腑鏂獟浣撻」鑾峰彇 ...")
                 return False
                 
             batch_items = self.__get_items_batch(service, parent_id,
@@ -3563,21 +3254,21 @@ class WsEmbyCover(_PluginBase):
                                               include_types=include_types)
             
             if not batch_items:
-                break  # 没有更多项目可获取
+                break  # 娌℃湁鏇村椤圭洰鍙幏鍙?
                 
-            # 筛选有效项目（有所需图片的项目）
+            # 绛涢€夋湁鏁堥」鐩紙鏈夋墍闇€鍥剧墖鐨勯」鐩級
             valid_items = self.__filter_valid_items(batch_items)
             items.extend(valid_items)
             
-            # 如果已经有足够的有效项目，则停止获取
+            # 濡傛灉宸茬粡鏈夎冻澶熺殑鏈夋晥椤圭洰锛屽垯鍋滄鑾峰彇
             if len(items) >= target_items:
                 break
                 
             offset += batch_size
         
-        # 使用获取到的有效项目更新封面
+        # 浣跨敤鑾峰彇鍒扮殑鏈夋晥椤圭洰鏇存柊灏侀潰
         if len(items) > 0:
-            logger.info(f"媒体库 {service.name}：{library['Name']} 找到 {len(items)} 个有效项目")
+            logger.info(f"濯掍綋搴?{service.name}锛歿library['Name']} 鎵惧埌 {len(items)} 涓湁鏁堥」鐩?)
             if self.__is_single_image_style():
                 return self.__update_single_image(service, library, title, items[0])
             elif self._cover_style == "static_2":
@@ -3585,7 +3276,7 @@ class WsEmbyCover(_PluginBase):
             else:
                 return self.__update_grid_image(service, library, title, items[:required_items])
         else:
-            logger.warning(f"媒体库 {service.name}：{library['Name']} 无法找到有效的图片项目 (筛选类型: {include_types})")
+            logger.warning(f"濯掍綋搴?{service.name}锛歿library['Name']} 鏃犳硶鎵惧埌鏈夋晥鐨勫浘鐗囬」鐩?(绛涢€夌被鍨? {include_types})")
             return False
         
     def __handle_boxset_library(self, service, library, title):
@@ -3603,19 +3294,19 @@ class WsEmbyCover(_PluginBase):
         target_items = self.__get_fetch_target_count()
         valid_items = []
         
-        # 首先检查BoxSet本身是否有合适的图片
+        # 棣栧厛妫€鏌oxSet鏈韩鏄惁鏈夊悎閫傜殑鍥剧墖
         self._seen_keys = set()
 
         valid_boxsets = self.__filter_valid_items(boxsets)
         valid_items.extend(valid_boxsets)
         
-        # 如果BoxSet本身没有足够的图片，则获取其中的电影
+        # 濡傛灉BoxSet鏈韩娌℃湁瓒冲鐨勫浘鐗囷紝鍒欒幏鍙栧叾涓殑鐢靛奖
         if len(valid_items) < target_items:
             for boxset in boxsets:
                 if len(valid_items) >= target_items:
                     break
                     
-                # 获取此BoxSet中的电影
+                # 鑾峰彇姝oxSet涓殑鐢靛奖
                 movies = self.__get_items_batch(service,
                                              parent_id=boxset['Id'], 
                                              include_types=include_types)
@@ -3626,7 +3317,7 @@ class WsEmbyCover(_PluginBase):
                 if len(valid_items) >= target_items:
                     break
         
-        # 使用获取到的有效项目更新封面
+        # 浣跨敤鑾峰彇鍒扮殑鏈夋晥椤圭洰鏇存柊灏侀潰
         if len(valid_items) > 0:
             if self.__is_single_image_style():
                 return self.__update_single_image(service, library, title, valid_items[0])
@@ -3635,12 +3326,12 @@ class WsEmbyCover(_PluginBase):
             else:
                 return self.__update_grid_image(service, library, title, valid_items[:required_items])
         else:
-            print(f"媒体库 {service.name}：{library['Name']} 无法找到有效的图片项目")
+            print(f"濯掍綋搴?{service.name}锛歿library['Name']} 鏃犳硶鎵惧埌鏈夋晥鐨勫浘鐗囬」鐩?)
             return False
         
     def __handle_playlist_library(self, service, library, title):
         """ 
-        播放列表图片获取 
+        鎾斁鍒楄〃鍥剧墖鑾峰彇 
         """
         include_types = 'Playlist,Movie,Series,Episode,Audio'
         if service.type == 'emby':
@@ -3655,19 +3346,19 @@ class WsEmbyCover(_PluginBase):
         target_items = self.__get_fetch_target_count()
         valid_items = []
         
-        # 首先检查 playlist 本身是否有合适的图片
+        # 棣栧厛妫€鏌?playlist 鏈韩鏄惁鏈夊悎閫傜殑鍥剧墖
         self._seen_keys = set()
 
         valid_playlists = self.__filter_valid_items(playlists)
         valid_items.extend(valid_playlists)
         
-        # 如果 playlist 本身没有足够的图片，则获取其中的电影
+        # 濡傛灉 playlist 鏈韩娌℃湁瓒冲鐨勫浘鐗囷紝鍒欒幏鍙栧叾涓殑鐢靛奖
         if len(valid_items) < target_items:
             for playlist in playlists:
                 if len(valid_items) >= target_items:
                     break
                     
-                # 获取此 playlist 中的电影
+                # 鑾峰彇姝?playlist 涓殑鐢靛奖
                 movies = self.__get_items_batch(service,
                                              parent_id=playlist['Id'], 
                                              include_types=include_types)
@@ -3678,7 +3369,7 @@ class WsEmbyCover(_PluginBase):
                 if len(valid_items) >= target_items:
                     break
         
-        # 使用获取到的有效项目更新封面
+        # 浣跨敤鑾峰彇鍒扮殑鏈夋晥椤圭洰鏇存柊灏侀潰
         if len(valid_items) > 0:
             if self.__is_single_image_style():
                 return self.__update_single_image(service, library, title, valid_items[0])
@@ -3687,11 +3378,11 @@ class WsEmbyCover(_PluginBase):
             else:
                 return self.__update_grid_image(service, library, title, valid_items[:required_items])
         else:
-            print(f"警告: 无法为播放列表 {service.name}：{library['Name']} 找到有效的图片项目")
+            print(f"璀﹀憡: 鏃犳硶涓烘挱鏀惧垪琛?{service.name}锛歿library['Name']} 鎵惧埌鏈夋晥鐨勫浘鐗囬」鐩?)
             return False
         
     def __get_items_batch(self, service, parent_id, offset=0, limit=20, include_types=None):
-        # 调用API获取项目
+        # 璋冪敤API鑾峰彇椤圭洰
         try:
             if not service:
                 return []
@@ -3703,7 +3394,7 @@ class WsEmbyCover(_PluginBase):
                     sort_by = self._sort_by
                 if self._monitor_sort:
                     sort_by = 'DateCreated'
-                    # 转移监控模式下强制包含 Episode 以获取最新入库的内容
+                    # 杞Щ鐩戞帶妯″紡涓嬪己鍒跺寘鍚?Episode 浠ヨ幏鍙栨渶鏂板叆搴撶殑鍐呭
                     include_types = 'Movie,Episode'
                 if not include_types:
                     include_types = 'Movie,Series'
@@ -3718,7 +3409,7 @@ class WsEmbyCover(_PluginBase):
                     data = res.json()
                     return data.get("Items", [])
             except Exception as err:
-                logger.error(f"获取媒体项失败：{str(err)}")
+                logger.error(f"鑾峰彇濯掍綋椤瑰け璐ワ細{str(err)}")
             return []
                 
         except Exception as err:
@@ -3726,18 +3417,18 @@ class WsEmbyCover(_PluginBase):
             return []
         
     def __filter_valid_items(self, items):
-        """筛选有效的项目（包含所需图片的项目），并按图片标签去重"""
+        """绛涢€夋湁鏁堢殑椤圭洰锛堝寘鍚墍闇€鍥剧墖鐨勯」鐩級锛屽苟鎸夊浘鐗囨爣绛惧幓閲?""
         valid_items = []
 
         for item in items:
-            # 1) 根据当前样式计算真实会使用的图片URL
+            # 1) 鏍规嵁褰撳墠鏍峰紡璁＄畻鐪熷疄浼氫娇鐢ㄧ殑鍥剧墖URL
             image_url = self.__get_image_url(item)
             if not image_url:
                 continue
 
-            # 2) 两层去重：
-            #    - content_key: 内容层（如同一剧集的多集使用同一Series图）
-            #    - image_key:   图片层（同一图片tag或同一路径）
+            # 2) 涓ゅ眰鍘婚噸锛?
+            #    - content_key: 鍐呭灞傦紙濡傚悓涓€鍓ч泦鐨勫闆嗕娇鐢ㄥ悓涓€Series鍥撅級
+            #    - image_key:   鍥剧墖灞傦紙鍚屼竴鍥剧墖tag鎴栧悓涓€璺緞锛?
             content_key = self.__build_content_key(item)
             image_key = self.__build_image_key(image_url)
 
@@ -3747,7 +3438,7 @@ class WsEmbyCover(_PluginBase):
             if (content_key and content_key in self._seen_keys) or (image_key and image_key in self._seen_keys):
                 continue
 
-            # 3) 加入有效列表并记录已处理的 Key
+            # 3) 鍔犲叆鏈夋晥鍒楄〃骞惰褰曞凡澶勭悊鐨?Key
             valid_items.append(item)
             if content_key:
                 self._seen_keys.add(content_key)
@@ -3757,7 +3448,7 @@ class WsEmbyCover(_PluginBase):
         return valid_items
 
     def __build_content_key(self, item: dict) -> Optional[str]:
-        """构建内容去重Key，尽量让同一来源内容只入选一次。"""
+        """鏋勫缓鍐呭鍘婚噸Key锛屽敖閲忚鍚屼竴鏉ユ簮鍐呭鍙叆閫変竴娆°€?""
         item_type = item.get("Type")
 
         if item_type == "Episode":
@@ -3778,16 +3469,16 @@ class WsEmbyCover(_PluginBase):
         return None
 
     def __build_image_key(self, image_url: str) -> Optional[str]:
-        """构建图片去重Key，忽略api_key，避免同图重复。"""
+        """鏋勫缓鍥剧墖鍘婚噸Key锛屽拷鐣pi_key锛岄伩鍏嶅悓鍥鹃噸澶嶃€?""
         if not image_url:
             return None
 
         try:
-            # 统一移除 api_key 参数，避免同图不同密钥导致重复
+            # 缁熶竴绉婚櫎 api_key 鍙傛暟锛岄伩鍏嶅悓鍥句笉鍚屽瘑閽ュ鑷撮噸澶?
             normalized = re.sub(r"([?&])api_key=[^&]*", "", image_url).rstrip("?&")
 
-            # 优先用路径 + tag 作为去重关键字（能精准区分图像版本）
-            # 例如: /Items/{id}/Images/Backdrop/0?tag=xxx
+            # 浼樺厛鐢ㄨ矾寰?+ tag 浣滀负鍘婚噸鍏抽敭瀛楋紙鑳界簿鍑嗗尯鍒嗗浘鍍忕増鏈級
+            # 渚嬪: /Items/{id}/Images/Backdrop/0?tag=xxx
             tag_match = re.search(r"[?&]tag=([^&]+)", image_url)
             tag = tag_match.group(1) if tag_match else ""
 
@@ -3800,8 +3491,8 @@ class WsEmbyCover(_PluginBase):
 
     
     def __update_single_image(self, service, library, title, item):
-        """更新单图封面"""
-        logger.info(f"媒体库 {service.name}：{library['Name']} 从媒体项获取图片")
+        """鏇存柊鍗曞浘灏侀潰"""
+        logger.info(f"濯掍綋搴?{service.name}锛歿library['Name']} 浠庡獟浣撻」鑾峰彇鍥剧墖")
         updated_item_id = ''
         image_url = self.__get_image_url(item)
         if not image_url:
@@ -3811,7 +3502,7 @@ class WsEmbyCover(_PluginBase):
         if not image_path:
             return False
         updated_item_id = self.__get_item_id(item)
-        # 从配置获取背景颜色
+        # 浠庨厤缃幏鍙栬儗鏅鑹?
         title_result = self.__get_title_from_config(library['Name'], service.name)
         config_bg_color = title_result[2] if len(title_result) == 3 else None
         image_data = self.__generate_image_from_path(service.name, library['Name'], title, image_path, config_bg_color)
@@ -3822,7 +3513,7 @@ class WsEmbyCover(_PluginBase):
             library_id = library.get("Id")
         else:
             library_id = library.get("ItemId")
-        # 更新id
+        # 鏇存柊id
         self.update_cover_history(
             server=service.name, 
             library_id=library_id, 
@@ -3832,15 +3523,15 @@ class WsEmbyCover(_PluginBase):
         return image_data
     
     def __update_grid_image(self, service, library, title, items):
-        """更新九宫格封面"""
-        logger.info(f"媒体库 {service.name}：{library['Name']} 从媒体项获取图片")
+        """鏇存柊涔濆鏍煎皝闈?""
+        logger.info(f"濯掍綋搴?{service.name}锛歿library['Name']} 浠庡獟浣撻」鑾峰彇鍥剧墖")
 
         image_paths = []
         
         updated_item_ids = []
         for i, item in enumerate(items):
             if self._event.is_set():
-                logger.info("检测到停止信号，中断图片下载 ...")
+                logger.info("妫€娴嬪埌鍋滄淇″彿锛屼腑鏂浘鐗囦笅杞?...")
                 return False
             image_url = self.__get_image_url(item)
             if image_url:
@@ -3852,8 +3543,8 @@ class WsEmbyCover(_PluginBase):
         if len(image_paths) < 1:
             return False
             
-        # 生成九宫格图片
-        # 从配置获取背景颜色
+        # 鐢熸垚涔濆鏍煎浘鐗?
+        # 浠庨厤缃幏鍙栬儗鏅鑹?
         title_result = self.__get_title_from_config(library['Name'], service.name)
         config_bg_color = title_result[2] if len(title_result) == 3 else None
         image_data = self.__generate_image_from_path(service.name, library['Name'], title, None, config_bg_color)
@@ -3863,7 +3554,7 @@ class WsEmbyCover(_PluginBase):
             library_id = library.get("Id")
         else:
             library_id = library.get("ItemId")
-        # 更新ids
+        # 鏇存柊ids
         for item_id in reversed(updated_item_ids):
             self.update_cover_history(
                 server=service.name, 
@@ -3874,8 +3565,8 @@ class WsEmbyCover(_PluginBase):
         return image_data
 
     def __update_showcase_image(self, service, library, title, items):
-        """更新横幅背景 + 多海报展示封面。"""
-        logger.info(f"媒体库 {service.name}：{library['Name']} 生成横幅展示封面")
+        """鏇存柊妯箙鑳屾櫙 + 澶氭捣鎶ュ睍绀哄皝闈€?""
+        logger.info(f"濯掍綋搴?{service.name}锛歿library['Name']} 鐢熸垚妯箙灞曠ず灏侀潰")
 
         if not items:
             return False
@@ -3886,7 +3577,7 @@ class WsEmbyCover(_PluginBase):
 
         for item in items:
             if self._event.is_set():
-                logger.info("检测到停止信号，中断图片下载 ...")
+                logger.info("妫€娴嬪埌鍋滄淇″彿锛屼腑鏂浘鐗囦笅杞?...")
                 return False
 
             if background_path:
@@ -3914,7 +3605,7 @@ class WsEmbyCover(_PluginBase):
 
         for item in poster_candidates:
             if self._event.is_set():
-                logger.info("检测到停止信号，中断图片下载 ...")
+                logger.info("妫€娴嬪埌鍋滄淇″彿锛屼腑鏂浘鐗囦笅杞?...")
                 return False
             if len(updated_item_ids) >= self.__get_required_items():
                 break
@@ -3957,27 +3648,27 @@ class WsEmbyCover(_PluginBase):
     
     def __load_title_config(self, yaml_str: str) -> dict:
         try:
-            # 替换全角冒号为半角
-            yaml_str = yaml_str.replace("：", ":")
-            # 替换制表符为两个空格，统一缩进
+            # 鏇挎崲鍏ㄨ鍐掑彿涓哄崐瑙?
+            yaml_str = yaml_str.replace("锛?, ":")
+            # 鏇挎崲鍒惰〃绗︿负涓や釜绌烘牸锛岀粺涓€缂╄繘
             yaml_str = yaml_str.replace("\t", "  ")
 
-            # 处理数字或字母开头的媒体库名，确保它们被正确解析为字符串键
-            # 在YAML中，数字开头的键可能被解析为数字，需要加引号
+            # 澶勭悊鏁板瓧鎴栧瓧姣嶅紑澶寸殑濯掍綋搴撳悕锛岀‘淇濆畠浠姝ｇ‘瑙ｆ瀽涓哄瓧绗︿覆閿?
+            # 鍦╕AML涓紝鏁板瓧寮€澶寸殑閿彲鑳借瑙ｆ瀽涓烘暟瀛楋紝闇€瑕佸姞寮曞彿
             lines = yaml_str.split('\n')
             processed_lines = []
             for line in lines:
-                # 检查是否是键值对行（包含冒号且不是注释）
+                # 妫€鏌ユ槸鍚︽槸閿€煎琛岋紙鍖呭惈鍐掑彿涓斾笉鏄敞閲婏級
                 if ':' in line and not line.strip().startswith('#'):
-                    # 分割键和值
+                    # 鍒嗗壊閿拰鍊?
                     parts = line.split(':', 1)
                     if len(parts) == 2:
                         key_part = parts[0].strip()
                         value_part = parts[1]
 
-                        # 如果键不是以引号开头，且包含数字或特殊字符，则添加引号
+                        # 濡傛灉閿笉鏄互寮曞彿寮€澶达紝涓斿寘鍚暟瀛楁垨鐗规畩瀛楃锛屽垯娣诲姞寮曞彿
                         if key_part and not (key_part.startswith('"') or key_part.startswith("'")):
-                            # 检查是否需要加引号（数字开头、包含特殊字符等）
+                            # 妫€鏌ユ槸鍚﹂渶瑕佸姞寮曞彿锛堟暟瀛楀紑澶淬€佸寘鍚壒娈婂瓧绗︾瓑锛?
                             if (key_part[0].isdigit() or
                                 any(char in key_part for char in [' ', '-', '.', '(', ')', '[', ']'])):
                                 key_part = f'"{key_part}"'
@@ -3992,9 +3683,9 @@ class WsEmbyCover(_PluginBase):
             preview_limit = 800
             flat_yaml = " ".join(part.strip() for part in processed_yaml.splitlines() if part.strip())
             if len(flat_yaml) > preview_limit:
-                logger.debug(f"处理后的YAML(扁平, 前{preview_limit}字): {flat_yaml[:preview_limit]}... (已截断)")
+                logger.debug(f"澶勭悊鍚庣殑YAML(鎵佸钩, 鍓峽preview_limit}瀛?: {flat_yaml[:preview_limit]}... (宸叉埅鏂?")
             else:
-                logger.debug(f"处理后的YAML(扁平): {flat_yaml}")
+                logger.debug(f"澶勭悊鍚庣殑YAML(鎵佸钩): {flat_yaml}")
 
             title_config = yaml.safe_load(processed_yaml) or {}
             if not isinstance(title_config, dict):
@@ -4002,10 +3693,10 @@ class WsEmbyCover(_PluginBase):
             filtered = {}
             for key, value in title_config.items():
                 if value is None:
-                    # 允许仅声明服务器键，未配置媒体库时不告警
+                    # 鍏佽浠呭０鏄庢湇鍔″櫒閿紝鏈厤缃獟浣撳簱鏃朵笉鍛婅
                     continue
                 if isinstance(value, dict):
-                    # 新格式：服务器名 -> 媒体库配置字典
+                    # 鏂版牸寮忥細鏈嶅姟鍣ㄥ悕 -> 濯掍綋搴撻厤缃瓧鍏?
                     server_filtered = {}
                     for lib_key, lib_value in value.items():
                         if lib_value is None:
@@ -4021,40 +3712,40 @@ class WsEmbyCover(_PluginBase):
                             else:
                                 server_filtered[str(lib_key)] = [lib_value[0], lib_value[1]]
                             if len(lib_value) > 3:
-                                logger.info(f"配置项 {key}/{lib_key} 包含多行，只使用前三行")
+                                logger.info(f"閰嶇疆椤?{key}/{lib_key} 鍖呭惈澶氳锛屽彧浣跨敤鍓嶄笁琛?)
                         else:
-                            logger.warning(f"标题配置项格式不正确，已忽略: {key}/{lib_key} -> {lib_value}")
+                            logger.warning(f"鏍囬閰嶇疆椤规牸寮忎笉姝ｇ‘锛屽凡蹇界暐: {key}/{lib_key} -> {lib_value}")
                     if server_filtered:
                         filtered[str(key)] = server_filtered
                     continue
 
                 if isinstance(value, list) and len(value) >= 2 and isinstance(value[0], str) and isinstance(value[1], str):
-                    # 兼容旧格式：媒体库 -> [中文, 英文, 可选背景色]
+                    # 鍏煎鏃ф牸寮忥細濯掍綋搴?-> [涓枃, 鑻辨枃, 鍙€夎儗鏅壊]
                     if len(value) >= 3 and isinstance(value[2], str):
                         filtered[str(key)] = [value[0], value[1], value[2]]
                     else:
                         filtered[str(key)] = [value[0], value[1]]
                     if len(value) > 3:
-                        logger.info(f"配置项 {key} 包含多行，只使用前三行")
+                        logger.info(f"閰嶇疆椤?{key} 鍖呭惈澶氳锛屽彧浣跨敤鍓嶄笁琛?)
                     continue
 
-                # 忽略格式不正确的项
-                logger.warning(f"标题配置项格式不正确，已忽略: {key} -> {value}")
+                # 蹇界暐鏍煎紡涓嶆纭殑椤?
+                logger.warning(f"鏍囬閰嶇疆椤规牸寮忎笉姝ｇ‘锛屽凡蹇界暐: {key} -> {value}")
                 continue
 
-            logger.debug(f"解析后的配置: {filtered}")
+            logger.debug(f"瑙ｆ瀽鍚庣殑閰嶇疆: {filtered}")
             return filtered
         except Exception as e:
-            # 整体 YAML 无法解析（比如语法错误），返回空配置
-            logger.warning(f"YAML 解析失败，使用空配置: {e}")
+            # 鏁翠綋 YAML 鏃犳硶瑙ｆ瀽锛堟瘮濡傝娉曢敊璇級锛岃繑鍥炵┖閰嶇疆
+            logger.warning(f"YAML 瑙ｆ瀽澶辫触锛屼娇鐢ㄧ┖閰嶇疆: {e}")
             return {}
 
     def __get_title_from_config(self, library_name, server_name: Optional[str] = None):
         """
-        从 yaml 配置中获取媒体库的主副标题和背景颜色
-        支持：
-        1. 服务器分组：服务器名 -> 媒体库名 -> [中文, 英文, 可选背景色]
-        2. 旧格式：媒体库名 -> [中文, 英文, 可选背景色]
+        浠?yaml 閰嶇疆涓幏鍙栧獟浣撳簱鐨勪富鍓爣棰樺拰鑳屾櫙棰滆壊
+        鏀寔锛?
+        1. 鏈嶅姟鍣ㄥ垎缁勶細鏈嶅姟鍣ㄥ悕 -> 濯掍綋搴撳悕 -> [涓枃, 鑻辨枃, 鍙€夎儗鏅壊]
+        2. 鏃ф牸寮忥細濯掍綋搴撳悕 -> [涓枃, 鑻辨枃, 鍙€夎儗鏅壊]
         """
         zh_title = library_name
         en_title = ''
@@ -4078,48 +3769,48 @@ class WsEmbyCover(_PluginBase):
                         break
             if server_key:
                 scoped_config = title_config.get(server_key, {})
-                logger.debug(f"标题配置按服务器匹配成功: {server_key}")
+                logger.debug(f"鏍囬閰嶇疆鎸夋湇鍔″櫒鍖归厤鎴愬姛: {server_key}")
             elif nested_mode:
-                # 新格式下未找到服务器时，不跨服务器扫描
+                # 鏂版牸寮忎笅鏈壘鍒版湇鍔″櫒鏃讹紝涓嶈法鏈嶅姟鍣ㄦ壂鎻?
                 scoped_config = {}
-                logger.debug(f"标题配置未找到服务器分组: {server_name}")
+                logger.debug(f"鏍囬閰嶇疆鏈壘鍒版湇鍔″櫒鍒嗙粍: {server_name}")
 
-        # 添加调试信息
-        logger.debug(f"查找媒体库名称: '{library_name}' (类型: {type(library_name)})")
-        logger.debug(f"当前作用域配置键: {list(scoped_config.keys()) if isinstance(scoped_config, dict) else []}")
+        # 娣诲姞璋冭瘯淇℃伅
+        logger.debug(f"鏌ユ壘濯掍綋搴撳悕绉? '{library_name}' (绫诲瀷: {type(library_name)})")
+        logger.debug(f"褰撳墠浣滅敤鍩熼厤缃敭: {list(scoped_config.keys()) if isinstance(scoped_config, dict) else []}")
 
-        # 多种匹配策略，确保数字或字母开头的媒体库名能够正确匹配
+        # 澶氱鍖归厤绛栫暐锛岀‘淇濇暟瀛楁垨瀛楁瘝寮€澶寸殑濯掍綋搴撳悕鑳藉姝ｇ‘鍖归厤
         for lib_name, config_values in (scoped_config.items() if isinstance(scoped_config, dict) else []):
             if not isinstance(config_values, list) or len(config_values) < 2:
                 continue
-            # 策略1: 直接字符串比较
+            # 绛栫暐1: 鐩存帴瀛楃涓叉瘮杈?
             if str(lib_name) == str(library_name):
                 zh_title = config_values[0]
                 en_title = config_values[1] if len(config_values) > 1 else ''
                 bg_color = config_values[2] if len(config_values) > 2 else None
-                logger.debug(f"找到匹配的配置(直接匹配): {lib_name} -> {zh_title}, {en_title}, {bg_color}")
+                logger.debug(f"鎵惧埌鍖归厤鐨勯厤缃?鐩存帴鍖归厤): {lib_name} -> {zh_title}, {en_title}, {bg_color}")
                 break
 
-            # 策略2: 去除空格后比较
+            # 绛栫暐2: 鍘婚櫎绌烘牸鍚庢瘮杈?
             if str(lib_name).strip() == str(library_name).strip():
                 zh_title = config_values[0]
                 en_title = config_values[1] if len(config_values) > 1 else ''
                 bg_color = config_values[2] if len(config_values) > 2 else None
-                logger.debug(f"找到匹配的配置(去空格匹配): {lib_name} -> {zh_title}, {en_title}, {bg_color}")
+                logger.debug(f"鎵惧埌鍖归厤鐨勯厤缃?鍘荤┖鏍煎尮閰?: {lib_name} -> {zh_title}, {en_title}, {bg_color}")
                 break
 
-            # 策略3: 忽略大小写比较
+            # 绛栫暐3: 蹇界暐澶у皬鍐欐瘮杈?
             if str(lib_name).lower() == str(library_name).lower():
                 zh_title = config_values[0]
                 en_title = config_values[1] if len(config_values) > 1 else ''
                 bg_color = config_values[2] if len(config_values) > 2 else None
-                logger.debug(f"找到匹配的配置(忽略大小写匹配): {lib_name} -> {zh_title}, {en_title}, {bg_color}")
+                logger.debug(f"鎵惧埌鍖归厤鐨勯厤缃?蹇界暐澶у皬鍐欏尮閰?: {lib_name} -> {zh_title}, {en_title}, {bg_color}")
                 break
         else:
-            logger.debug(f"未找到媒体库 '{library_name}' 的配置，使用默认标题")
-            # 如果没有找到配置，检查是否是数字开头的媒体库名导致的问题
+            logger.debug(f"鏈壘鍒板獟浣撳簱 '{library_name}' 鐨勯厤缃紝浣跨敤榛樿鏍囬")
+            # 濡傛灉娌℃湁鎵惧埌閰嶇疆锛屾鏌ユ槸鍚︽槸鏁板瓧寮€澶寸殑濯掍綋搴撳悕瀵艰嚧鐨勯棶棰?
             if library_name and (library_name[0].isdigit() or library_name[0].isalpha()):
-                logger.info(f"媒体库名 '{library_name}' 以数字或字母开头，如果需要自定义标题，请在配置中使用引号包围媒体库名，例如: \"{library_name}\":")
+                logger.info(f"濯掍綋搴撳悕 '{library_name}' 浠ユ暟瀛楁垨瀛楁瘝寮€澶达紝濡傛灉闇€瑕佽嚜瀹氫箟鏍囬锛岃鍦ㄩ厤缃腑浣跨敤寮曞彿鍖呭洿濯掍綋搴撳悕锛屼緥濡? \"{library_name}\":")
 
         return (zh_title, en_title, bg_color)
 
@@ -4150,12 +3841,12 @@ class WsEmbyCover(_PluginBase):
                 except Exception:
                     request_url = url
                 request_url_safe = self.__safe_log_url(request_url)
-                self.__debug_log(f"请求媒体库列表：server={getattr(service, 'name', 'unknown')} url={request_url_safe}")
+                self.__debug_log(f"璇锋眰濯掍綋搴撳垪琛細server={getattr(service, 'name', 'unknown')} url={request_url_safe}")
                 res = service.instance.get_data(url=url)
                 if not res:
-                    logger.warning(f"获取媒体库列表失败(无响应)：server={getattr(service, 'name', 'unknown')} url={request_url_safe}")
+                    logger.warning(f"鑾峰彇濯掍綋搴撳垪琛ㄥけ璐?鏃犲搷搴?锛歴erver={getattr(service, 'name', 'unknown')} url={request_url_safe}")
                     return []
-                self.__debug_log(f"媒体库列表响应：server={getattr(service, 'name', 'unknown')} status={res.status_code}")
+                self.__debug_log(f"濯掍綋搴撳垪琛ㄥ搷搴旓細server={getattr(service, 'name', 'unknown')} status={res.status_code}")
                 if res.status_code >= 400:
                     body_preview = ""
                     try:
@@ -4163,7 +3854,7 @@ class WsEmbyCover(_PluginBase):
                     except Exception:
                         body_preview = ""
                     logger.warning(
-                        f"获取媒体库列表失败(HTTP {res.status_code})：server={getattr(service, 'name', 'unknown')} "
+                        f"鑾峰彇濯掍綋搴撳垪琛ㄥけ璐?HTTP {res.status_code})锛歴erver={getattr(service, 'name', 'unknown')} "
                         f"url={request_url_safe} response={body_preview}"
                     )
                     return []
@@ -4176,20 +3867,20 @@ class WsEmbyCover(_PluginBase):
                     except Exception:
                         body_preview = ""
                     logger.warning(
-                        f"获取媒体库列表失败(JSON解析失败)：server={getattr(service, 'name', 'unknown')} "
+                        f"鑾峰彇濯掍綋搴撳垪琛ㄥけ璐?JSON瑙ｆ瀽澶辫触)锛歴erver={getattr(service, 'name', 'unknown')} "
                         f"url={request_url_safe} err={json_err} response={body_preview}"
                     )
                     return []
                 count_hint = len(data) if isinstance(data, list) else len(data.get("Items", [])) if isinstance(data, dict) else 0
-                self.__debug_log(f"媒体库列表解析成功：server={getattr(service, 'name', 'unknown')} count={count_hint}")
+                self.__debug_log(f"濯掍綋搴撳垪琛ㄨВ鏋愭垚鍔燂細server={getattr(service, 'name', 'unknown')} count={count_hint}")
                 if service.type == 'emby':
                     return data.get("Items", []) if isinstance(data, dict) else []
                 return data if isinstance(data, list) else []
             except Exception as err:
-                logger.error(f"获取媒体库列表失败：{str(err)}")
+                logger.error(f"鑾峰彇濯掍綋搴撳垪琛ㄥけ璐ワ細{str(err)}")
             return []
         except Exception as err:
-            logger.error(f"获取媒体库列表失败：{str(err)}")
+            logger.error(f"鑾峰彇濯掍綋搴撳垪琛ㄥけ璐ワ細{str(err)}")
             return []
     
     def __get_all_libraries(self, server, service):
@@ -4209,7 +3900,7 @@ class WsEmbyCover(_PluginBase):
                     lib_items.append(lib_item)
             return lib_items
         except Exception as err:
-            logger.error(f"获取所有媒体库失败：{str(err)}")
+            logger.error(f"鑾峰彇鎵€鏈夊獟浣撳簱澶辫触锛歿str(err)}")
             return []
 
     def __parse_selected_libraries(self) -> List[Tuple[str, str]]:
@@ -4221,7 +3912,7 @@ class WsEmbyCover(_PluginBase):
             if "::" in raw:
                 server, library_id = raw.split("::", 1)
             elif "-" in raw:
-                # 向后兼容旧格式：server-library_id
+                # 鍚戝悗鍏煎鏃ф牸寮忥細server-library_id
                 server, library_id = raw.split("-", 1)
             else:
                 continue
@@ -4232,7 +3923,7 @@ class WsEmbyCover(_PluginBase):
         return selected
 
     def __get_showcase_background_url(self, item):
-        """获取横幅展示风格使用的背景图URL，优先背景图。"""
+        """鑾峰彇妯箙灞曠ず椋庢牸浣跨敤鐨勮儗鏅浘URL锛屼紭鍏堣儗鏅浘銆?""
         if item.get("Type") == "Episode":
             if item.get("ParentBackdropImageTags") and len(item["ParentBackdropImageTags"]) > 0:
                 item_id = item.get("ParentBackdropItemId")
@@ -4256,7 +3947,7 @@ class WsEmbyCover(_PluginBase):
         return self.__get_showcase_poster_url(item)
 
     def __get_showcase_poster_url(self, item):
-        """获取横幅展示风格使用的海报URL，优先竖版主海报。"""
+        """鑾峰彇妯箙灞曠ず椋庢牸浣跨敤鐨勬捣鎶RL锛屼紭鍏堢珫鐗堜富娴锋姤銆?""
         if item.get("Type") == "Episode":
             if item.get("SeriesPrimaryImageTag"):
                 item_id = item.get("SeriesId")
@@ -4296,7 +3987,7 @@ class WsEmbyCover(_PluginBase):
         
     def __get_image_url(self, item):
         """
-        从媒体项信息中获取图片URL
+        浠庡獟浣撻」淇℃伅涓幏鍙栧浘鐗嘦RL
         """
         # Emby/Jellyfin
         if item['Type'] in 'MusicAlbum,Audio':
@@ -4410,7 +4101,7 @@ class WsEmbyCover(_PluginBase):
             
     def __get_item_id(self, item):
         """
-        从媒体项信息中获取项目ID
+        浠庡獟浣撻」淇℃伅涓幏鍙栭」鐩甀D
         """
         # Emby/Jellyfin
         if item['Type'] in 'MusicAlbum,Audio':
@@ -4459,19 +4150,19 @@ class WsEmbyCover(_PluginBase):
 
     def __download_image(self, service, imageurl, library_name, count=None, retries=3, delay=1):
         """
-        下载图片，保存到本地目录 self._covers_path/library_name/ 下，文件名为 1-9.jpg
-        若已存在则跳过下载，直接返回图片路径。
-        下载失败时重试若干次。
+        涓嬭浇鍥剧墖锛屼繚瀛樺埌鏈湴鐩綍 self._covers_path/library_name/ 涓嬶紝鏂囦欢鍚嶄负 1-9.jpg
+        鑻ュ凡瀛樺湪鍒欒烦杩囦笅杞斤紝鐩存帴杩斿洖鍥剧墖璺緞銆?
+        涓嬭浇澶辫触鏃堕噸璇曡嫢骞叉銆?
         """
         try:
-            # 确保媒体库名称是安全的文件名（处理数字或字母开头的名称）
+            # 纭繚濯掍綋搴撳悕绉版槸瀹夊叏鐨勬枃浠跺悕锛堝鐞嗘暟瀛楁垨瀛楁瘝寮€澶寸殑鍚嶇О锛?
             safe_library_name = self.__sanitize_filename(library_name)
 
-            # 创建目标子目录
+            # 鍒涘缓鐩爣瀛愮洰褰?
             subdir = os.path.join(self._covers_path, safe_library_name)
             os.makedirs(subdir, exist_ok=True)
 
-            # 文件命名：item_id 为主，适合排序
+            # 鏂囦欢鍛藉悕锛歩tem_id 涓轰富锛岄€傚悎鎺掑簭
             if count is not None:
                 filename = f"{count}.jpg"
             else:
@@ -4479,11 +4170,11 @@ class WsEmbyCover(_PluginBase):
 
             filepath = os.path.join(subdir, filename)
 
-            # 如果文件已存在，直接返回路径
+            # 濡傛灉鏂囦欢宸插瓨鍦紝鐩存帴杩斿洖璺緞
             # if os.path.exists(filepath):
             #     return filepath
 
-            # 重试机制
+            # 閲嶈瘯鏈哄埗
             for attempt in range(1, retries + 1):
                 image_content = None
 
@@ -4499,33 +4190,33 @@ class WsEmbyCover(_PluginBase):
                     if r and r.status_code == 200:
                         image_content = r.content
 
-                # 如果成功，保存并返回
+                # 濡傛灉鎴愬姛锛屼繚瀛樺苟杩斿洖
                 if image_content:
                     with open(filepath, 'wb') as f:
                         f.write(image_content)
                     return filepath
 
-                # 如果失败，记录并等待后重试
-                logger.warning(f"第 {attempt} 次尝试下载失败：{imageurl}")
+                # 濡傛灉澶辫触锛岃褰曞苟绛夊緟鍚庨噸璇?
+                logger.warning(f"绗?{attempt} 娆″皾璇曚笅杞藉け璐ワ細{imageurl}")
                 if attempt < retries:
                     time.sleep(delay)
 
-            logger.error(f"图片下载失败（重试 {retries} 次）：{imageurl}")
+            logger.error(f"鍥剧墖涓嬭浇澶辫触锛堥噸璇?{retries} 娆★級锛歿imageurl}")
             return None
 
         except Exception as err:
-            logger.error(f"下载图片异常：{str(err)}")
+            logger.error(f"涓嬭浇鍥剧墖寮傚父锛歿str(err)}")
             return None
 
 
     def __save_image_to_local(self, image_content, server_name: str, library_name: str, extension: str):
         """
-        保存图片到本地路径
+        淇濆瓨鍥剧墖鍒版湰鍦拌矾寰?
         """
         try:
             if not self._save_recent_covers:
                 return
-            # 确保目录存在
+            # 纭繚鐩綍瀛樺湪
             local_path = str(self.__get_recent_cover_output_dir())
             os.makedirs(local_path, exist_ok=True)
 
@@ -4538,10 +4229,10 @@ class WsEmbyCover(_PluginBase):
             file_path = os.path.join(local_path, filename)
             with open(file_path, "wb") as f:
                 f.write(image_content)
-            logger.info(f"图片已保存到本地: {file_path}")
+            logger.info(f"鍥剧墖宸蹭繚瀛樺埌鏈湴: {file_path}")
             self.__trim_saved_cover_history(local_path, safe_server, safe_library)
         except Exception as err:
-            logger.error(f"保存图片到本地失败: {str(err)}")
+            logger.error(f"淇濆瓨鍥剧墖鍒版湰鍦板け璐? {str(err)}")
 
     def __trim_saved_cover_history(self, local_path: str, safe_server: str, safe_library: str):
         limit = self.__clamp_value(
@@ -4569,17 +4260,17 @@ class WsEmbyCover(_PluginBase):
             candidate_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
             for old_file in candidate_files[limit:]:
                 old_file.unlink(missing_ok=True)
-                logger.info(f"已按历史数量限制删除旧封面: {old_file}")
+                logger.info(f"宸叉寜鍘嗗彶鏁伴噺闄愬埗鍒犻櫎鏃у皝闈? {old_file}")
         except Exception as e:
-            logger.warning(f"清理历史封面失败: {e}")
+            logger.warning(f"娓呯悊鍘嗗彶灏侀潰澶辫触: {e}")
         
 
     def __set_library_image(self, service, library, image_base64):
         """
-        设置媒体库封面
+        璁剧疆濯掍綋搴撳皝闈?
         """
 
-        """设置Emby媒体库封面"""
+        """璁剧疆Emby濯掍綋搴撳皝闈?""
         try:
             if service.type == 'emby':
                 library_id = library.get("Id")
@@ -4595,10 +4286,10 @@ class WsEmbyCover(_PluginBase):
             except Exception:
                 request_url = url
             self.__debug_log(
-                f"设置封面请求：server={service.name} library={library.get('Name')} library_id={library_id} "
+                f"璁剧疆灏侀潰璇锋眰锛歴erver={service.name} library={library.get('Name')} library_id={library_id} "
                 f"url={self.__safe_log_url(request_url)}"
             )
-            # 根据 base64 前几个字节简单判断格式
+            # 鏍规嵁 base64 鍓嶅嚑涓瓧鑺傜畝鍗曞垽鏂牸寮?
             content_type = "image/png"
             extension = "png"
             if image_base64.startswith("R0lG"):
@@ -4614,24 +4305,24 @@ class WsEmbyCover(_PluginBase):
                 content_type = "image/jpeg"
                 extension = "jpg"
 
-            # 在发送前保存一份图片到本地
+            # 鍦ㄥ彂閫佸墠淇濆瓨涓€浠藉浘鐗囧埌鏈湴
             try:
                 image_bytes = base64.b64decode(image_base64)
             except Exception as decode_err:
-                logger.error(f"封面数据解码失败: {decode_err}")
+                logger.error(f"灏侀潰鏁版嵁瑙ｇ爜澶辫触: {decode_err}")
                 return False
 
             if self._save_recent_covers:
                 try:
                     self.__save_image_to_local(image_bytes, service.name, library['Name'], extension)
                 except Exception as save_err:
-                    logger.error(f"保存发送前图片失败: {str(save_err)}")
+                    logger.error(f"淇濆瓨鍙戦€佸墠鍥剧墖澶辫触: {str(save_err)}")
 
             logger.info(
-                f"准备上传封面: {library['Name']} 格式={content_type} 大小={len(image_bytes) / 1024:.1f}KB"
+                f"鍑嗗涓婁紶灏侀潰: {library['Name']} 鏍煎紡={content_type} 澶у皬={len(image_bytes) / 1024:.1f}KB"
             )
             self.__debug_log(
-                f"封面上传参数：content_type={content_type} extension={extension} base64_len={len(image_base64)} bytes={len(image_bytes)}"
+                f"灏侀潰涓婁紶鍙傛暟锛歝ontent_type={content_type} extension={extension} base64_len={len(image_base64)} bytes={len(image_bytes)}"
             )
 
             def _post_cover(data_text):
@@ -4643,14 +4334,14 @@ class WsEmbyCover(_PluginBase):
 
             res = _post_cover(image_base64)
             if not res:
-                logger.warning(f"设置「{library['Name']}」封面首次上传无响应，准备重试")
+                logger.warning(f"璁剧疆銆寋library['Name']}銆嶅皝闈㈤娆′笂浼犳棤鍝嶅簲锛屽噯澶囬噸璇?)
                 time.sleep(1)
                 res = _post_cover(image_base64)
             else:
-                self.__debug_log(f"封面上传响应：status={res.status_code}")
+                self.__debug_log(f"灏侀潰涓婁紶鍝嶅簲锛歴tatus={res.status_code}")
 
             if res and res.status_code in [200, 204]:
-                self.__debug_log(f"封面上传成功：library={library['Name']} status={res.status_code}")
+                self.__debug_log(f"灏侀潰涓婁紶鎴愬姛锛歭ibrary={library['Name']} status={res.status_code}")
                 return True
 
             if res is not None:
@@ -4660,16 +4351,16 @@ class WsEmbyCover(_PluginBase):
                 except Exception:
                     err_text = ""
                 if err_text:
-                    logger.error(f"设置「{library['Name']}」封面失败，错误码：{res.status_code}，响应：{err_text[:300]}")
+                    logger.error(f"璁剧疆銆寋library['Name']}銆嶅皝闈㈠け璐ワ紝閿欒鐮侊細{res.status_code}锛屽搷搴旓細{err_text[:300]}")
                 else:
-                    logger.error(f"设置「{library['Name']}」封面失败，错误码：{res.status_code}")
+                    logger.error(f"璁剧疆銆寋library['Name']}銆嶅皝闈㈠け璐ワ紝閿欒鐮侊細{res.status_code}")
             else:
                 logger.error(
-                    f"设置「{library['Name']}」封面失败，错误码：No response（可能是反向代理超时、连接重置或媒体服务器拒绝连接）"
+                    f"璁剧疆銆寋library['Name']}銆嶅皝闈㈠け璐ワ紝閿欒鐮侊細No response锛堝彲鑳芥槸鍙嶅悜浠ｇ悊瓒呮椂銆佽繛鎺ラ噸缃垨濯掍綋鏈嶅姟鍣ㄦ嫆缁濊繛鎺ワ級"
                 )
             return False
         except Exception as err:
-            logger.error(f"设置「{library['Name']}」封面失败：{str(err)}")
+            logger.error(f"璁剧疆銆寋library['Name']}銆嶅皝闈㈠け璐ワ細{str(err)}")
         return False
 
     def clean_cover_history(self, save=True):
@@ -4686,7 +4377,7 @@ class WsEmbyCover(_PluginBase):
                 }
                 cleaned.append(cleaned_item)
             except (KeyError, ValueError, TypeError):
-                # 如果字段缺失或格式错误则跳过该项
+                # 濡傛灉瀛楁缂哄け鎴栨牸寮忛敊璇垯璺宠繃璇ラ」
                 continue
 
         if save:
@@ -4707,10 +4398,10 @@ class WsEmbyCover(_PluginBase):
             "timestamp": now
         }
 
-        # 原始数据
+        # 鍘熷鏁版嵁
         history = self.get_data('cover_history') or []
 
-        # 用于分组管理：(server, library_id) => list of items
+        # 鐢ㄤ簬鍒嗙粍绠＄悊锛?server, library_id) => list of items
         grouped = defaultdict(list)
         for item in history:
             key = (item["server"], str(item["library_id"]))
@@ -4719,11 +4410,11 @@ class WsEmbyCover(_PluginBase):
         key = (server, library_id)
         items = grouped[key]
 
-        # 查找是否已有该 item_id
+        # 鏌ユ壘鏄惁宸叉湁璇?item_id
         existing = next((i for i in items if str(i["item_id"]) == item_id), None)
 
         if existing:
-            # 若已存在且是最新的，跳过
+            # 鑻ュ凡瀛樺湪涓旀槸鏈€鏂扮殑锛岃烦杩?
             if existing["timestamp"] >= max(i["timestamp"] for i in items):
                 return
             else:
@@ -4731,10 +4422,10 @@ class WsEmbyCover(_PluginBase):
         else:
             items.append(history_item)
 
-        # 排序 + 截取前9
+        # 鎺掑簭 + 鎴彇鍓?
         grouped[key] = sorted(items, key=lambda x: x["timestamp"], reverse=True)[:9]
 
-        # 重新整合所有分组的数据
+        # 閲嶆柊鏁村悎鎵€鏈夊垎缁勭殑鏁版嵁
         new_history = []
         for item_list in grouped.values():
             new_history.extend(item_list)
@@ -4747,16 +4438,16 @@ class WsEmbyCover(_PluginBase):
 
     def prepare_library_images(self, library_dir: str, required_items: int = 9):
         """
-        准备目录下的 1~required_items.jpg 图片文件:
-        1. 检查已有的目标编号文件
-        2. 保留已有的文件，只补足缺失的编号
-        3. 补充文件时尽量避免连续使用相同的源图片
+        鍑嗗鐩綍涓嬬殑 1~required_items.jpg 鍥剧墖鏂囦欢:
+        1. 妫€鏌ュ凡鏈夌殑鐩爣缂栧彿鏂囦欢
+        2. 淇濈暀宸叉湁鐨勬枃浠讹紝鍙ˉ瓒崇己澶辩殑缂栧彿
+        3. 琛ュ厖鏂囦欢鏃跺敖閲忛伩鍏嶈繛缁娇鐢ㄧ浉鍚岀殑婧愬浘鐗?
         """
         os.makedirs(library_dir, exist_ok=True)
 
         required_items = max(1, int(required_items))
 
-        # 检查哪些编号的文件已存在，哪些缺失
+        # 妫€鏌ュ摢浜涚紪鍙风殑鏂囦欢宸插瓨鍦紝鍝簺缂哄け
         existing_numbers = []
         missing_numbers = []
         for i in range(1, required_items + 1):
@@ -4766,16 +4457,16 @@ class WsEmbyCover(_PluginBase):
             else:
                 missing_numbers.append(i)
 
-        # 如果已经存在所有文件，直接返回
+        # 濡傛灉宸茬粡瀛樺湪鎵€鏈夋枃浠讹紝鐩存帴杩斿洖
         if not missing_numbers:
             return True
 
-        logger.info(f"信息: {library_dir} 中缺少以下编号的图片: {missing_numbers}，将进行补充。")
+        logger.info(f"淇℃伅: {library_dir} 涓己灏戜互涓嬬紪鍙风殑鍥剧墖: {missing_numbers}锛屽皢杩涜琛ュ厖銆?)
 
         target_name_pattern = rf"^[1-9][0-9]*\.jpg$"
 
-        # 获取可用作源的图片（排除已有的目标编号文件）
-        # 使用 scandir 并限制采样数量，避免超大目录扫描导致长时间无日志
+        # 鑾峰彇鍙敤浣滄簮鐨勫浘鐗囷紙鎺掗櫎宸叉湁鐨勭洰鏍囩紪鍙锋枃浠讹級
+        # 浣跨敤 scandir 骞堕檺鍒堕噰鏍锋暟閲忥紝閬垮厤瓒呭ぇ鐩綍鎵弿瀵艰嚧闀挎椂闂存棤鏃ュ織
         source_image_filenames = []
         max_source_scan = 512
         scanned_entries = 0
@@ -4785,7 +4476,7 @@ class WsEmbyCover(_PluginBase):
                 continue
 
             f = entry.name
-            # 排除 N.jpg（N 为正整数）作为源
+            # 鎺掗櫎 N.jpg锛圢 涓烘鏁存暟锛変綔涓烘簮
             if re.match(target_name_pattern, f, re.IGNORECASE):
                 continue
             if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
@@ -4794,61 +4485,61 @@ class WsEmbyCover(_PluginBase):
                     break
 
         if scanned_entries > 2000:
-            logger.info(f"信息: {library_dir} 文件较多，已快速采样 {len(source_image_filenames)} 张作为补图源")
+            logger.info(f"淇℃伅: {library_dir} 鏂囦欢杈冨锛屽凡蹇€熼噰鏍?{len(source_image_filenames)} 寮犱綔涓鸿ˉ鍥炬簮")
 
-        # 如果没有源图片可用
+        # 濡傛灉娌℃湁婧愬浘鐗囧彲鐢?
         if not source_image_filenames:
-            # 如果已经有部分目标编号图片，可以从这些现有文件中选择
+            # 濡傛灉宸茬粡鏈夐儴鍒嗙洰鏍囩紪鍙峰浘鐗囷紝鍙互浠庤繖浜涚幇鏈夋枃浠朵腑閫夋嫨
             if existing_numbers:
-                logger.info(f"信息: {library_dir} 中没有其他图片可用，将从现有目标编号图片中随机选择进行复制。")
+                logger.info(f"淇℃伅: {library_dir} 涓病鏈夊叾浠栧浘鐗囧彲鐢紝灏嗕粠鐜版湁鐩爣缂栧彿鍥剧墖涓殢鏈洪€夋嫨杩涜澶嶅埗銆?)
                 existing_file_paths = [os.path.join(library_dir, f"{i}.jpg") for i in existing_numbers]
                 source_image_paths = existing_file_paths
             else:
-                logger.info(f"警告: {library_dir} 中没有任何可用的图片来生成 1-{required_items}.jpg。")
+                logger.info(f"璀﹀憡: {library_dir} 涓病鏈変换浣曞彲鐢ㄧ殑鍥剧墖鏉ョ敓鎴?1-{required_items}.jpg銆?)
                 return False
         else:
-            # 将文件名转换为完整路径
+            # 灏嗘枃浠跺悕杞崲涓哄畬鏁磋矾寰?
             source_image_paths = [os.path.join(library_dir, f) for f in sorted(source_image_filenames)]
 
-        # 如果源图片数量不足，需要重复使用
+        # 濡傛灉婧愬浘鐗囨暟閲忎笉瓒筹紝闇€瑕侀噸澶嶄娇鐢?
         if len(source_image_paths) < len(missing_numbers):
-            logger.info(f"信息: 源图片数量({len(source_image_paths)})小于缺失数量({len(missing_numbers)})，某些图片将被重复使用。")
+            logger.info(f"淇℃伅: 婧愬浘鐗囨暟閲?{len(source_image_paths)})灏忎簬缂哄け鏁伴噺({len(missing_numbers)})锛屾煇浜涘浘鐗囧皢琚噸澶嶄娇鐢ㄣ€?)
         
-        # 为每个缺失的编号选择一个源图片，尽量避免连续重复
+        # 涓烘瘡涓己澶辩殑缂栧彿閫夋嫨涓€涓簮鍥剧墖锛屽敖閲忛伩鍏嶈繛缁噸澶?
         last_used_source = None
         for missing_num in missing_numbers:
             target_path = os.path.join(library_dir, f"{missing_num}.jpg")
             
-            # 如果只有一个源文件，没有选择，直接使用
+            # 濡傛灉鍙湁涓€涓簮鏂囦欢锛屾病鏈夐€夋嫨锛岀洿鎺ヤ娇鐢?
             if len(source_image_paths) == 1:
                 selected_source = source_image_paths[0]
             else:
-                # 尝试选择一个与上次不同的源文件
+                # 灏濊瘯閫夋嫨涓€涓笌涓婃涓嶅悓鐨勬簮鏂囦欢
                 available_sources = [s for s in source_image_paths if s != last_used_source]
                 
-                # 如果没有其他选择（可能上次用了唯一的源文件），则使用所有源
+                # 濡傛灉娌℃湁鍏朵粬閫夋嫨锛堝彲鑳戒笂娆＄敤浜嗗敮涓€鐨勬簮鏂囦欢锛夛紝鍒欎娇鐢ㄦ墍鏈夋簮
                 if not available_sources:
                     available_sources = source_image_paths
                     
-                # 随机选择一个源文件
+                # 闅忔満閫夋嫨涓€涓簮鏂囦欢
                 selected_source = random.choice(available_sources)
                 
-            # 记录本次使用的源文件，用于下次比较
+            # 璁板綍鏈浣跨敤鐨勬簮鏂囦欢锛岀敤浜庝笅娆℃瘮杈?
             last_used_source = selected_source
             
             try:
                 if not os.path.exists(selected_source):
-                    logger.info(f"错误: 源文件 {selected_source} 在尝试复制前找不到了！")
+                    logger.info(f"閿欒: 婧愭枃浠?{selected_source} 鍦ㄥ皾璇曞鍒跺墠鎵句笉鍒颁簡锛?)
                     return False
                     
                 shutil.copy(selected_source, target_path)
-                logger.info(f"信息: 已创建 {missing_num}.jpg (源自: {os.path.basename(selected_source)})")
+                logger.info(f"淇℃伅: 宸插垱寤?{missing_num}.jpg (婧愯嚜: {os.path.basename(selected_source)})")
                 
             except Exception as e:
-                logger.info(f"错误: 复制文件 {selected_source} 到 {target_path} 时发生错误: {e}")
+                logger.info(f"閿欒: 澶嶅埗鏂囦欢 {selected_source} 鍒?{target_path} 鏃跺彂鐢熼敊璇? {e}")
                 return False
 
-        logger.info(f"信息: {library_dir} 已成功补充所有缺失的图片，现在包含完整的 1-{required_items}.jpg")
+        logger.info(f"淇℃伅: {library_dir} 宸叉垚鍔熻ˉ鍏呮墍鏈夌己澶辩殑鍥剧墖锛岀幇鍦ㄥ寘鍚畬鏁寸殑 1-{required_items}.jpg")
         return True
 
     def __get_fonts(self):
@@ -4857,11 +4548,11 @@ class WsEmbyCover(_PluginBase):
                 return None
             s = s.strip()
 
-            # 判断是否是 HTTP(S) 链接
+            # 鍒ゆ柇鏄惁鏄?HTTP(S) 閾炬帴
             if re.match(r'^https?://[^\s]+$', s, re.IGNORECASE):
                 return 'url'
 
-            # 判断是否像路径（包含 / 或 \，或以 ~、.、/ 开头）
+            # 鍒ゆ柇鏄惁鍍忚矾寰勶紙鍖呭惈 / 鎴?\锛屾垨浠?~銆?銆? 寮€澶达級
             if os.path.isabs(s) or s.startswith(('.', '~', '/')) or re.search(r'[\\/]', s):
                 return 'path'
 
@@ -4893,7 +4584,7 @@ class WsEmbyCover(_PluginBase):
 
         default_en_url = default_font_url.get(self._en_font_preset, "https://raw.githubusercontent.com/justzerock/MoviePilot-Plugins/main/fonts/EmblemaOne.woff2")
         
-        log_prefix = "默认"
+        log_prefix = "榛樿"
         zh_custom_type = detect_string_type(self._zh_font_custom)
         en_custom_type = detect_string_type(self._en_font_custom)
         current_zh_font_url = self._zh_font_custom if zh_custom_type == 'url' else default_zh_url
@@ -4908,11 +4599,11 @@ class WsEmbyCover(_PluginBase):
         final_zh_font_path_attr = "_zh_font_path"
         final_en_font_path_attr = "_en_font_path"
 
-        logger.info(f"当前主标题字体URL: {current_zh_font_url} (本地路径: {zh_local_path_config})")
+        logger.info(f"褰撳墠涓绘爣棰樺瓧浣揢RL: {current_zh_font_url} (鏈湴璺緞: {zh_local_path_config})")
 
         active_fonts_to_process = [
             {
-                "lang": "主标题",
+                "lang": "涓绘爣棰?,
                 "url": current_zh_font_url,
                 "local_path_config": zh_local_path_config,
                 "download_base_name": downloaded_zh_font_base,
@@ -4921,7 +4612,7 @@ class WsEmbyCover(_PluginBase):
                 "fallback_ext": ".ttf"
             },
             {
-                "lang": "副标题",
+                "lang": "鍓爣棰?,
                 "url": current_en_font_url,
                 "local_path_config": en_local_path_config,
                 "download_base_name": downloaded_en_font_base,
@@ -4951,11 +4642,11 @@ class WsEmbyCover(_PluginBase):
             if local_path_cfg:
                 local_font_p = Path(local_path_cfg)
                 if self.__validate_font_file(local_font_p):
-                    logger.info(f"{lang}字体: 使用本地指定路径 {local_font_p}")
+                    logger.info(f"{lang}瀛椾綋: 浣跨敤鏈湴鎸囧畾璺緞 {local_font_p}")
                     current_font_path = local_font_p
                     using_local_font = True
                 else:
-                    logger.warning(f"{log_prefix}{lang}字体: 本地指定路径 {local_font_p} 无效或文件不存在。")
+                    logger.warning(f"{log_prefix}{lang}瀛椾綋: 鏈湴鎸囧畾璺緞 {local_font_p} 鏃犳晥鎴栨枃浠朵笉瀛樺湪銆?)
 
             if not using_local_font:
                 url_hash = hashlib.md5(url.encode()).hexdigest()
@@ -4965,169 +4656,169 @@ class WsEmbyCover(_PluginBase):
                         if hash_file_path.read_text() == url_hash:
                             url_has_changed = False
                     except Exception as e:
-                        logger.warning(f"读取哈希文件失败 {hash_file_path}: {e}。将重新下载。")
+                        logger.warning(f"璇诲彇鍝堝笇鏂囦欢澶辫触 {hash_file_path}: {e}銆傚皢閲嶆柊涓嬭浇銆?)
                 
                 font_file_is_valid = self.__validate_font_file(downloaded_font_file_path)
 
                 if url_has_changed or not font_file_is_valid:
                     if url_has_changed:
-                        logger.info(f"{log_prefix}{lang}字体URL已更改或首次下载。")
+                        logger.info(f"{log_prefix}{lang}瀛椾綋URL宸叉洿鏀规垨棣栨涓嬭浇銆?)
                     if not font_file_is_valid and downloaded_font_file_path.exists():
-                         logger.info(f"{log_prefix}{lang}字体文件 {downloaded_font_file_path} 无效或损坏，将重新下载。")
+                         logger.info(f"{log_prefix}{lang}瀛椾綋鏂囦欢 {downloaded_font_file_path} 鏃犳晥鎴栨崯鍧忥紝灏嗛噸鏂颁笅杞姐€?)
                     elif not downloaded_font_file_path.exists():
-                         logger.info(f"{log_prefix}{lang}字体文件 {downloaded_font_file_path} 不存在，将下载。")
+                         logger.info(f"{log_prefix}{lang}瀛椾綋鏂囦欢 {downloaded_font_file_path} 涓嶅瓨鍦紝灏嗕笅杞姐€?)
 
-                    # 使用安全的字体下载方法
+                    # 浣跨敤瀹夊叏鐨勫瓧浣撲笅杞芥柟娉?
                     if self.download_font_safely_with_timeout(url, downloaded_font_file_path):
                         try:
                             hash_file_path.write_text(url_hash)
                         except Exception as e:
-                            logger.error(f"写入哈希文件失败 {hash_file_path}: {e}")
+                            logger.error(f"鍐欏叆鍝堝笇鏂囦欢澶辫触 {hash_file_path}: {e}")
                         current_font_path = downloaded_font_file_path
                     else:
-                        logger.critical(f"无法获取必要的{log_prefix}{lang}支持字体: {url}")
+                        logger.critical(f"鏃犳硶鑾峰彇蹇呰鐨剓log_prefix}{lang}鏀寔瀛椾綋: {url}")
                         if font_file_is_valid :
-                             logger.warning(f"下载失败，但找到一个已存在的（可能旧版本）有效字体文件 {downloaded_font_file_path}，将尝试使用。")
+                             logger.warning(f"涓嬭浇澶辫触锛屼絾鎵惧埌涓€涓凡瀛樺湪鐨勶紙鍙兘鏃х増鏈級鏈夋晥瀛椾綋鏂囦欢 {downloaded_font_file_path}锛屽皢灏濊瘯浣跨敤銆?)
                              current_font_path = downloaded_font_file_path
                         else:
                              current_font_path = None
                 else:
-                    logger.info(f"{log_prefix}{lang}字体: 使用已下载/缓存的有效字体 {downloaded_font_file_path}")
+                    logger.info(f"{log_prefix}{lang}瀛椾綋: 浣跨敤宸蹭笅杞?缂撳瓨鐨勬湁鏁堝瓧浣?{downloaded_font_file_path}")
                     current_font_path = downloaded_font_file_path
             
-            # 安全设置字体路径
+            # 瀹夊叏璁剧疆瀛椾綋璺緞
             if current_font_path and current_font_path.exists():
                 setattr(self, final_attr, current_font_path)
-                status_log = '(本地路径)' if using_local_font else '(已下载/缓存)'
-                logger.info(f"{log_prefix}{lang}字体最终路径: {getattr(self,final_attr)} {status_log}")
+                status_log = '(鏈湴璺緞)' if using_local_font else '(宸蹭笅杞?缂撳瓨)'
+                logger.info(f"{log_prefix}{lang}瀛椾綋鏈€缁堣矾寰? {getattr(self,final_attr)} {status_log}")
             else:
-                # 字体获取失败，设置为None并记录错误
+                # 瀛椾綋鑾峰彇澶辫触锛岃缃负None骞惰褰曢敊璇?
                 setattr(self, final_attr, None)
-                logger.error(f"{log_prefix}{lang}字体获取失败，这可能导致封面生成失败")
+                logger.error(f"{log_prefix}{lang}瀛椾綋鑾峰彇澶辫触锛岃繖鍙兘瀵艰嚧灏侀潰鐢熸垚澶辫触")
 
-        # 检查是否所有必要的字体都已获取
+        # 妫€鏌ユ槸鍚︽墍鏈夊繀瑕佺殑瀛椾綋閮藉凡鑾峰彇
         if not self._zh_font_path or not self._en_font_path:
-            logger.critical("关键字体文件缺失，插件可能无法正常工作。请检查网络连接或手动下载字体文件。")
+            logger.critical("鍏抽敭瀛椾綋鏂囦欢缂哄け锛屾彃浠跺彲鑳芥棤娉曟甯稿伐浣溿€傝妫€鏌ョ綉缁滆繛鎺ユ垨鎵嬪姩涓嬭浇瀛椾綋鏂囦欢銆?)
 
     def __sanitize_filename(self, filename: str) -> str:
         """
-        将媒体库名称转换为安全的文件名，特别处理数字或字母开头的名称
+        灏嗗獟浣撳簱鍚嶇О杞崲涓哄畨鍏ㄧ殑鏂囦欢鍚嶏紝鐗瑰埆澶勭悊鏁板瓧鎴栧瓧姣嶅紑澶寸殑鍚嶇О
         """
         if not filename:
             return "unknown"
 
-        # 移除或替换不安全的字符
+        # 绉婚櫎鎴栨浛鎹笉瀹夊叏鐨勫瓧绗?
         import re
-        # 替换Windows和Unix系统中不允许的字符
+        # 鏇挎崲Windows鍜孶nix绯荤粺涓笉鍏佽鐨勫瓧绗?
         unsafe_chars = r'[<>:"/\\|?*]'
         safe_name = re.sub(unsafe_chars, '_', filename)
 
-        # 移除前后空格
+        # 绉婚櫎鍓嶅悗绌烘牸
         safe_name = safe_name.strip()
 
-        # 如果名称为空，使用默认名称
+        # 濡傛灉鍚嶇О涓虹┖锛屼娇鐢ㄩ粯璁ゅ悕绉?
         if not safe_name:
             return "unknown"
 
-        # 确保不以点开头（在某些系统中是隐藏文件）
+        # 纭繚涓嶄互鐐瑰紑澶达紙鍦ㄦ煇浜涚郴缁熶腑鏄殣钘忔枃浠讹級
         if safe_name.startswith('.'):
             safe_name = '_' + safe_name[1:]
 
-        # 限制长度（避免路径过长）
+        # 闄愬埗闀垮害锛堥伩鍏嶈矾寰勮繃闀匡級
         if len(safe_name) > 100:
             safe_name = safe_name[:100]
 
         if safe_name != filename and filename not in self._sanitize_log_cache:
             self._sanitize_log_cache.add(filename)
-            logger.debug(f"文件名安全化: '{filename}' -> '{safe_name}'")
+            logger.debug(f"鏂囦欢鍚嶅畨鍏ㄥ寲: '{filename}' -> '{safe_name}'")
         return safe_name
 
     def health_check(self) -> bool:
         """
-        插件健康检查，确保关键组件正常
+        鎻掍欢鍋ュ悍妫€鏌ワ紝纭繚鍏抽敭缁勪欢姝ｅ父
         """
         try:
-            # 检查分辨率配置
+            # 妫€鏌ュ垎杈ㄧ巼閰嶇疆
             if not hasattr(self, '_resolution_config') or self._resolution_config is None:
-                logger.warning("分辨率配置缺失，重新初始化")
-                # 使用用户设置的分辨率，而不是硬编码的1080p
+                logger.warning("鍒嗚鲸鐜囬厤缃己澶憋紝閲嶆柊鍒濆鍖?)
+                # 浣跨敤鐢ㄦ埛璁剧疆鐨勫垎杈ㄧ巼锛岃€屼笉鏄‖缂栫爜鐨?080p
                 if self._resolution == "custom":
                     self._resolution_config = self.__new_resolution_config((self._custom_width, self._custom_height))
                 else:
                     self._resolution_config = self.__new_resolution_config(self._resolution)
 
-            # 检查字体文件
+            # 妫€鏌ュ瓧浣撴枃浠?
             if not self._zh_font_path or not self._en_font_path:
-                logger.warning("字体文件缺失，尝试重新获取")
+                logger.warning("瀛椾綋鏂囦欢缂哄け锛屽皾璇曢噸鏂拌幏鍙?)
                 self.__get_fonts()
 
-            # 验证字体文件有效性
+            # 楠岃瘉瀛椾綋鏂囦欢鏈夋晥鎬?
             if self._zh_font_path and not self.__validate_font_file(Path(self._zh_font_path)):
-                logger.warning("主标题字体文件无效，尝试重新下载")
+                logger.warning("涓绘爣棰樺瓧浣撴枃浠舵棤鏁堬紝灏濊瘯閲嶆柊涓嬭浇")
                 return False
 
             if self._en_font_path and not self.__validate_font_file(Path(self._en_font_path)):
-                logger.warning("副标题字体文件无效，尝试重新下载")
+                logger.warning("鍓爣棰樺瓧浣撴枃浠舵棤鏁堬紝灏濊瘯閲嶆柊涓嬭浇")
                 return False
 
-            logger.info("插件健康检查通过")
+            logger.info("鎻掍欢鍋ュ悍妫€鏌ラ€氳繃")
             return True
 
         except Exception as e:
-            logger.error(f"健康检查失败: {e}")
+            logger.error(f"鍋ュ悍妫€鏌ュけ璐? {e}")
             return False
 
     def download_font_safely_with_timeout(self, font_url: str, font_path: Path, timeout: int = 60) -> bool:
         """
-        带超时的安全字体下载方法，避免首次下载时阻塞过久
+        甯﹁秴鏃剁殑瀹夊叏瀛椾綋涓嬭浇鏂规硶锛岄伩鍏嶉娆′笅杞芥椂闃诲杩囦箙
         """
         try:
-            logger.info(f"开始下载字体（超时限制: {timeout}秒）: {font_url}")
+            logger.info(f"寮€濮嬩笅杞藉瓧浣擄紙瓒呮椂闄愬埗: {timeout}绉掞級: {font_url}")
             return self.download_font_safely(font_url, font_path, retries=1, timeout=timeout)
 
         except Exception as e:
-            logger.error(f"字体下载过程中出现异常: {e}")
+            logger.error(f"瀛椾綋涓嬭浇杩囩▼涓嚭鐜板紓甯? {e}")
             return False
 
     def download_font_safely(self, font_url: str, font_path: Path, retries: int = 2, timeout: int = 30):
         """
-        从链接下载字体文件到指定目录，使用优化的网络助手
-        :param font_url: 字体文件URL
-        :param font_path: 保存路径
-        :param retries: 每种策略的最大重试次数（减少重试次数）
-        :param timeout: 下载超时时间
-        :return: 是否下载成功
+        浠庨摼鎺ヤ笅杞藉瓧浣撴枃浠跺埌鎸囧畾鐩綍锛屼娇鐢ㄤ紭鍖栫殑缃戠粶鍔╂墜
+        :param font_url: 瀛椾綋鏂囦欢URL
+        :param font_path: 淇濆瓨璺緞
+        :param retries: 姣忕绛栫暐鐨勬渶澶ч噸璇曟鏁帮紙鍑忓皯閲嶈瘯娆℃暟锛?
+        :param timeout: 涓嬭浇瓒呮椂鏃堕棿
+        :return: 鏄惁涓嬭浇鎴愬姛
         """
-        logger.info(f"准备下载字体: {font_url} -> {font_path}")
+        logger.info(f"鍑嗗涓嬭浇瀛椾綋: {font_url} -> {font_path}")
 
-        # 确保在开始下载前删除任何可能存在的损坏文件
+        # 纭繚鍦ㄥ紑濮嬩笅杞藉墠鍒犻櫎浠讳綍鍙兘瀛樺湪鐨勬崯鍧忔枃浠?
         if font_path.exists():
             try:
                 font_path.unlink()
-                logger.info(f"删除之前的字体文件以便重新下载: {font_path}")
+                logger.info(f"鍒犻櫎涔嬪墠鐨勫瓧浣撴枃浠朵互渚块噸鏂颁笅杞? {font_path}")
             except OSError as unlink_error:
-                logger.error(f"无法删除现有字体文件 {font_path}: {unlink_error}")
+                logger.error(f"鏃犳硶鍒犻櫎鐜版湁瀛椾綋鏂囦欢 {font_path}: {unlink_error}")
                 return False
         
-        # 准备下载策略
+        # 鍑嗗涓嬭浇绛栫暐
         strategies = []
 
-        # 判断是否为GitHub链接
+        # 鍒ゆ柇鏄惁涓篏itHub閾炬帴
         is_github_url = "github.com" in font_url or "raw.githubusercontent.com" in font_url
 
-        # 对于GitHub链接，优先使用GitHub镜像站
+        # 瀵逛簬GitHub閾炬帴锛屼紭鍏堜娇鐢℅itHub闀滃儚绔?
         if is_github_url and settings.GITHUB_PROXY:
             github_proxy_url = f"{UrlUtils.standardize_base_url(settings.GITHUB_PROXY)}{font_url}"
-            strategies.append(("GitHub镜像站", github_proxy_url))
+            strategies.append(("GitHub闀滃儚绔?, github_proxy_url))
 
-        # 直接使用原始URL
-        strategies.append(("直连", font_url))
+        # 鐩存帴浣跨敤鍘熷URL
+        strategies.append(("鐩磋繛", font_url))
 
-        # 遍历所有策略
+        # 閬嶅巻鎵€鏈夌瓥鐣?
         for strategy_name, target_url in strategies:
-            logger.info(f"尝试使用策略：{strategy_name} 下载字体: {target_url}")
+            logger.info(f"灏濊瘯浣跨敤绛栫暐锛歿strategy_name} 涓嬭浇瀛椾綋: {target_url}")
 
-            # 创建临时文件路径
+            # 鍒涘缓涓存椂鏂囦欢璺緞
             temp_path = font_path.with_suffix('.temp')
 
             try:
@@ -5136,7 +4827,7 @@ class WsEmbyCover(_PluginBase):
                     timeout=timeout,
                     headers={'User-Agent': 'MoviePilot-WsEmbyCover/1.3'},
                     stream=True,
-                    verify=False if strategy_name == "GitHub镜像站" else True,
+                    verify=False if strategy_name == "GitHub闀滃儚绔? else True,
                 )
                 if response.status_code == 200:
                     temp_path.parent.mkdir(parents=True, exist_ok=True)
@@ -5144,38 +4835,38 @@ class WsEmbyCover(_PluginBase):
                         f.write(response.content)
                     if self.__validate_font_file(temp_path):
                         temp_path.replace(font_path)
-                        logger.info(f"字体下载成功: 使用策略 {strategy_name}")
+                        logger.info(f"瀛椾綋涓嬭浇鎴愬姛: 浣跨敤绛栫暐 {strategy_name}")
                         return True
-                    logger.warning("下载的字体文件验证失败，可能已损坏")
+                    logger.warning("涓嬭浇鐨勫瓧浣撴枃浠堕獙璇佸け璐ワ紝鍙兘宸叉崯鍧?)
                     if temp_path.exists():
                         temp_path.unlink()
                 else:
-                    logger.warning(f"策略 {strategy_name} 下载失败，HTTP状态码: {response.status_code}")
+                    logger.warning(f"绛栫暐 {strategy_name} 涓嬭浇澶辫触锛孒TTP鐘舵€佺爜: {response.status_code}")
 
             except Exception as e:
-                logger.warning(f"策略 {strategy_name} 下载出错: {e}")
-                # 清理可能的临时文件
+                logger.warning(f"绛栫暐 {strategy_name} 涓嬭浇鍑洪敊: {e}")
+                # 娓呯悊鍙兘鐨勪复鏃舵枃浠?
                 if temp_path.exists():
                     try:
                         temp_path.unlink()
                     except OSError:
                         pass
         
-        # 所有策略都失败
-        logger.error(f"所有下载策略均失败，无法下载字体，建议手动下载字体: {font_url}")
-        # 确保目标路径没有损坏的文件
+        # 鎵€鏈夌瓥鐣ラ兘澶辫触
+        logger.error(f"鎵€鏈変笅杞界瓥鐣ュ潎澶辫触锛屾棤娉曚笅杞藉瓧浣擄紝寤鸿鎵嬪姩涓嬭浇瀛椾綋: {font_url}")
+        # 纭繚鐩爣璺緞娌℃湁鎹熷潖鐨勬枃浠?
         if font_path.exists():
             try:
                 font_path.unlink()
-                logger.info(f"已删除部分下载的文件: {font_path}")
+                logger.info(f"宸插垹闄ら儴鍒嗕笅杞界殑鏂囦欢: {font_path}")
             except OSError as unlink_error:
-                logger.error(f"无法删除部分下载的文件 {font_path}: {unlink_error}")
+                logger.error(f"鏃犳硶鍒犻櫎閮ㄥ垎涓嬭浇鐨勬枃浠?{font_path}: {unlink_error}")
         
         return False
 
     def get_file_extension_from_url(self, url: str, fallback_ext: str = ".ttf") -> str:
         """
-        从链接获取字体扩展名扩展名
+        浠庨摼鎺ヨ幏鍙栧瓧浣撴墿灞曞悕鎵╁睍鍚?
         """
         try:
             parsed_url = urlparse(url)
@@ -5185,10 +4876,10 @@ class WsEmbyCover(_PluginBase):
                 _ , ext = os.path.splitext(filename)
                 return ext if ext else fallback_ext
             else:
-                logger.warning(f"无法从URL中提取路径部分: {url}. 使用备用扩展名: {fallback_ext}")
+                logger.warning(f"鏃犳硶浠嶶RL涓彁鍙栬矾寰勯儴鍒? {url}. 浣跨敤澶囩敤鎵╁睍鍚? {fallback_ext}")
                 return fallback_ext
         except Exception as e:
-            logger.error(f"解析URL时出错 '{url}': {e}. 使用备用扩展名: {fallback_ext}")
+            logger.error(f"瑙ｆ瀽URL鏃跺嚭閿?'{url}': {e}. 浣跨敤澶囩敤鎵╁睍鍚? {fallback_ext}")
             return fallback_ext
         
     def _validate_font_file(self, font_path: Path):
@@ -5214,15 +4905,15 @@ class WsEmbyCover(_PluginBase):
                     sample = f.read(9).decode(errors='ignore')
                     if sample == "STARTFONT":
                         return True
-            logger.warning(f"字体文件存在但可能已损坏或格式无法识别: {font_path}")
+            logger.warning(f"瀛椾綋鏂囦欢瀛樺湪浣嗗彲鑳藉凡鎹熷潖鎴栨牸寮忔棤娉曡瘑鍒? {font_path}")
             return False
         except Exception as e:
-            logger.warning(f"验证字体文件时出错 {font_path}: {e}")
+            logger.warning(f"楠岃瘉瀛椾綋鏂囦欢鏃跺嚭閿?{font_path}: {e}")
             return False
 
     def stop_service(self):
         """
-        停止服务
+        鍋滄鏈嶅姟
         """
         try:
             if self._scheduler:
@@ -5233,4 +4924,4 @@ class WsEmbyCover(_PluginBase):
                     self._event.clear()
                 self._scheduler = None
         except Exception as e:
-            logger.error(f"停止服务失败: {str(e)}")
+            logger.error(f"鍋滄鏈嶅姟澶辫触: {str(e)}")
