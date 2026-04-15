@@ -1,4 +1,5 @@
 import base64
+import abc
 import datetime
 import gc
 import hashlib
@@ -76,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.58"
+    plugin_version = "1.59"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -4667,11 +4668,18 @@ class WsEmbyCover(_PluginBase):
             logger.error(f"停止服务失败: {str(e)}")
 
 
-# 强制兜底：无条件补齐 get_page 并清空抽象方法集合，避免任何环境差异导致实例化失败
+# 强制兜底：无条件补齐 get_page 并重算抽象方法集合，避免任何环境差异导致实例化失败
 try:
     def _wsec_get_page_fallback(self):
         return []
+    _wsec_get_page_fallback.__isabstractmethod__ = False
     WsEmbyCover.get_page = _wsec_get_page_fallback
-    WsEmbyCover.__abstractmethods__ = frozenset()
+    try:
+        abc.update_abstractmethods(WsEmbyCover)
+    except Exception:
+        WsEmbyCover.__abstractmethods__ = frozenset(
+            item for item in set(getattr(WsEmbyCover, "__abstractmethods__", set()) or set())
+            if item != "get_page"
+        )
 except Exception:
     pass
