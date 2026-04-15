@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.62"
+    plugin_version = "1.63"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -1193,14 +1193,14 @@ class WsEmbyCover(_PluginBase):
                 "path": "/clean_cache",
                 "endpoint": self.api_clean_cache,
                 "auth": "bear",
-                "methods": ["POST"],
+                "methods": ["POST", "GET"],
                 "summary": "立即清理全部缓存（图片+字体）",
             },
             {
                 "path": "clean_cache",
                 "endpoint": self.api_clean_cache,
                 "auth": "bear",
-                "methods": ["POST"],
+                "methods": ["POST", "GET"],
                 "summary": "立即清理全部缓存（图片+字体，兼容）",
             },
             {
@@ -2313,7 +2313,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 3
+                                                    'md': 2
                                                 },
                                                 'content': [
                                                     {
@@ -2329,7 +2329,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 3
+                                                    'md': 2
                                                 },
                                                 'content': [
                                                     {
@@ -2345,7 +2345,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 3
+                                                    'md': 2
                                                 },
                                                 'content': [
                                                     {
@@ -2361,7 +2361,7 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 3
+                                                    'md': 2
                                                 },
                                                 'content': [
                                                     {
@@ -2457,15 +2457,11 @@ class WsEmbyCover(_PluginBase):
                                                     }
                                                 ]
                                             },
-                                        ]
-                                    },
-                                    {
-                                        'component': 'VRow',
-                                        'content': [
                                             {
                                                 'component': 'VCol',
                                                 'props': {
-                                                    'cols': 12
+                                                    'cols': 12,
+                                                    'md': 4
                                                 },
                                                 'content': [
                                                     {
@@ -2474,21 +2470,22 @@ class WsEmbyCover(_PluginBase):
                                                             'color': 'error',
                                                             'variant': 'flat',
                                                             'prepend-icon': 'mdi-broom',
-                                                            'class': 'text-none'
+                                                            'class': 'text-none w-100',
+                                                            'type': 'button'
                                                         },
                                                         'text': '立即清理缓存（图片+字体）',
                                                         'events': {
                                                             'click': {
                                                                 'api': 'plugin/WsEmbyCover/clean_cache',
-                                                                'method': 'post'
+                                                                'method': 'get'
                                                             }
                                                         }
                                                     }
                                                 ]
-                                            }
+                                            },
                                         ]
                                     },
-                                    
+
                                 ]
                             },
                         ]
@@ -2678,7 +2675,8 @@ class WsEmbyCover(_PluginBase):
         }
 
     def get_page(self) -> List[dict]:
-        return []
+        form_page, _ = self.get_form()
+        return form_page
 
         limit = self.__clamp_value(
             self._covers_page_history_limit,

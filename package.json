@@ -23,7 +23,7 @@
         "name": "无双Emby封面",
         "description": "生成媒体库动态/静态封面，支持 Emby/Jellyfin",
         "labels": "Emby,动态封面,媒体库",
-        "version": "1.62",
+        "version": "1.63",
         "icon": "emby.png",
         "author": "wushuangshangjiang",
         "level": 1
