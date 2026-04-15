@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.74"
+    plugin_version = "1.75"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -628,13 +628,13 @@ class WsEmbyCover(_PluginBase):
 
     @staticmethod
     def __default_servers_config_template() -> str:
-        return '''# 閰嶇疆澶氭湇鍔″櫒
-# 鏍煎紡濡備笅锛?
+        return '''# 配置多服务器
+# 格式如下：
 #
-# 鏈嶅姟鍣?:
+# 服务器1:
 #   - http://127.0.0.1:8096
 #   - xxxxx
-# 鏈嶅姟鍣?:
+# 服务器2:
 #   - http://192.168.1.10:8096
 #   - yyyyy
 #
@@ -1499,7 +1499,7 @@ class WsEmbyCover(_PluginBase):
                                     'lang': 'yaml',
                                     'theme': 'monokai',
                                     'style': 'height: 18rem',
-                                    'label': '澶氭湇鍔″櫒閰嶇疆',
+                                    'label': '多服务器配置',
                                     'placeholder': self.__default_servers_config_template()
                                  }
                              }
@@ -1528,9 +1528,9 @@ class WsEmbyCover(_PluginBase):
                                     'theme': 'monokai',
                                     'style': 'height: 30rem',
                                     'label': '中英标题配置',
-                                    'placeholder': '''鏈嶅姟鍣?:
-  鍔ㄧ敾鐢靛奖:
-    - 鍔ㄧ敾鐢靛奖
+                                    'placeholder': '''服务器1:
+  动画电影:
+    - 动画电影
     - ANI MOVIE
   华语电影:
     - 华语电影
@@ -1578,7 +1578,7 @@ class WsEmbyCover(_PluginBase):
                                     'model': 'covers_input',
                                     'label': '自定义图片目录（可）',
                                     'prependInnerIcon': 'mdi-file-image',
-                                    'hint': '浣跨敤浣犳寚瀹氱殑鍥剧墖鐢熸垚灏侀潰锛屽浘鐗囨斁鍦ㄤ笌濯掍綋搴撳悓鍚嶇殑鏂囦欢澶逛笅',
+                                    'hint': '使用你指定的图片生成封面，图片放在与媒体库同名的文件夹下',
                                     'persistentHint': True
                                 }
                             }
@@ -1615,8 +1615,8 @@ class WsEmbyCover(_PluginBase):
                                 'component': 'VSwitch',
                                 'props': {
                                     'model': 'save_recent_covers',
-                                    'label': '淇濆瓨鏈€杩戠敓鎴愮殑灏侀潰',
-                                    'hint': '默认弢启，保存历史封面',
+                                    'label': '保存最近生成的封面',
+                                    'hint': '默认开启，保存历史封面',
                                     'persistentHint': True
                                 }
                             }
@@ -2116,6 +2116,10 @@ class WsEmbyCover(_PluginBase):
                                 'content': [
                                     {
                                         'component': 'VRow',
+                                        'props': {
+                                            'class': 'd-flex flex-nowrap align-center',
+                                            'style': 'column-gap: 10px;'
+                                        },
                                         'content': [
                                             {
                                                 'component': 'VCol',
@@ -2356,7 +2360,8 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 1
+                                                    'md': 12,
+                                                    'style': 'flex: 0 0 20%; max-width: 20%;'
                                                 },
                                                 'content': [
                                                     {
@@ -2372,7 +2377,8 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 2
+                                                    'md': 12,
+                                                    'style': 'flex: 0 0 20%; max-width: 20%;'
                                                 },
                                                 'content': [
                                                     {
@@ -2388,7 +2394,8 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 2
+                                                    'md': 12,
+                                                    'style': 'flex: 0 0 20%; max-width: 20%;'
                                                 },
                                                 'content': [
                                                     {
@@ -2404,7 +2411,8 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 2
+                                                    'md': 12,
+                                                    'style': 'flex: 0 0 20%; max-width: 20%;'
                                                 },
                                                 'content': [
                                                     {
@@ -2421,7 +2429,8 @@ class WsEmbyCover(_PluginBase):
                                                 'component': 'VCol',
                                                 'props': {
                                                     'cols': 12,
-                                                    'md': 2
+                                                    'md': 12,
+                                                    'style': 'flex: 0 0 20%; max-width: 20%;'
                                                 },
                                                 'content': [
                                                     {
@@ -2430,8 +2439,7 @@ class WsEmbyCover(_PluginBase):
                                                             'color': '#4FC3F7',
                                                             'variant': 'flat',
                                                             'prepend-icon': 'mdi-broom',
-                                                            'class': 'text-none text-white',
-                                                            'style': 'min-width: 96px; max-width: 120px; padding-left: 8px; padding-right: 8px;',
+                                                            'class': 'text-none text-white w-100',
                                                             'type': 'button'
                                                         },
                                                         'text': '清理缓存',
