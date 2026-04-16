@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.79"
+    plugin_version = "1.80"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -607,38 +607,11 @@ class WsEmbyCover(_PluginBase):
 
     @staticmethod
     def __default_title_config_template() -> str:
-        return '''# 配置封面标题（支持按服务器分组）
-# 鎺ㄨ崘鏍煎紡锛堟寜鏈嶅姟鍣ㄥ垎缁勶級锛?
-#
-# 鏈嶅姟鍣?:
-#   濯掍綋搴撳悕绉?
-#     - 涓绘爣棰?
-#     - 副标?
-#   另一个媒体库:
-#     - 涓绘爣棰?
-#     - 副标?
-#
-# 兼容旧格式（不分服务器）?
-# 濯掍綋搴撳悕绉?
-#   - 涓绘爣棰?
-#   - 副标?
-#   - "#FF5722"  # 鑳屾櫙棰滆壊锛堝彲閫夛紝蹇呴』鍔犲紩鍙凤級
-#
-'''
+        return '''# 配置封面标题（支持按服务器分组）\n# 推荐格式如下：\n#\n# 服务器名:\n#   媒体库名称:\n#     - 中文标题\n#     - 英文标题\n#   另一个媒体库:\n#     - 中文标题\n#     - 英文标题\n#\n# 兼容旧格式（不分服务器）：\n# 媒体库名称:\n#   - 中文标题\n#   - 英文标题\n#   - "#FF5722"  # 背景颜色（可选，必须加引号）\n#\n'''
 
     @staticmethod
     def __default_servers_config_template() -> str:
-        return '''# 配置多服务器
-# 格式如下：
-#
-# 服务器1:
-#   - http://127.0.0.1:8096
-#   - xxxxx
-# 服务器2:
-#   - http://192.168.1.10:8096
-#   - yyyyy
-#
-'''
+        return '''# 配置多服务器\n# 格式如下：\n#\n# 服务器1:\n#   - http://127.0.0.1:8096\n#   - xxxxx\n# 服务器2:\n#   - http://192.168.1.10:8096\n#   - yyyyy\n#\n'''
 
     def __profile_from_runtime(self, name: str, host: str, api_key: str, style: str) -> Dict[str, Any]:
         safe_style = "static_2" if style == "static_2" else "static_1"
