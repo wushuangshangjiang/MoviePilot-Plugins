@@ -36,7 +36,7 @@
     "name": "WsEmbyCover",
     "description": "Generate dynamic or static library covers for Emby/Jellyfin",
     "labels": "Emby,Cover,Library",
-    "version": "1.3",
+    "version": "1.4",
     "icon": "emby.png",
     "author": "wushuangshangjiang",
     "level": 1,
@@ -44,7 +44,8 @@
       "v1.0": "Initial release",
       "v1.1": "Clean history and fix title template/log chain",
       "v1.2": "Fix garbled logs, style2 six-poster layout, and profile parameter application",
-      "v1.3": "Fix active server profile update to preserve advanced parameters in More Settings"
+      "v1.3": "Fix active server profile update to preserve advanced parameters in More Settings",
+      "v1.4": "When Save + Update Now is enabled, persist latest settings first, then run update with new settings"
     }
   }
 }
