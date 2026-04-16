@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.2"
+    plugin_version = "1.3"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -887,16 +887,25 @@ class WsEmbyCover(_PluginBase):
             return False
         dirty = False
         if edit_target and edit_target in self._server_profiles and host and api_key:
-            old_edit_profile = self._server_profiles.get(edit_target)
+            old_edit_profile = dict(self._server_profiles.get(edit_target) or {})
             edit_style = style if selected_name in {edit_target, "__new__"} else str(old_edit_profile.get("style", "static_1"))
-            new_edit_profile = self.__profile_from_runtime(
-                name=edit_target,
-                host=host,
-                api_key=api_key,
-                style=edit_style,
-            )
-            if old_edit_profile != new_edit_profile:
-                self._server_profiles[edit_target] = new_edit_profile
+            new_edit_profile = dict(old_edit_profile)
+            new_edit_profile.update({
+                "name": edit_target,
+                "host": host if host.endswith("/") else f"{host}/",
+                "api_key": api_key,
+                "style": "static_2" if str(edit_style) == "static_2" else "static_1",
+            })
+            normalized_edit_profile = self.__normalize_server_profile(edit_target, new_edit_profile)
+            if not normalized_edit_profile:
+                normalized_edit_profile = self.__profile_from_runtime(
+                    name=edit_target,
+                    host=host,
+                    api_key=api_key,
+                    style=edit_style,
+                )
+            if old_edit_profile != normalized_edit_profile:
+                self._server_profiles[edit_target] = normalized_edit_profile
                 dirty = True
         if selected_name != "__new__":
             if self._active_server_name != selected_name:
