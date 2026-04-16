@@ -77,7 +77,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.1"
+    plugin_version = "1.2"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -342,9 +342,8 @@ class WsEmbyCover(_PluginBase):
             loaded_profiles_from_form = bool(form_profiles)
         else:
             loaded_profiles_from_form = False
-
-            if self._resolution not in ["1080p", "720p", "480p"]:
-                self._resolution = "480p"
+        if self._resolution not in ["1080p", "720p", "480p"]:
+            self._resolution = "480p"
 
         self._bg_color_mode = (config or {}).get("bg_color_mode", "auto")
         self._custom_bg_color = (config or {}).get("custom_bg_color", "")
@@ -363,6 +362,8 @@ class WsEmbyCover(_PluginBase):
         if not self._server_profiles:
             self._server_profiles = self.__build_server_profiles_from_legacy(config or {})
             profile_dirty = bool(self._server_profiles)
+        if config and self.__merge_form_values_into_active_profile(config):
+            profile_dirty = True
         if (not loaded_profiles_from_form) and self.__upsert_active_server_profile(config or {}):
             profile_dirty = True
         if self.__sync_profile_styles_with_selected_style():
@@ -725,6 +726,40 @@ class WsEmbyCover(_PluginBase):
                 profiles[normalized["name"]] = normalized
         return profiles
 
+    def __merge_form_values_into_active_profile(self, config: dict) -> bool:
+        cfg = config or {}
+        active_name = str(cfg.get("active_server_name", self._active_server_name or "")).strip()
+        if not active_name or active_name == "__new__":
+            return False
+        if active_name not in self._server_profiles:
+            return False
+
+        old_profile = dict(self._server_profiles.get(active_name) or {})
+        profile = dict(old_profile)
+
+        for key in [
+            "title_config", "sort_by", "covers_input", "covers_output", "use_primary", "multi_1_blur",
+            "save_recent_covers", "covers_history_limit_per_library", "covers_page_history_limit",
+            "resolution", "custom_width", "custom_height", "bg_color_mode", "custom_bg_color",
+            "zh_font_preset", "en_font_preset", "zh_font_custom", "en_font_custom",
+            "zh_font_size", "en_font_size", "blur_size", "color_ratio", "title_scale",
+            "zh_font_offset", "title_spacing", "en_line_spacing",
+        ]:
+            if key in cfg:
+                profile[key] = cfg.get(key)
+
+        style_value = str(cfg.get("cover_style_base", cfg.get("cover_style", profile.get("style", "static_1"))) or "static_1").strip()
+        profile["style"] = "static_2" if style_value == "static_2" else "static_1"
+
+        normalized = self.__normalize_server_profile(active_name, profile)
+        if not normalized:
+            return False
+        if normalized == old_profile:
+            return False
+
+        self._server_profiles[active_name] = normalized
+        return True
+
     def __build_server_profiles_from_legacy(self, config: dict) -> Dict[str, Dict[str, Any]]:
         cfg = config or {}
         legacy_servers = self.__parse_manual_servers_from_config(cfg)
@@ -934,6 +969,55 @@ class WsEmbyCover(_PluginBase):
         self._cover_style_base = target_style
         return dirty
 
+    def __sync_runtime_values_to_active_profile(self) -> bool:
+        active_name = str(self._active_server_name or "").strip()
+        if not active_name or active_name == "__new__":
+            return False
+        if active_name not in self._server_profiles:
+            return False
+
+        profile = dict(self._server_profiles.get(active_name) or {})
+        old_profile = dict(profile)
+        profile.update({
+            "name": active_name,
+            "host": profile.get("host", ""),
+            "api_key": profile.get("api_key", ""),
+            "style": "static_2" if str(self._cover_style_base or "static_1") == "static_2" else "static_1",
+            "title_config": self._title_config,
+            "sort_by": self._sort_by,
+            "covers_input": self._covers_input,
+            "covers_output": self._covers_output,
+            "use_primary": self._use_primary,
+            "multi_1_blur": self._multi_1_blur,
+            "save_recent_covers": self._save_recent_covers,
+            "covers_history_limit_per_library": self._covers_history_limit_per_library,
+            "covers_page_history_limit": self._covers_page_history_limit,
+            "resolution": self._resolution,
+            "custom_width": self._custom_width,
+            "custom_height": self._custom_height,
+            "bg_color_mode": self._bg_color_mode,
+            "custom_bg_color": self._custom_bg_color,
+            "zh_font_preset": self._zh_font_preset,
+            "en_font_preset": self._en_font_preset,
+            "zh_font_custom": self._zh_font_custom,
+            "en_font_custom": self._en_font_custom,
+            "zh_font_size": self._zh_font_size,
+            "en_font_size": self._en_font_size,
+            "blur_size": self._blur_size,
+            "color_ratio": self._color_ratio,
+            "title_scale": self._title_scale,
+            "zh_font_offset": self._zh_font_offset,
+            "title_spacing": self._title_spacing,
+            "en_line_spacing": self._en_line_spacing,
+        })
+        normalized = self.__normalize_server_profile(active_name, profile)
+        if not normalized:
+            return False
+        if normalized == old_profile:
+            return False
+        self._server_profiles[active_name] = normalized
+        return True
+
     def __compose_cover_style(self, base_style: str, variant: str) -> str:
         mapping = {
             "static_1": "static_1",
@@ -968,6 +1052,7 @@ class WsEmbyCover(_PluginBase):
         """
         ??????
         """
+        self.__sync_runtime_values_to_active_profile()
         self._cover_style = self.__compose_cover_style(self._cover_style_base, "static")
         self.__sync_profile_styles_with_selected_style()
         self.update_config({
@@ -1289,41 +1374,41 @@ class WsEmbyCover(_PluginBase):
 
     def api_clean_images(self, apikey: str = ""):
         try:
-            logger.warning(f"[WsEmbyCover] ?????????? apikey={'yes' if apikey else 'no'}")
+            logger.warning(f"[WsEmbyCover] clean_images requested apikey={'yes' if apikey else 'no'}")
             self.__clean_generated_images()
             self._clean_images = False
             self.__update_config()
-            logger.warning("[WsEmbyCover] ????????")
-            return {"code": 0, "msg": "????????"}
+            logger.warning("[WsEmbyCover] clean_images completed")
+            return {"code": 0, "msg": "clean_images completed"}
         except Exception as e:
-            logger.error(f"[WsEmbyCover] ????????: {e}", exc_info=True)
-            return {"code": 1, "msg": f"????????: {e}"}
+            logger.error(f"[WsEmbyCover] clean_images failed: {e}", exc_info=True)
+            return {"code": 1, "msg": f"clean_images failed: {e}"}
 
     def api_clean_fonts(self, apikey: str = ""):
         try:
-            logger.warning(f"[WsEmbyCover] ?????????? apikey={'yes' if apikey else 'no'}")
+            logger.warning(f"[WsEmbyCover] clean_fonts requested apikey={'yes' if apikey else 'no'}")
             self.__clean_downloaded_fonts()
             self._clean_fonts = False
             self.__update_config()
-            logger.warning("[WsEmbyCover] ????????")
-            return {"code": 0, "msg": "????????"}
+            logger.warning("[WsEmbyCover] clean_fonts completed")
+            return {"code": 0, "msg": "clean_fonts completed"}
         except Exception as e:
-            logger.error(f"[WsEmbyCover] ????????: {e}", exc_info=True)
-            return {"code": 1, "msg": f"????????: {e}"}
+            logger.error(f"[WsEmbyCover] clean_fonts failed: {e}", exc_info=True)
+            return {"code": 1, "msg": f"clean_fonts failed: {e}"}
 
     def api_clean_cache(self, apikey: str = ""):
         try:
-            logger.warning(f"[WsEmbyCover] ???????????+??? apikey={'yes' if apikey else 'no'}")
+            logger.warning(f"[WsEmbyCover] clean_cache requested (images+fonts) apikey={'yes' if apikey else 'no'}")
             self.__clean_generated_images()
             self.__clean_downloaded_fonts()
             self._clean_images = False
             self._clean_fonts = False
             self.__update_config()
-            logger.warning("[WsEmbyCover] ?????????+???")
-            return {"code": 0, "msg": "?????????+???"}
+            logger.warning("[WsEmbyCover] clean_cache completed (images+fonts)")
+            return {"code": 0, "msg": "clean_cache completed (images+fonts)"}
         except Exception as e:
-            logger.error(f"[WsEmbyCover] ??????: {e}", exc_info=True)
-            return {"code": 1, "msg": f"??????: {e}"}
+            logger.error(f"[WsEmbyCover] clean_cache failed: {e}", exc_info=True)
+            return {"code": 1, "msg": f"clean_cache failed: {e}"}
 
     def api_delete_saved_cover(self, file: str = ""):
         try:
@@ -3167,9 +3252,9 @@ class WsEmbyCover(_PluginBase):
         title_spacing = float(self._title_spacing or 40) * title_scale
         en_line_spacing = float(self._en_line_spacing or 40) * title_scale
         font_offset = (float(zh_font_offset), float(title_spacing), float(en_line_spacing))
+        logger.info(f"当前分辨率配置: {self._resolution_config}")
 
         # 记录分辨率配置信?
-        logger.info(f"褰撳墠鍒嗚鲸鐜囬厤缃? {self._resolution_config}")
 
         # 准备背景颜色配置
         bg_color_config = {
@@ -3205,7 +3290,7 @@ class WsEmbyCover(_PluginBase):
             safe_library_name = self.__sanitize_filename(library_name)
             cache_library_dir = Path(self._covers_path) / safe_library_name
             custom_library_dir = Path(self._covers_input) / safe_library_name if self._covers_input else None
-            numbered_posters = [cache_library_dir / f"{index}.jpg" for index in range(1, 6)]
+            numbered_posters = [cache_library_dir / f"{index}.jpg" for index in range(1, 7)]
             if all(path.exists() for path in numbered_posters):
                 library_dir = cache_library_dir
             elif custom_library_dir and custom_library_dir.exists():
@@ -4774,6 +4859,35 @@ class WsEmbyCover(_PluginBase):
 
         except Exception as e:
             logger.error(f"鍋ュ悍妫€鏌ュけ璐? {e}")
+            return False
+
+    # 覆盖旧的乱码实现，统一输出可读日志
+    def health_check(self) -> bool:
+        """Basic health check before generating covers."""
+        try:
+            if not hasattr(self, "_resolution_config") or self._resolution_config is None:
+                logger.warning("分辨率配置缺失，正在重新初始化")
+                if self._resolution == "custom":
+                    self._resolution_config = self.__new_resolution_config((self._custom_width, self._custom_height))
+                else:
+                    self._resolution_config = self.__new_resolution_config(self._resolution)
+
+            if not self._zh_font_path or not self._en_font_path:
+                logger.warning("字体文件缺失，尝试重新获取")
+                self.__get_fonts()
+
+            if self._zh_font_path and not self.__validate_font_file(Path(self._zh_font_path)):
+                logger.warning("主标题字体无效，请检查字体文件")
+                return False
+
+            if self._en_font_path and not self.__validate_font_file(Path(self._en_font_path)):
+                logger.warning("副标题字体无效，请检查字体文件")
+                return False
+
+            logger.info("插件健康检查通过")
+            return True
+        except Exception as e:
+            logger.error(f"健康检查失败: {e}")
             return False
 
     def download_font_safely_with_timeout(self, font_url: str, font_path: Path, timeout: int = 60) -> bool:

@@ -96,7 +96,7 @@ def create_style_static_2(
 ):
     try:
         if not image_path:
-            logger.warning("static_5 缺少背景图路径")
+            logger.warning("static_2 缺少背景图路径")
             return False
 
         zh_font_path, en_font_path = font_path
@@ -214,21 +214,35 @@ def create_style_static_2(
             if candidate.exists():
                 poster_paths.append(candidate)
         if not poster_paths:
-            logger.warning("static_5 未找到可用海报图")
+            logger.warning("static_2 未找到可用海报图")
             return False
 
         poster_count = min(6, len(poster_paths))
-        available_width = int(canvas_size[0] * 0.90)
-        poster_width = int(available_width / max(1.0, poster_count + 0.42))
+        available_width = int(canvas_size[0] * 0.92)
+        poster_width = int(available_width / max(1.0, poster_count + 0.95))
         poster_height = int(poster_width * 1.43)
         cards = [
             _build_poster_card(path, (poster_width, poster_height), frame_color)
             for path in poster_paths[:poster_count]
         ]
 
-        total_cards_width = sum(card.size[0] for card in cards)
-        gap = max(10, int((canvas_size[0] - total_cards_width) / (poster_count + 1)))
-        start_x = gap
+        gap = max(8, int(canvas_size[0] * 0.012))
+        total_cards_width = sum(card.size[0] for card in cards) + gap * max(0, poster_count - 1)
+        max_group_width = int(canvas_size[0] * 0.94)
+
+        if total_cards_width > max_group_width and total_cards_width > 0:
+            scale = max_group_width / float(total_cards_width)
+            cards = [
+                card.resize(
+                    (max(1, int(card.size[0] * scale)), max(1, int(card.size[1] * scale))),
+                    Image.Resampling.LANCZOS,
+                )
+                for card in cards
+            ]
+            gap = max(6, int(gap * scale))
+            total_cards_width = sum(card.size[0] for card in cards) + gap * max(0, poster_count - 1)
+
+        start_x = max(0, (canvas_size[0] - total_cards_width) // 2)
         start_y = canvas_size[1] - max(card.size[1] for card in cards) - int(canvas_size[1] * 0.03)
 
         for idx, card in enumerate(cards):

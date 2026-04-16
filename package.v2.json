@@ -1,48 +1,49 @@
 {
-    "MediaHook": {
-        "name": "MediaHook",
-        "description": "转移完成时,发送webhook到mediaserver",
-        "version": "2.0",
-        "icon": "webhook.png",
-        "author": "wushuangshangjiang",
-        "level": 1
-    },
-    "Rss": {
-        "name": "RSS",
-        "description": "定时刷新RSS报文,并对前N条进行处理",
-        "labels": "订阅",
-        "version": "2.1",
-        "icon": "rss.png",
-        "author": "wushuangshangjiang",
-        "level": 2,
-        "history": {
-            "v2.0": "自定义处理RSS的条数",
-            "v2.1": "跟随上游代码修复错误"
-        }
-    },
-    "ISO": {
-        "name": "ISO",
-        "description": "ISO原盘匹配",
-        "labels": "原盘",
-        "version": "2.8",
-        "icon": "directory.png",
-        "author": "wushuangshangjiang",
-        "level": 2,
-        "history": {
-            "v2.0": "在媒体识别阶段将ISO文件分类为原盘电影"
-        }
-    },
-    "WsEmbyCover": {
-        "name": "无双Emby封面",
-        "description": "生成媒体库动态/静态封面，支持 Emby/Jellyfin",
-        "labels": "Emby,动态封面,媒体库",
-        "version": "1.1",
-        "icon": "emby.png",
-        "author": "wushuangshangjiang",
-        "level": 1,
-        "history": {
-            "v1.0": "正式发布无双Emby封面：完成插件独立命名与仓库信息调整，新增基于 Emby fanart 横幅背景与五张竖版海报的风格5，补齐预览图和配置界面，优化文字色彩、海报排版与悬浮阴影效果，并修复模块加载、重复重载、预览读取、背景与海报来源及生成流程中的相关问题。",
-            "v1.1": "清理历史版本说明，仅保留 v1.0；修复封面标题模板乱码并优化清理缓存日志链路。"
-        }
+  "MediaHook": {
+    "name": "MediaHook",
+    "description": "Send webhook to media server after transfer",
+    "version": "2.0",
+    "icon": "webhook.png",
+    "author": "wushuangshangjiang",
+    "level": 1
+  },
+  "Rss": {
+    "name": "RSS",
+    "description": "Refresh RSS and process top N items",
+    "labels": "subscribe",
+    "version": "2.1",
+    "icon": "rss.png",
+    "author": "wushuangshangjiang",
+    "level": 2,
+    "history": {
+      "v2.0": "Custom RSS item count",
+      "v2.1": "Fix with upstream changes"
     }
+  },
+  "ISO": {
+    "name": "ISO",
+    "description": "ISO disc matching",
+    "labels": "disc",
+    "version": "2.8",
+    "icon": "directory.png",
+    "author": "wushuangshangjiang",
+    "level": 2,
+    "history": {
+      "v2.0": "Classify ISO files as disc movies during recognition"
+    }
+  },
+  "WsEmbyCover": {
+    "name": "WsEmbyCover",
+    "description": "Generate dynamic or static library covers for Emby/Jellyfin",
+    "labels": "Emby,Cover,Library",
+    "version": "1.2",
+    "icon": "emby.png",
+    "author": "wushuangshangjiang",
+    "level": 1,
+    "history": {
+      "v1.0": "Initial release",
+      "v1.1": "Clean history and fix title template/log chain",
+      "v1.2": "Fix garbled logs, style2 six-poster layout, and profile parameter application"
+    }
+  }
 }
