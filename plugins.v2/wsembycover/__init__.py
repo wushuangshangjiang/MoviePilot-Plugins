@@ -2361,7 +2361,7 @@ class WsEmbyCover(_PluginBase):
                                                         'component': 'VSwitch',
                                                         'props': {
                                                             'model': 'update_now',
-                                                            'label': '立即更新封面',
+                                                            'label': '立即更新',
                                                         }
                                                     }
                                                 ]
