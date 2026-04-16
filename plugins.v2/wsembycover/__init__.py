@@ -415,6 +415,10 @@ class WsEmbyCover(_PluginBase):
             self.__update_config()
 
         if self._update_now:
+            # 保存时若勾选“立即更新”，先落最新配置，再触发本次运行
+            self._update_now = False
+            self.__sync_runtime_values_to_active_profile()
+            self.__update_config()
             self._scheduler = BackgroundScheduler(timezone=settings.TZ)
             self._scheduler.add_job(func=self.__update_all_libraries, trigger='date',
                                     run_date=datetime.datetime.now(
@@ -5043,4 +5047,3 @@ class WsEmbyCover(_PluginBase):
                 self._scheduler = None
         except Exception as e:
             logger.error(f"停止服务失败: {str(e)}")
-
