@@ -60,6 +60,9 @@ _MOJIBAKE_PHRASE_MAP = {
     "\u5f02\u59cb\u68c0\u67e5\u5b57?...": "开始检查字体...",
     "\u6d63\u6ec6\u20ac\u546c\u5bcc\u6924?": "插件描述",
     "\u93bb\u638d\u6b22\u935a\u5d87\u041e": "插件名称",
+    "寮€濮嬫洿鏂板獟浣撳簱灏侀潰 ...": "开始更新媒体库封面 ...",
+    "褰撳墠椋庢牸": "当前风格",
+    "宸叉寜鍘嗗彶鏁伴噺闄愬埗鍒犻櫎鏃у皝闈?": "已按历史数量限制删除旧封面:",
 }
 
 
@@ -177,7 +180,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.5"
+    plugin_version = "1.6"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -3004,7 +3007,7 @@ class WsEmbyCover(_PluginBase):
                 return
             self.post_message(
                 channel=event.event_data.get("channel"),
-                title="寮€濮嬫洿鏂板獟浣撳簱灏侀潰 ...",
+                title="开始更新媒体库封面 ...",
                 userid=event.event_data.get("user"),
             )
         tips = self.__update_all_libraries()
@@ -3140,7 +3143,7 @@ class WsEmbyCover(_PluginBase):
         except Exception as e:
             logger.error(f"初始化过程中出错: {e}")
             logger.warning("将尝试继续执行，但可能影响封面生成质量")
-        logger.info("寮€濮嬫洿鏂板獟浣撳簱灏侀潰 ...")
+        logger.info("开始更新媒体库封面 ...")
         self.__debug_log(f"调试模式弢启：selected_libraries={self._selected_libraries}")
         # 弢始前确保停止信号已清?
         self._event.clear()
@@ -3159,7 +3162,7 @@ class WsEmbyCover(_PluginBase):
                 "static_1": "闈欐€?1",
                 "static_2": "闈欐€?2",
             }.get(self._cover_style, "闈欐€?1")
-            logger.info(f"褰撳墠椋庢牸 {cover_style}")
+            logger.info(f"当前风格 {cover_style}")
             # 鑾峰彇濯掍綋搴撳垪琛?
             libraries = self.__get_server_libraries(service)
             if not libraries:
@@ -4430,7 +4433,7 @@ class WsEmbyCover(_PluginBase):
             candidate_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
             for old_file in candidate_files[limit:]:
                 old_file.unlink(missing_ok=True)
-                logger.info(f"宸叉寜鍘嗗彶鏁伴噺闄愬埗鍒犻櫎鏃у皝闈? {old_file}")
+                logger.info(f"已按历史数量限制删除旧封面: {old_file}")
         except Exception as e:
             logger.warning(f"娓呯悊鍘嗗彶灏侀潰澶辫触: {e}")
         
