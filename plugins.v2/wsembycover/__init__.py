@@ -38,6 +38,106 @@ from app.utils.url import UrlUtils
 
 sys.dont_write_bytecode = True
 
+_RAW_LOGGER = logger
+_MOJIBAKE_TOKEN_RE = re.compile(r"[\u2e80-\u9fff]{2,}")
+_MOJIBAKE_HINT_CHARS = set(
+    "\u93bb\u935a\u93b5\u93c2\u93c8\u9352\u951b\u704f\u4f80\u6f70\u7d8b\u6d93\u6fb6\u6fef\u947e\u9286\u701b\u7490\u6434\u56e6\u6b91\u612c"
+)
+_MOJIBAKE_COMMON_WORDS = (
+    "插件", "封面", "媒体库", "更新", "当前", "服务器", "字体", "配置", "目录",
+    "图片", "缓存", "清理", "分辨率", "标题", "背景", "开始", "结束", "失败",
+    "成功", "保存", "获取", "默认", "调试", "模式", "立即", "运行", "路径",
+)
+_MOJIBAKE_COMMON_CHARS = set(
+    "插件封面媒体库更新当前服务器字体配置目录图片缓存清理分辨率标题背景开始结束失败成功保存获取默认调试模式立即运行路径"
+)
+_MOJIBAKE_PHRASE_MAP = {
+    "\u8930\u64b3\u58a0\u93c8\u5d85\u59df\u9363?": "当前服务器：",
+    "\u95c8\u6b10\u20ac?1": "静态 1",
+    "\u95c8\u6b10\u20ac?2": "静态 2",
+    "\u701b\u693e\u7d8b\u93c8\u20ac\u7f01\u5823\u77fe\u5bf0?": "字体最终路径:",
+    "\u5206\u8fa8\u7387\u914d\u7f6e?": "分辨率配置:",
+    "\u5f02\u59cb\u68c0\u67e5\u5b57?...": "开始检查字体...",
+    "\u6d63\u6ec6\u20ac\u546c\u5bcc\u6924?": "插件描述",
+    "\u93bb\u638d\u6b22\u935a\u5d87\u041e": "插件名称",
+}
+
+
+def _repair_mojibake_text(text: str) -> str:
+    if not isinstance(text, str) or not text:
+        return text
+    for bad, good in _MOJIBAKE_PHRASE_MAP.items():
+        text = text.replace(bad, good)
+
+    def _score_token(token: str) -> int:
+        cjk_count = sum(1 for ch in token if "\u4e00" <= ch <= "\u9fff")
+        high_block_count = sum(1 for ch in token if 0x9300 <= ord(ch) <= 0x9FFF)
+        hint_count = sum(1 for ch in token if ch in _MOJIBAKE_HINT_CHARS)
+        common_char_count = sum(1 for ch in token if ch in _MOJIBAKE_COMMON_CHARS)
+        common_word_count = sum(1 for w in _MOJIBAKE_COMMON_WORDS if w in token)
+        replacement_count = token.count("�") + token.count("?")
+        return (
+            common_word_count * 20
+            + common_char_count * 4
+            + cjk_count
+            - high_block_count * 6
+            - hint_count * 5
+            - replacement_count * 10
+        )
+
+    def _repair_token(token: str) -> str:
+        if not any((0x9300 <= ord(ch) <= 0x9FFF) or ch in _MOJIBAKE_HINT_CHARS for ch in token):
+            return token
+        candidates = {token}
+        for enc in ("gbk", "gb18030"):
+            try:
+                repaired = token.encode(enc, errors="strict").decode("utf-8", errors="strict")
+                if repaired:
+                    candidates.add(repaired)
+            except Exception:
+                continue
+        return max(candidates, key=_score_token)
+
+    fixed = _MOJIBAKE_TOKEN_RE.sub(lambda m: _repair_token(m.group(0)), text)
+    for bad, good in _MOJIBAKE_PHRASE_MAP.items():
+        fixed = fixed.replace(bad, good)
+    return fixed
+
+
+class _SafeWsLogger:
+    def __init__(self, raw):
+        self._raw = raw
+
+    def _fix(self, msg):
+        return _repair_mojibake_text(msg) if isinstance(msg, str) else msg
+
+    def _fix_args(self, args):
+        return tuple(_repair_mojibake_text(v) if isinstance(v, str) else v for v in args)
+
+    def debug(self, msg, *args, **kwargs):
+        return self._raw.debug(self._fix(msg), *self._fix_args(args), **kwargs)
+
+    def info(self, msg, *args, **kwargs):
+        return self._raw.info(self._fix(msg), *self._fix_args(args), **kwargs)
+
+    def warning(self, msg, *args, **kwargs):
+        return self._raw.warning(self._fix(msg), *self._fix_args(args), **kwargs)
+
+    def error(self, msg, *args, **kwargs):
+        return self._raw.error(self._fix(msg), *self._fix_args(args), **kwargs)
+
+    def critical(self, msg, *args, **kwargs):
+        return self._raw.critical(self._fix(msg), *self._fix_args(args), **kwargs)
+
+    def exception(self, msg, *args, **kwargs):
+        return self._raw.exception(self._fix(msg), *self._fix_args(args), **kwargs)
+
+    def __getattr__(self, item):
+        return getattr(self._raw, item)
+
+
+logger = _SafeWsLogger(_RAW_LOGGER)
+
 
 class _ManualServerInstance:
     def __init__(self, host: str, api_key: str):
@@ -77,7 +177,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.4"
+    plugin_version = "1.5"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -167,46 +267,7 @@ class WsEmbyCover(_PluginBase):
 
     @staticmethod
     def __repair_mojibake_text(text: str) -> str:
-        if not isinstance(text, str) or not text:
-            return text
-
-        if any('\ue000' <= ch <= '\uf8ff' for ch in text):
-            suspicious = True
-        else:
-            suspicious_tokens = ("鍚", "鏃", "璁", "缂", "銆", "瀛", "鎻", "绔", "閰")
-            suspicious = any(token in text for token in suspicious_tokens)
-        if not suspicious:
-            return text
-
-        suspicious_chars = set("鍚鏃璁缂銆瀛鎻绔閰鏉鏄鎴鍥瀵娴涓妯")
-
-        def score_text(s: str) -> int:
-            cjk_count = sum(1 for ch in s if '\u4e00' <= ch <= '\u9fff')
-            private_count = sum(1 for ch in s if '\ue000' <= ch <= '\uf8ff')
-            suspicious_count = sum(1 for ch in s if ch in suspicious_chars)
-            replacement_count = s.count('�')
-            return cjk_count * 3 - private_count * 8 - suspicious_count * 2 - replacement_count * 6
-
-        candidates = {text}
-        for enc in ("gbk", "gb18030"):
-            try:
-                c1 = text.encode(enc, errors="ignore").decode("utf-8", errors="ignore")
-                if c1:
-                    candidates.add(c1)
-            except Exception:
-                pass
-            try:
-                c2 = text.encode("utf-8", errors="ignore").decode(enc, errors="ignore")
-                if c2:
-                    candidates.add(c2)
-            except Exception:
-                pass
-
-        best = max(candidates, key=score_text)
-        # 仍然可疑时给出安全兜底，避免页面继续出现乱码
-        if any('\ue000' <= ch <= '\uf8ff' for ch in best) or sum(1 for ch in best if ch in suspicious_chars) >= 2:
-            return "配置项"
-        return best
+        return _repair_mojibake_text(text)
 
     def __sanitize_text_payload(self, payload):
         if isinstance(payload, dict):
@@ -415,24 +476,13 @@ class WsEmbyCover(_PluginBase):
             self.__update_config()
 
         if self._update_now:
-            # 保存时若勾选“立即更新”，先落最新配置，再触发本次运行
+            # Persist latest settings first, then run once immediately.
             self._update_now = False
             self.__sync_runtime_values_to_active_profile()
             self.__update_config()
-            self._scheduler = BackgroundScheduler(timezone=settings.TZ)
-            self._scheduler.add_job(func=self.__update_all_libraries, trigger='date',
-                                    run_date=datetime.datetime.now(
-                                        tz=pytz.timezone(settings.TZ)) + datetime.timedelta(seconds=3)
-                                    )
-            logger.info("媒体库封面更新服务启动，立即运行一次")
-            # 鍏抽棴涓€娆℃€у紑鍏?
-            self._update_now = False
-            # 淇濆瓨閰嶇疆
-            self.__update_config()
-            # 启动服务
-            if self._scheduler.get_jobs():
-                self._scheduler.print_jobs()
-                self._scheduler.start()
+            logger.info("\u5a92\u4f53\u5e93\u5c01\u9762\u66f4\u65b0\u670d\u52a1\u542f\u52a8\uff0c\u7acb\u5373\u8fd0\u884c\u4e00\u6b21")
+            threading.Thread(target=self.__update_all_libraries, daemon=True).start()
+
 
     def __clamp_value(self, value, minimum, maximum, default_value, name, cast_type):
         try:
@@ -1063,7 +1113,7 @@ class WsEmbyCover(_PluginBase):
 
     def __update_config(self):
         """
-        ??????
+        更新并持久化插件配置。
         """
         self.__sync_runtime_values_to_active_profile()
         self._cover_style = self.__compose_cover_style(self._cover_style_base, "static")
@@ -2400,7 +2450,7 @@ class WsEmbyCover(_PluginBase):
         ]
 
 
-        return [
+        form_schema = [
             {
                 "component": "VCard",
                 "props": {"variant": "outlined", "class": "mb-3"},
@@ -2734,7 +2784,9 @@ class WsEmbyCover(_PluginBase):
                     },
                 ],
             }
-        ], {
+        ]
+
+        form_data = {
             "enabled": False,
             "update_now": False,
             "transfer_monitor": False,
@@ -2802,6 +2854,8 @@ class WsEmbyCover(_PluginBase):
             "style_naming_v2": True,
             **profile_defaults,
         }
+
+        return self.__sanitize_text_payload(form_schema), self.__sanitize_text_payload(form_data)
 
     def get_page(self) -> List[dict]:
         pass
