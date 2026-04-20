@@ -2926,7 +2926,51 @@ class WsEmbyCover(_PluginBase):
         return self.__sanitize_text_payload(form_schema), self.__sanitize_text_payload(form_data)
 
     def get_page(self) -> List[dict]:
-        pass
+        return [
+            {
+                "component": "VCard",
+                "props": {
+                    "variant": "tonal",
+                    "class": "mb-3"
+                },
+                "content": [
+                    {
+                        "component": "VCardTitle",
+                        "text": "缓存管理"
+                    },
+                    {
+                        "component": "VCardText",
+                        "content": [
+                            {
+                                "component": "VAlert",
+                                "props": {
+                                    "type": "info",
+                                    "variant": "tonal",
+                                    "text": "清理缓存将删除 WsEmbyCover 生成与输出的图片缓存（不删除字体缓存）。"
+                                }
+                            },
+                            {
+                                "component": "VBtn",
+                                "props": {
+                                    "color": "#4FC3F7",
+                                    "variant": "flat",
+                                    "prepend-icon": "mdi-broom",
+                                    "class": "text-none text-white mt-3",
+                                    "type": "button"
+                                },
+                                "text": "立即清理图片缓存",
+                                "events": {
+                                    "click": {
+                                        "api": "plugin/WsEmbyCover/clean_cache",
+                                        "method": "post"
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
 
     @staticmethod
     def __style_preview_src(index: int) -> str:
