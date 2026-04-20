@@ -36,7 +36,7 @@
     "name": "WsEmbyCover",
     "description": "Generate dynamic or static library covers for Emby/Jellyfin",
     "labels": "Emby,Cover,Library",
-      "version": "1.8",
+      "version": "1.9",
     "icon": "emby.png",
     "author": "wushuangshangjiang",
     "level": 1,
@@ -47,7 +47,8 @@
       "v1.3": "Fix active server profile update to preserve advanced parameters in More Settings",
       "v1.4": "When Save + Update Now is enabled, persist latest settings first, then run update with new settings",
       "v1.7": "Improve sort-rule consistency for Update Now, add clear cache/title diagnostics logs, and optimize title matching robustness",
-      "v1.8": "Fix clean-cache button invocation by switching UI request to POST to ensure backend API is hit"
+      "v1.8": "Fix clean-cache button invocation by switching UI request to POST to ensure backend API is hit",
+      "v1.9": "Add a page-level clean-cache action button to reliably trigger backend cache cleanup API"
     }
   }
 }
