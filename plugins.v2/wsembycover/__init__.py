@@ -1317,10 +1317,10 @@ class WsEmbyCover(_PluginBase):
         errors = 0
         cleaned_dirs: List[str] = []
         cache_dirs: List[Path] = []
+        # Only clear generated image caches (production + output).
+        # Do not touch user custom covers_input sources.
         if self._covers_path:
             cache_dirs.append(Path(self._covers_path))
-        if self._covers_input:
-            cache_dirs.append(Path(self._covers_input))
         if self._covers_output:
             cache_dirs.append(Path(self._covers_output))
         data_path = self.get_data_path()
@@ -1522,23 +1522,20 @@ class WsEmbyCover(_PluginBase):
 
     def api_clean_cache(self, apikey: str = ""):
         try:
-            logger.warning(f"[WsEmbyCover] clean_cache requested (images+fonts) apikey={'yes' if apikey else 'no'}")
+            logger.warning(f"[WsEmbyCover] clean_cache requested (images only) apikey={'yes' if apikey else 'no'}")
             image_result = self.__clean_generated_images()
-            font_result = self.__clean_downloaded_fonts()
             self._clean_images = False
-            self._clean_fonts = False
             self.__update_config()
 
-            total_removed = int(image_result.get("removed", 0)) + int(font_result.get("removed", 0))
-            total_errors = int(image_result.get("errors", 0)) + int(font_result.get("errors", 0))
+            total_removed = int(image_result.get("removed", 0))
+            total_errors = int(image_result.get("errors", 0))
             logger.warning(f"[WsEmbyCover] clean_cache completed removed={total_removed} errors={total_errors}")
 
             return {
                 "code": 0,
-                "msg": f"clean_cache completed, removed={total_removed}, errors={total_errors}",
+                "msg": f"clean_cache completed (images only), removed={total_removed}, errors={total_errors}",
                 "data": {
                     "images": image_result,
-                    "fonts": font_result,
                     "removed": total_removed,
                     "errors": total_errors,
                 },
@@ -2644,10 +2641,7 @@ class WsEmbyCover(_PluginBase):
                                                         'events': {
                                                             'click': {
                                                                 'api': 'plugin/WsEmbyCover/clean_cache',
-                                                                'method': 'get',
-                                                                'params': {
-                                                                    'apikey': settings.API_TOKEN
-                                                                }
+                                                                'method': 'post'
                                                             }
                                                         }
                                                     }
