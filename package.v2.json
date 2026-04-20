@@ -36,7 +36,7 @@
     "name": "WsEmbyCover",
     "description": "Generate dynamic or static library covers for Emby/Jellyfin",
     "labels": "Emby,Cover,Library",
-      "version": "1.14",
+      "version": "1.15",
     "icon": "emby.png",
     "author": "wushuangshangjiang",
     "level": 1,
@@ -53,7 +53,8 @@
       "v1.11": "Remove WsEmbyCover custom get_page implementation so plugin opens directly in config flow",
       "v1.12": "Fix regression by restoring get_page override to keep plugin config form rendering normally",
       "v1.13": "Remove extra details-page content by keeping get_page empty return across plugin variants",
-      "v1.14": "Hotfix: keep explicit get_page implementation to satisfy abstract base contract and avoid plugin load failure"
+      "v1.14": "Hotfix: keep explicit get_page implementation to satisfy abstract base contract and avoid plugin load failure",
+      "v1.15": "Replace empty detail placeholder with action-entry page for quick cover update operations"
     }
   }
 }

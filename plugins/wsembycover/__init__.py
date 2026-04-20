@@ -180,7 +180,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.14"
+    plugin_version = "1.15"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -2861,8 +2861,74 @@ class WsEmbyCover(_PluginBase):
         return self.__sanitize_text_payload(form_schema), self.__sanitize_text_payload(form_data)
 
     def get_page(self) -> List[dict]:
-        # Keep explicit implementation to satisfy abstract base contract.
-        return []
+        # Keep explicit implementation to satisfy abstract base contract and
+        # provide actionable operations instead of empty placeholder page.
+        return [
+            {
+                "component": "VCard",
+                "props": {"variant": "tonal", "class": "mb-3"},
+                "content": [
+                    {
+                        "component": "VCardTitle",
+                        "text": "快捷操作",
+                    },
+                    {
+                        "component": "VCardText",
+                        "text": "可在此直接触发媒体库封面更新，无需进入配置页。",
+                    },
+                    {
+                        "component": "div",
+                        "props": {"class": "d-flex flex-wrap ga-2 px-4 pb-4"},
+                        "content": [
+                            {
+                                "component": "VBtn",
+                                "props": {"color": "primary", "variant": "flat"},
+                                "text": "立即更新（当前风格）",
+                                "events": {
+                                    "click": {
+                                        "api": "plugin/WsEmbyCover/generate_now",
+                                        "method": "post",
+                                        "params": {
+                                            "apikey": settings.API_TOKEN
+                                        },
+                                    }
+                                },
+                            },
+                            {
+                                "component": "VBtn",
+                                "props": {"color": "secondary", "variant": "outlined"},
+                                "text": "立即更新（静态1）",
+                                "events": {
+                                    "click": {
+                                        "api": "plugin/WsEmbyCover/generate_now",
+                                        "method": "post",
+                                        "params": {
+                                            "style": "static_1",
+                                            "apikey": settings.API_TOKEN
+                                        },
+                                    }
+                                },
+                            },
+                            {
+                                "component": "VBtn",
+                                "props": {"color": "secondary", "variant": "outlined"},
+                                "text": "立即更新（静态2）",
+                                "events": {
+                                    "click": {
+                                        "api": "plugin/WsEmbyCover/generate_now",
+                                        "method": "post",
+                                        "params": {
+                                            "style": "static_2",
+                                            "apikey": settings.API_TOKEN
+                                        },
+                                    }
+                                },
+                            },
+                        ],
+                    },
+                ],
+            }
+        ]
 
     @staticmethod
     def __style_preview_src(index: int) -> str:

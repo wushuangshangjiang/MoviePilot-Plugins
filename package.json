@@ -23,7 +23,7 @@
     "name": "WsEmbyCover",
     "description": "Generate dynamic or static library covers for Emby/Jellyfin",
     "labels": "Emby,Cover,Library",
-        "version": "1.14",
+        "version": "1.15",
     "icon": "emby.png",
     "author": "wushuangshangjiang",
     "level": 1
