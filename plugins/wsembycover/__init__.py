@@ -180,7 +180,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.6"
+    plugin_version = "1.13"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -2861,7 +2861,7 @@ class WsEmbyCover(_PluginBase):
         return self.__sanitize_text_payload(form_schema), self.__sanitize_text_payload(form_data)
 
     def get_page(self) -> List[dict]:
-        pass
+        return []
 
     @staticmethod
     def __style_preview_src(index: int) -> str:
