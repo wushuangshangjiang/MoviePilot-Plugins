@@ -180,7 +180,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.6"
+    plugin_version = "1.7"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -431,6 +431,8 @@ class WsEmbyCover(_PluginBase):
         if (not loaded_profiles_from_form) and self.__upsert_active_server_profile(config or {}):
             profile_dirty = True
         if self.__sync_profile_styles_with_selected_style():
+            profile_dirty = True
+        if self.__sync_profile_sort_with_selected_sort():
             profile_dirty = True
         self._manual_servers = self.__profiles_to_manual_servers()
         self.__sync_active_server_editor()
@@ -1035,6 +1037,23 @@ class WsEmbyCover(_PluginBase):
         self._cover_style_base = target_style
         return dirty
 
+    def __sync_profile_sort_with_selected_sort(self) -> bool:
+        allowed = {"Random", "DateCreated", "PremiereDate"}
+        target_sort = str(self._sort_by or "Random")
+        if target_sort not in allowed:
+            target_sort = "Random"
+        self._sort_by = target_sort
+
+        dirty = False
+        if isinstance(self._server_profiles, dict):
+            for name, profile in list(self._server_profiles.items()):
+                normalized = dict(profile or {})
+                if str(normalized.get("sort_by", "Random") or "Random") != target_sort:
+                    normalized["sort_by"] = target_sort
+                    self._server_profiles[name] = normalized
+                    dirty = True
+        return dirty
+
     def __sync_runtime_values_to_active_profile(self) -> bool:
         active_name = str(self._active_server_name or "").strip()
         if not active_name or active_name == "__new__":
@@ -1121,6 +1140,7 @@ class WsEmbyCover(_PluginBase):
         self.__sync_runtime_values_to_active_profile()
         self._cover_style = self.__compose_cover_style(self._cover_style_base, "static")
         self.__sync_profile_styles_with_selected_style()
+        self.__sync_profile_sort_with_selected_sort()
         self.update_config({
             "enabled": self._enabled,
             "update_now": self._update_now,
@@ -1292,8 +1312,10 @@ class WsEmbyCover(_PluginBase):
             en_items.append({"title": spec["title"], "value": spec["value"]})
         return zh_items, en_items, zh_paths, en_paths
 
-    def __clean_generated_images(self):
+    def __clean_generated_images(self) -> Dict[str, Any]:
         removed = 0
+        errors = 0
+        cleaned_dirs: List[str] = []
         cache_dirs: List[Path] = []
         if self._covers_path:
             cache_dirs.append(Path(self._covers_path))
@@ -1302,12 +1324,7 @@ class WsEmbyCover(_PluginBase):
         if self._covers_output:
             cache_dirs.append(Path(self._covers_output))
         data_path = self.get_data_path()
-        legacy_covers_dir = data_path / "covers"
-        legacy_input_dir = data_path / "input"
-        legacy_output_dir = data_path / "output"
-        cache_dirs.append(legacy_covers_dir)
-        cache_dirs.append(legacy_input_dir)
-        cache_dirs.append(legacy_output_dir)
+        cache_dirs.extend([data_path / "covers", data_path / "input", data_path / "output"])
 
         handled = set()
         for cache_dir in cache_dirs:
@@ -1317,6 +1334,7 @@ class WsEmbyCover(_PluginBase):
             if cache_key in handled:
                 continue
             handled.add(cache_key)
+            cleaned_dirs.append(cache_key)
             for entry in cache_dir.iterdir():
                 if not entry.exists():
                     continue
@@ -1328,14 +1346,29 @@ class WsEmbyCover(_PluginBase):
                         entry.unlink(missing_ok=True)
                         removed += 1
                 except Exception as e:
-                    logger.warning(f"清理图片缓存失败 {entry}: {e}")
-        logger.info(f"清理图片缓存完成，共清理 {removed} 项")
+                    errors += 1
+                    logger.warning(f"[WsEmbyCover] clean_images failed entry={entry} err={e}")
 
-    def __clean_downloaded_fonts(self):
+        logger.warning(
+            f"[WsEmbyCover] clean_images summary removed={removed} scanned_dirs={len(cleaned_dirs)} errors={errors}"
+        )
+        for directory in cleaned_dirs:
+            logger.info(f"[WsEmbyCover] clean_images scanned_dir={directory}")
+
+        return {
+            "removed": removed,
+            "errors": errors,
+            "dirs": cleaned_dirs,
+        }
+
+    def __clean_downloaded_fonts(self) -> Dict[str, Any]:
         if not self._font_path or not Path(self._font_path).exists():
-            logger.info("清理字体：未找到字体目录，跳过")
-            return
+            logger.info("[WsEmbyCover] clean_fonts skipped: font directory not found")
+            return {"removed": 0, "errors": 0, "dirs": []}
+
         removed = 0
+        errors = 0
+        cleaned_dirs = [str(Path(self._font_path).resolve())]
         for entry in Path(self._font_path).iterdir():
             if entry.name.startswith("."):
                 continue
@@ -1347,10 +1380,23 @@ class WsEmbyCover(_PluginBase):
                     shutil.rmtree(entry)
                     removed += 1
             except Exception as e:
-                logger.warning(f"清理字体缓存失败 {entry}: {e}")
+                errors += 1
+                logger.warning(f"[WsEmbyCover] clean_fonts failed entry={entry} err={e}")
+
         self._zh_font_path = ""
         self._en_font_path = ""
-        logger.info(f"清理字体完成，共清理 {removed} 项")
+
+        logger.warning(
+            f"[WsEmbyCover] clean_fonts summary removed={removed} scanned_dirs={len(cleaned_dirs)} errors={errors}"
+        )
+        for directory in cleaned_dirs:
+            logger.info(f"[WsEmbyCover] clean_fonts scanned_dir={directory}")
+
+        return {
+            "removed": removed,
+            "errors": errors,
+            "dirs": cleaned_dirs,
+        }
 
     @staticmethod
     def get_command() -> List[Dict[str, Any]]:
@@ -1441,11 +1487,17 @@ class WsEmbyCover(_PluginBase):
     def api_clean_images(self, apikey: str = ""):
         try:
             logger.warning(f"[WsEmbyCover] clean_images requested apikey={'yes' if apikey else 'no'}")
-            self.__clean_generated_images()
+            result = self.__clean_generated_images()
             self._clean_images = False
             self.__update_config()
-            logger.warning("[WsEmbyCover] clean_images completed")
-            return {"code": 0, "msg": "clean_images completed"}
+            logger.warning(
+                f"[WsEmbyCover] clean_images completed removed={result.get('removed', 0)} errors={result.get('errors', 0)}"
+            )
+            return {
+                "code": 0,
+                "msg": f"clean_images completed, removed={result.get('removed', 0)}, errors={result.get('errors', 0)}",
+                "data": result,
+            }
         except Exception as e:
             logger.error(f"[WsEmbyCover] clean_images failed: {e}", exc_info=True)
             return {"code": 1, "msg": f"clean_images failed: {e}"}
@@ -1453,11 +1505,17 @@ class WsEmbyCover(_PluginBase):
     def api_clean_fonts(self, apikey: str = ""):
         try:
             logger.warning(f"[WsEmbyCover] clean_fonts requested apikey={'yes' if apikey else 'no'}")
-            self.__clean_downloaded_fonts()
+            result = self.__clean_downloaded_fonts()
             self._clean_fonts = False
             self.__update_config()
-            logger.warning("[WsEmbyCover] clean_fonts completed")
-            return {"code": 0, "msg": "clean_fonts completed"}
+            logger.warning(
+                f"[WsEmbyCover] clean_fonts completed removed={result.get('removed', 0)} errors={result.get('errors', 0)}"
+            )
+            return {
+                "code": 0,
+                "msg": f"clean_fonts completed, removed={result.get('removed', 0)}, errors={result.get('errors', 0)}",
+                "data": result,
+            }
         except Exception as e:
             logger.error(f"[WsEmbyCover] clean_fonts failed: {e}", exc_info=True)
             return {"code": 1, "msg": f"clean_fonts failed: {e}"}
@@ -1465,13 +1523,26 @@ class WsEmbyCover(_PluginBase):
     def api_clean_cache(self, apikey: str = ""):
         try:
             logger.warning(f"[WsEmbyCover] clean_cache requested (images+fonts) apikey={'yes' if apikey else 'no'}")
-            self.__clean_generated_images()
-            self.__clean_downloaded_fonts()
+            image_result = self.__clean_generated_images()
+            font_result = self.__clean_downloaded_fonts()
             self._clean_images = False
             self._clean_fonts = False
             self.__update_config()
-            logger.warning("[WsEmbyCover] clean_cache completed (images+fonts)")
-            return {"code": 0, "msg": "clean_cache completed (images+fonts)"}
+
+            total_removed = int(image_result.get("removed", 0)) + int(font_result.get("removed", 0))
+            total_errors = int(image_result.get("errors", 0)) + int(font_result.get("errors", 0))
+            logger.warning(f"[WsEmbyCover] clean_cache completed removed={total_removed} errors={total_errors}")
+
+            return {
+                "code": 0,
+                "msg": f"clean_cache completed, removed={total_removed}, errors={total_errors}",
+                "data": {
+                    "images": image_result,
+                    "fonts": font_result,
+                    "removed": total_removed,
+                    "errors": total_errors,
+                },
+            }
         except Exception as e:
             logger.error(f"[WsEmbyCover] clean_cache failed: {e}", exc_info=True)
             return {"code": 1, "msg": f"clean_cache failed: {e}"}
@@ -3156,6 +3227,7 @@ class WsEmbyCover(_PluginBase):
             if selected_servers and server not in selected_servers:
                 continue
             self.__apply_server_profile(server)
+            logger.info(f"[WsEmbyCover] sort rule active: server={server}, sort_by={self._sort_by}")
             # 扫描扢有媒体库
             logger.info(f"褰撳墠鏈嶅姟鍣?{server}")
             cover_style = {
@@ -3221,6 +3293,11 @@ class WsEmbyCover(_PluginBase):
         else:
             title = title_result
             config_bg_color = None
+        logger.info(
+            f"[WsEmbyCover] title resolved server={service.name} library={library_name} zh={title[0] if isinstance(title, tuple) and len(title) > 0 else title} en={title[1] if isinstance(title, tuple) and len(title) > 1 else ''}"
+        )
+        if isinstance(title, tuple) and len(title) > 1 and not str(title[1] or "").strip():
+            logger.warning(f"[WsEmbyCover] title english missing after resolve server={service.name} library={library_name}")
         if image_path:
             logger.info(f"媒体库 {service.name}：{library_name} 从自定义路径获取封面")
             image_data = self.__generate_image_from_path(service.name, library_name, title, image_path[0], config_bg_color)
@@ -3584,6 +3661,11 @@ class WsEmbyCover(_PluginBase):
                     include_types = 'Movie,Episode'
                 if not include_types:
                     include_types = 'Movie,Series'
+                logger.info(
+                    f"[WsEmbyCover] fetch rule: server={getattr(service, 'name', 'unknown')}, "
+                    f"sort_by={sort_by}, monitor_sort={bool(self._monitor_sort)}, include_types={include_types}, "
+                    f"offset={offset}, limit={limit}"
+                )
 
                 url = f'[HOST]emby/Items/?api_key=[APIKEY]' \
                       f'&ParentId={parent_id}&SortBy={sort_by}&Limit={limit}' \
@@ -3926,6 +4008,14 @@ class WsEmbyCover(_PluginBase):
             logger.warning(f"YAML 瑙ｆ瀽澶辫触锛屼娇鐢ㄧ┖閰嶇疆: {e}")
             return {}
 
+    @staticmethod
+    def __normalize_title_key(value: Any) -> str:
+        text = str(value or "")
+        # Normalize spaces and invisible separators to improve YAML key matching.
+        text = re.sub(r"[\u200b\u200c\u200d\ufeff]", "", text)
+        text = re.sub(r"\s+", "", text)
+        return text.casefold()
+
     def __get_title_from_config(self, library_name, server_name: Optional[str] = None):
         """Read title config from YAML and resolve title/background settings."""
         zh_title = library_name
@@ -3940,58 +4030,57 @@ class WsEmbyCover(_PluginBase):
         scoped_config = title_config
         nested_mode = any(isinstance(v, dict) for v in title_config.values()) if isinstance(title_config, dict) else False
         if server_name and isinstance(title_config, dict):
+            normalized_server = self.__normalize_title_key(server_name)
             server_key = None
             if server_name in title_config and isinstance(title_config.get(server_name), dict):
                 server_key = server_name
             else:
                 for key, value in title_config.items():
-                    if isinstance(value, dict) and str(key).strip().lower() == str(server_name).strip().lower():
+                    if isinstance(value, dict) and self.__normalize_title_key(key) == normalized_server:
                         server_key = str(key)
                         break
             if server_key:
                 scoped_config = title_config.get(server_key, {})
-                logger.debug(f"标题配置按服务器匹配成功: {server_key}")
+                self.__debug_log(f"title config server matched: requested={server_name} resolved={server_key}")
             elif nested_mode:
-                # 新格式下未找到服务器时，不跨服务器扫?
                 scoped_config = {}
-                logger.debug(f"标题配置未找到服务器分组: {server_name}")
+                logger.warning(f"[WsEmbyCover] title config server not found, fallback to default title: server={server_name}")
 
-        # 娣诲姞璋冭瘯淇℃伅
-        logger.debug(f"鏌ユ壘濯掍綋搴撳悕绉? '{library_name}' (绫诲瀷: {type(library_name)})")
-        logger.debug(f"当前作用域配置键: {list(scoped_config.keys()) if isinstance(scoped_config, dict) else []}")
-
-        # 多种匹配策略，确保数字或字母弢头的媒体库名能够正确匹配
+        normalized_library = self.__normalize_title_key(library_name)
+        matched = False
         for lib_name, config_values in (scoped_config.items() if isinstance(scoped_config, dict) else []):
             if not isinstance(config_values, list) or len(config_values) < 2:
                 continue
-            # 策略1: 直接字符串比?
-            if str(lib_name) == str(library_name):
+
+            lib_name_text = str(lib_name)
+            if (
+                lib_name_text == str(library_name)
+                or lib_name_text.strip() == str(library_name).strip()
+                or lib_name_text.lower() == str(library_name).lower()
+                or self.__normalize_title_key(lib_name_text) == normalized_library
+            ):
                 zh_title = config_values[0]
                 en_title = config_values[1] if len(config_values) > 1 else ''
                 bg_color = config_values[2] if len(config_values) > 2 else None
-                logger.debug(f"鎵惧埌鍖归厤鐨勯厤缃?鐩存帴鍖归厤): {lib_name} -> {zh_title}, {en_title}, {bg_color}")
+                matched = True
+                self.__debug_log(
+                    f"title config library matched: server={server_name} library={library_name} key={lib_name_text} zh={zh_title} en={en_title} bg={bg_color}"
+                )
                 break
 
-            # 绛栫暐2: 鍘婚櫎绌烘牸鍚庢瘮杈?
-            if str(lib_name).strip() == str(library_name).strip():
-                zh_title = config_values[0]
-                en_title = config_values[1] if len(config_values) > 1 else ''
-                bg_color = config_values[2] if len(config_values) > 2 else None
-                logger.debug(f"鎵惧埌鍖归厤鐨勯厤缃?鍘荤┖鏍煎尮閰?: {lib_name} -> {zh_title}, {en_title}, {bg_color}")
-                break
+        if not matched:
+            logger.warning(
+                f"[WsEmbyCover] title config library not matched, fallback title used: server={server_name} library={library_name}"
+            )
+            if library_name and (str(library_name)[0].isdigit() or str(library_name)[0].isalpha()):
+                logger.info(
+                    f"[WsEmbyCover] library key starts with alnum, quote it in YAML if needed: \"{library_name}\":"
+                )
 
-            # 绛栫暐3: 蹇界暐澶у皬鍐欐瘮杈?
-            if str(lib_name).lower() == str(library_name).lower():
-                zh_title = config_values[0]
-                en_title = config_values[1] if len(config_values) > 1 else ''
-                bg_color = config_values[2] if len(config_values) > 2 else None
-                logger.debug(f"鎵惧埌鍖归厤鐨勯厤缃?蹇界暐澶у皬鍐欏尮閰?: {lib_name} -> {zh_title}, {en_title}, {bg_color}")
-                break
-        else:
-            logger.debug(f"未找到媒体库 '{library_name}' 的配置，使用默认标题")
-            # 如果没有找到配置，检查是否是数字弢头的媒体库名导致的问?
-            if library_name and (library_name[0].isdigit() or library_name[0].isalpha()):
-                logger.info(f"媒体库名 '{library_name}' 以数字或字母弢头，如果霢要自定义标题，请在配置中使用引号包围媒体库名，例? \"{library_name}\":")
+        if not en_title:
+            logger.warning(
+                f"[WsEmbyCover] english subtitle empty: server={server_name} library={library_name} matched={matched}"
+            )
 
         return (zh_title, en_title, bg_color)
 
