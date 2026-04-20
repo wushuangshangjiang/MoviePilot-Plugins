@@ -180,7 +180,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.9"
+    plugin_version = "1.10"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -260,7 +260,7 @@ class WsEmbyCover(_PluginBase):
     _clean_images = False
     _clean_fonts = False
     _save_recent_covers = True
-    _covers_history_limit_per_library = 10
+    _covers_history_limit_per_library = 3
     _covers_page_history_limit = 50
     _page_tab = "generate-tab"
     _debug_mode = False
@@ -382,7 +382,7 @@ class WsEmbyCover(_PluginBase):
             self._save_recent_covers = config.get("save_recent_covers", True)
             self._debug_mode = bool(config.get("debug_mode", config.get("debug_show_apikey", False)))
             self._covers_history_limit_per_library = self.__clamp_value(
-                config.get("covers_history_limit_per_library", 10),
+                config.get("covers_history_limit_per_library", 3),
                 1,
                 100,
                 10,
@@ -865,7 +865,7 @@ class WsEmbyCover(_PluginBase):
         self._save_recent_covers = bool(profile.get("save_recent_covers", self._save_recent_covers))
         self._covers_history_limit_per_library = self.__clamp_value(
             profile.get("covers_history_limit_per_library", self._covers_history_limit_per_library),
-            1, 100, 10, "covers_history_limit_per_library[profile]", int
+            1, 100, 3, "covers_history_limit_per_library[profile]", int
         )
         self._covers_page_history_limit = self.__clamp_value(
             profile.get("covers_page_history_limit", self._covers_page_history_limit),
@@ -1413,48 +1413,6 @@ class WsEmbyCover(_PluginBase):
     def get_api(self) -> List[Dict[str, Any]]:
         return [
             {
-                "path": "/clean_cache",
-                "endpoint": self.api_clean_cache,
-                "auth": "",
-                "methods": ["POST", "GET"],
-                "summary": "立即清理全部缓存（图片+字体）",
-            },
-            {
-                "path": "clean_cache",
-                "endpoint": self.api_clean_cache,
-                "auth": "",
-                "methods": ["POST", "GET"],
-                "summary": "立即清理全部缓存（兼容路由）",
-            },
-            {
-                "path": "/clean_images",
-                "endpoint": self.api_clean_images,
-                "auth": "",
-                "methods": ["POST", "GET"],
-                "summary": "立即清理图片缓存",
-            },
-            {
-                "path": "clean_images",
-                "endpoint": self.api_clean_images,
-                "auth": "",
-                "methods": ["POST", "GET"],
-                "summary": "立即清理图片缓存（兼容路由）",
-            },
-            {
-                "path": "/clean_fonts",
-                "endpoint": self.api_clean_fonts,
-                "auth": "",
-                "methods": ["POST", "GET"],
-                "summary": "立即清理字体缓存",
-            },
-            {
-                "path": "clean_fonts",
-                "endpoint": self.api_clean_fonts,
-                "auth": "",
-                "methods": ["POST", "GET"],
-                "summary": "立即清理字体缓存（兼容路由）",
-            },
-            {
                 "path": "/delete_saved_cover",
                 "endpoint": self.api_delete_saved_cover,
                 "auth": "bear",
@@ -1830,7 +1788,7 @@ class WsEmbyCover(_PluginBase):
                                     'model': 'covers_history_limit_per_library',
                                     'label': '媒体库历史封面数量',
                                     'prependInnerIcon': 'mdi-history',
-                                    'hint': '单个媒体库封面保留上限，默认 10',
+                                    'hint': '单个媒体库封面保留上限，默认 3',
                                     'persistentHint': True
                                 }
                             }
@@ -2556,7 +2514,7 @@ class WsEmbyCover(_PluginBase):
                                                 'props': {
                                                     'cols': 12,
                                                     'md': 12,
-                                                    'style': 'flex: 0 0 20%; max-width: 20%;'
+                                                    'style': 'flex: 0 0 25%; max-width: 25%;'
                                                 },
                                                 'content': [
                                                     {
@@ -2573,7 +2531,7 @@ class WsEmbyCover(_PluginBase):
                                                 'props': {
                                                     'cols': 12,
                                                     'md': 12,
-                                                    'style': 'flex: 0 0 20%; max-width: 20%;'
+                                                    'style': 'flex: 0 0 25%; max-width: 25%;'
                                                 },
                                                 'content': [
                                                     {
@@ -2590,7 +2548,7 @@ class WsEmbyCover(_PluginBase):
                                                 'props': {
                                                     'cols': 12,
                                                     'md': 12,
-                                                    'style': 'flex: 0 0 20%; max-width: 20%;'
+                                                    'style': 'flex: 0 0 25%; max-width: 25%;'
                                                 },
                                                 'content': [
                                                     {
@@ -2607,7 +2565,7 @@ class WsEmbyCover(_PluginBase):
                                                 'props': {
                                                     'cols': 12,
                                                     'md': 12,
-                                                    'style': 'flex: 0 0 20%; max-width: 20%;'
+                                                    'style': 'flex: 0 0 25%; max-width: 25%;'
                                                 },
                                                 'content': [
                                                     {
@@ -2616,33 +2574,6 @@ class WsEmbyCover(_PluginBase):
                                                             'model': 'debug_mode',
                                                             'label': '调试模式',
                                                             'color': 'warning',
-                                                        }
-                                                    }
-                                                ]
-                                            },
-                                            {
-                                                'component': 'VCol',
-                                                'props': {
-                                                    'cols': 12,
-                                                    'md': 12,
-                                                    'style': 'flex: 0 0 20%; max-width: 20%;'
-                                                },
-                                                'content': [
-                                                    {
-                                                        'component': 'VBtn',
-                                                        'props': {
-                                                            'color': '#4FC3F7',
-                                                            'variant': 'flat',
-                                                            'prepend-icon': 'mdi-broom',
-                                                            'class': 'text-none text-white w-100',
-                                                            'type': 'button'
-                                                        },
-                                                        'text': '清理缓存',
-                                                        'events': {
-                                                            'click': {
-                                                                'api': 'plugin/WsEmbyCover/clean_cache',
-                                                                'method': 'post'
-                                                            }
                                                         }
                                                     }
                                                 ]
@@ -2926,51 +2857,7 @@ class WsEmbyCover(_PluginBase):
         return self.__sanitize_text_payload(form_schema), self.__sanitize_text_payload(form_data)
 
     def get_page(self) -> List[dict]:
-        return [
-            {
-                "component": "VCard",
-                "props": {
-                    "variant": "tonal",
-                    "class": "mb-3"
-                },
-                "content": [
-                    {
-                        "component": "VCardTitle",
-                        "text": "缓存管理"
-                    },
-                    {
-                        "component": "VCardText",
-                        "content": [
-                            {
-                                "component": "VAlert",
-                                "props": {
-                                    "type": "info",
-                                    "variant": "tonal",
-                                    "text": "清理缓存将删除 WsEmbyCover 生成与输出的图片缓存（不删除字体缓存）。"
-                                }
-                            },
-                            {
-                                "component": "VBtn",
-                                "props": {
-                                    "color": "#4FC3F7",
-                                    "variant": "flat",
-                                    "prepend-icon": "mdi-broom",
-                                    "class": "text-none text-white mt-3",
-                                    "type": "button"
-                                },
-                                "text": "立即清理图片缓存",
-                                "events": {
-                                    "click": {
-                                        "api": "plugin/WsEmbyCover/clean_cache",
-                                        "method": "post"
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                ]
-            }
-        ]
+        return []
 
     @staticmethod
     def __style_preview_src(index: int) -> str:
@@ -4539,7 +4426,7 @@ class WsEmbyCover(_PluginBase):
             self._covers_history_limit_per_library,
             1,
             100,
-            10,
+            3,
             "covers_history_limit_per_library[trim]",
             int,
         )
