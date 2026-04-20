@@ -36,7 +36,7 @@
     "name": "WsEmbyCover",
     "description": "Generate dynamic or static library covers for Emby/Jellyfin",
     "labels": "Emby,Cover,Library",
-      "version": "1.11",
+      "version": "1.12",
     "icon": "emby.png",
     "author": "wushuangshangjiang",
     "level": 1,
@@ -50,7 +50,8 @@
       "v1.8": "Fix clean-cache button invocation by switching UI request to POST to ensure backend API is hit",
       "v1.9": "Add a page-level clean-cache action button to reliably trigger backend cache cleanup API",
       "v1.10": "Remove get_page and cache-clean button, optimize base-setting layout, and set cover history retention default to 3",
-      "v1.11": "Remove WsEmbyCover custom get_page implementation so plugin opens directly in config flow"
+      "v1.11": "Remove WsEmbyCover custom get_page implementation so plugin opens directly in config flow",
+      "v1.12": "Fix regression by restoring get_page override to keep plugin config form rendering normally"
     }
   }
 }
