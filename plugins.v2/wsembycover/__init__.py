@@ -180,7 +180,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.17"
+    plugin_version = "1.18"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -3975,34 +3975,16 @@ class WsEmbyCover(_PluginBase):
                     # 新格式：服务器名 -> 媒体库配置字?
                     server_filtered = {}
                     for lib_key, lib_value in value.items():
-                        if lib_value is None:
-                            continue
-                        if (
-                            isinstance(lib_value, list)
-                            and len(lib_value) >= 2
-                            and isinstance(lib_value[0], str)
-                            and isinstance(lib_value[1], str)
-                        ):
-                            if len(lib_value) >= 3 and isinstance(lib_value[2], str):
-                                server_filtered[str(lib_key)] = [lib_value[0], lib_value[1], lib_value[2]]
-                            else:
-                                server_filtered[str(lib_key)] = [lib_value[0], lib_value[1]]
-                            if len(lib_value) > 3:
-                                logger.info(f"配置项 {key}/{lib_key} 包含多行，仅使用前三行")
-                        else:
-                            logger.warning(f"标题配置项格式不正确，已忽略: {key}/{lib_key} -> {lib_value}")
+                        normalized_value = normalize_title_value(lib_value, f"{key}/{lib_key}")
+                        if normalized_value:
+                            server_filtered[str(lib_key)] = normalized_value
                     if server_filtered:
                         filtered[str(key)] = server_filtered
                     continue
 
-                if isinstance(value, list) and len(value) >= 2 and isinstance(value[0], str) and isinstance(value[1], str):
-                    # 兼容旧格式：媒体?-> [中文, 英文, 可背景色]
-                    if len(value) >= 3 and isinstance(value[2], str):
-                        filtered[str(key)] = [value[0], value[1], value[2]]
-                    else:
-                        filtered[str(key)] = [value[0], value[1]]
-                    if len(value) > 3:
-                        logger.info(f"配置项 {key} 包含多行，仅使用前三行")
+                normalized_value = normalize_title_value(value, str(key))
+                if normalized_value:
+                    filtered[str(key)] = normalized_value
                     continue
 
                 # 忽略格式不正确的?
