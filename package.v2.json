@@ -36,7 +36,7 @@
     "name": "WsEmbyCover",
     "description": "Generate dynamic or static library covers for Emby/Jellyfin",
     "labels": "Emby,Cover,Library",
-    "version": "1.18",
+    "version": "1.19",
     "icon": "emby.png",
     "author": "wushuangshangjiang",
     "level": 1,
@@ -57,7 +57,8 @@
       "v1.15": "Replace empty detail placeholder with action-entry page for quick cover update operations",
       "v1.16": "Restore legacy get_page behavior and migrate repository to v2-only by removing v1 plugin code",
       "v1.17": "Fix title parsing/matching, static_2 poster layout scaling, and custom resolution application",
-      "v1.18": "Fix nested title config parsing and tune static_2 poster size/spacing with readable EN subtitle rendering"
+      "v1.18": "Fix nested title config parsing and tune static_2 poster size/spacing with readable EN subtitle rendering",
+      "v1.19": "Fix profile hydration for title/font settings and improve static_2 poster sizing behavior"
     }
   }
 }

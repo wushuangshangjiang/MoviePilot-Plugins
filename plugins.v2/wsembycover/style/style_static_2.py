@@ -219,11 +219,11 @@ def create_style_static_2(
 
         poster_count = min(6, len(poster_paths))
         # 固定 6 等分槽位，确保 6 张竖图都完整且均匀可见
-        horizontal_margin = int(canvas_size[0] * 0.03)
+        horizontal_margin = int(canvas_size[0] * 0.022)
         available_width = max(1, canvas_size[0] - horizontal_margin * 2)
-        slot_gap = max(6, int(canvas_size[0] * 0.006))
+        slot_gap = max(4, int(canvas_size[0] * 0.0045))
         slot_width = max(1, int((available_width - slot_gap * (poster_count - 1)) / poster_count))
-        poster_width = max(1, int(slot_width * 0.90))
+        poster_width = max(1, int(slot_width * 0.95))
         poster_height = int(poster_width * 1.43)
         cards = [
             _build_poster_card(path, (poster_width, poster_height), frame_color)
@@ -243,7 +243,7 @@ def create_style_static_2(
                 )
                 for card in cards
             ]
-            gap = max(5, int(gap * scale))
+            gap = max(4, int(gap * scale))
             total_cards_width = sum(card.size[0] for card in cards) + gap * max(0, poster_count - 1)
 
         start_x = max(0, horizontal_margin + (available_width - total_cards_width) // 2)

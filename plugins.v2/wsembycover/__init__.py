@@ -180,7 +180,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.18"
+    plugin_version = "1.19"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -438,6 +438,8 @@ class WsEmbyCover(_PluginBase):
         if self.__sync_profile_styles_with_selected_style():
             profile_dirty = True
         if self.__sync_profile_sort_with_selected_sort():
+            profile_dirty = True
+        if self.__hydrate_profiles_from_global_defaults():
             profile_dirty = True
         self._manual_servers = self.__profiles_to_manual_servers()
         self.__sync_active_server_editor()
@@ -805,18 +807,71 @@ class WsEmbyCover(_PluginBase):
             profile["use_primary"] = cfg.get(f"profile_{idx}_use_primary", profile.get("use_primary"))
             profile["multi_1_blur"] = cfg.get(f"profile_{idx}_multi_1_blur", profile.get("multi_1_blur"))
             profile["resolution"] = cfg.get(f"profile_{idx}_resolution", profile.get("resolution"))
+            profile["custom_width"] = cfg.get(f"profile_{idx}_custom_width", cfg.get("custom_width", profile.get("custom_width")))
+            profile["custom_height"] = cfg.get(f"profile_{idx}_custom_height", cfg.get("custom_height", profile.get("custom_height")))
             profile["bg_color_mode"] = cfg.get(f"profile_{idx}_bg_color_mode", profile.get("bg_color_mode"))
             profile["custom_bg_color"] = cfg.get(f"profile_{idx}_custom_bg_color", profile.get("custom_bg_color"))
+            profile["zh_font_preset"] = cfg.get(f"profile_{idx}_zh_font_preset", cfg.get("zh_font_preset", profile.get("zh_font_preset")))
+            profile["en_font_preset"] = cfg.get(f"profile_{idx}_en_font_preset", cfg.get("en_font_preset", profile.get("en_font_preset")))
+            profile["zh_font_custom"] = cfg.get(f"profile_{idx}_zh_font_custom", cfg.get("zh_font_custom", profile.get("zh_font_custom")))
+            profile["en_font_custom"] = cfg.get(f"profile_{idx}_en_font_custom", cfg.get("en_font_custom", profile.get("en_font_custom")))
             profile["zh_font_size"] = cfg.get(f"profile_{idx}_zh_font_size", profile.get("zh_font_size"))
             profile["en_font_size"] = cfg.get(f"profile_{idx}_en_font_size", profile.get("en_font_size"))
+            profile["blur_size"] = cfg.get(f"profile_{idx}_blur_size", cfg.get("blur_size", profile.get("blur_size")))
+            profile["color_ratio"] = cfg.get(f"profile_{idx}_color_ratio", cfg.get("color_ratio", profile.get("color_ratio")))
             profile["title_scale"] = cfg.get(f"profile_{idx}_title_scale", profile.get("title_scale"))
             profile["zh_font_offset"] = cfg.get(f"profile_{idx}_zh_font_offset", profile.get("zh_font_offset"))
             profile["title_spacing"] = cfg.get(f"profile_{idx}_title_spacing", profile.get("title_spacing"))
             profile["en_line_spacing"] = cfg.get(f"profile_{idx}_en_line_spacing", profile.get("en_line_spacing"))
+            if not profile.get("title_config"):
+                profile["title_config"] = cfg.get("title_config", profile.get("title_config"))
             normalized = self.__normalize_server_profile(name, profile)
             if normalized:
                 profiles[normalized["name"]] = normalized
         return profiles
+
+    def __hydrate_profiles_from_global_defaults(self) -> bool:
+        """
+        Backfill legacy/incomplete profile fields using current global config values.
+        This avoids losing title/font settings for users whose profile payloads missed fields.
+        """
+        if not isinstance(self._server_profiles, dict) or not self._server_profiles:
+            return False
+
+        global_title = str(self._title_config or "").strip()
+        global_zh_custom = str(self._zh_font_custom or "").strip()
+        global_en_custom = str(self._en_font_custom or "").strip()
+        global_zh_preset = str(self._zh_font_preset or "chaohei").strip() or "chaohei"
+        global_en_preset = str(self._en_font_preset or "EmblemaOne").strip() or "EmblemaOne"
+
+        has_global_title_mapping = bool(self.__load_title_config(global_title)) if global_title else False
+        default_template = self.__default_title_config_template()
+        changed = False
+
+        for name, raw_profile in list(self._server_profiles.items()):
+            profile = dict(raw_profile or {})
+            original = dict(profile)
+
+            profile_title = str(profile.get("title_config") or "").strip()
+            if has_global_title_mapping and (not profile_title or profile_title == default_template):
+                profile["title_config"] = global_title
+
+            if global_zh_custom and not str(profile.get("zh_font_custom") or "").strip():
+                profile["zh_font_custom"] = global_zh_custom
+            if global_en_custom and not str(profile.get("en_font_custom") or "").strip():
+                profile["en_font_custom"] = global_en_custom
+
+            if not str(profile.get("zh_font_preset") or "").strip():
+                profile["zh_font_preset"] = global_zh_preset
+            if not str(profile.get("en_font_preset") or "").strip():
+                profile["en_font_preset"] = global_en_preset
+
+            normalized = self.__normalize_server_profile(name, profile)
+            if normalized and normalized != original:
+                self._server_profiles[name] = normalized
+                changed = True
+
+        return changed
 
     def __merge_form_values_into_active_profile(self, config: dict) -> bool:
         cfg = config or {}
@@ -891,7 +946,14 @@ class WsEmbyCover(_PluginBase):
             return
         self._cover_style = "static_2" if str(profile.get("style", "static_1")) == "static_2" else "static_1"
         self._cover_style_base = self._cover_style
-        self._title_config = profile.get("title_config") or self.__default_title_config_template()
+        profile_title_config = str(profile.get("title_config") or "").strip()
+        current_title_config = str(self._title_config or "").strip()
+        if profile_title_config:
+            self._title_config = profile_title_config
+        elif current_title_config:
+            self._title_config = current_title_config
+        else:
+            self._title_config = self.__default_title_config_template()
         self._sort_by = profile.get("sort_by") or "Random"
         self._covers_input = profile.get("covers_input") or ""
         self._covers_output = profile.get("covers_output") or ""
@@ -913,8 +975,12 @@ class WsEmbyCover(_PluginBase):
         self._custom_bg_color = profile.get("custom_bg_color", self._custom_bg_color or "")
         self._zh_font_preset = profile.get("zh_font_preset", self._zh_font_preset or "chaohei")
         self._en_font_preset = profile.get("en_font_preset", self._en_font_preset or "EmblemaOne")
-        self._zh_font_custom = profile.get("zh_font_custom", self._zh_font_custom or "")
-        self._en_font_custom = profile.get("en_font_custom", self._en_font_custom or "")
+        profile_zh_custom = profile.get("zh_font_custom", self._zh_font_custom or "")
+        profile_en_custom = profile.get("en_font_custom", self._en_font_custom or "")
+        if str(profile_zh_custom or "").strip():
+            self._zh_font_custom = profile_zh_custom
+        if str(profile_en_custom or "").strip():
+            self._en_font_custom = profile_en_custom
         self._zh_font_size = profile.get("zh_font_size", self._zh_font_size)
         self._en_font_size = profile.get("en_font_size", self._en_font_size)
         self._blur_size = profile.get("blur_size", self._blur_size)
