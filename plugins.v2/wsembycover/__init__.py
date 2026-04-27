@@ -406,15 +406,20 @@ class WsEmbyCover(_PluginBase):
             loaded_profiles_from_form = bool(form_profiles)
         else:
             loaded_profiles_from_form = False
-        if self._resolution not in ["1080p", "720p", "480p"]:
-            self._resolution = "480p"
+        self._resolution, resolved_resolution_value = self.__resolve_resolution_setting(
+            self._resolution,
+            self._custom_width,
+            self._custom_height,
+        )
+        if self._resolution == "custom" and isinstance(resolved_resolution_value, tuple):
+            self._custom_width, self._custom_height = resolved_resolution_value
 
         self._bg_color_mode = (config or {}).get("bg_color_mode", "auto")
         self._custom_bg_color = (config or {}).get("custom_bg_color", "")
 
         # 初始化分辨率配置（确保安全初始化?
         try:
-            self._resolution_config = self.__new_resolution_config(self._resolution)
+            self._resolution_config = self.__new_resolution_config(resolved_resolution_value)
         except Exception as e:
             logger.warning(f"分辨率配置初始化失败，使用默认配? {e}")
             self._resolution_config = self.__new_resolution_config("480p")
@@ -547,6 +552,34 @@ class WsEmbyCover(_PluginBase):
                 return f"{self.width}x{self.height}"
 
         return LocalResolutionConfig(resolution)
+
+    def __resolve_resolution_setting(
+        self,
+        resolution: Any,
+        custom_width: Optional[Any] = None,
+        custom_height: Optional[Any] = None,
+    ) -> Tuple[str, Any]:
+        valid_presets = {"1080p", "720p", "480p", "360p", "4k", "1440p", "custom"}
+        normalized = str(resolution or "480p").strip().lower()
+        if normalized not in valid_presets:
+            normalized = "480p"
+
+        if normalized == "custom":
+            raw_w = self._custom_width if custom_width is None else custom_width
+            raw_h = self._custom_height if custom_height is None else custom_height
+            try:
+                width = int(raw_w)
+                height = int(raw_h)
+                if width > 0 and height > 0:
+                    return normalized, (width, height)
+            except (TypeError, ValueError):
+                pass
+            logger.warning(
+                f"自定义分辨率参数无效: {raw_w}x{raw_h}, 使用默认480p"
+            )
+            return "480p", "480p"
+
+        return normalized, normalized
 
     def __validate_font_file(self, font_path: Path):
         return self._validate_font_file(font_path)
@@ -890,10 +923,15 @@ class WsEmbyCover(_PluginBase):
         self._zh_font_offset = profile.get("zh_font_offset", self._zh_font_offset)
         self._title_spacing = profile.get("title_spacing", self._title_spacing)
         self._en_line_spacing = profile.get("en_line_spacing", self._en_line_spacing)
-        if self._resolution not in ["1080p", "720p", "480p"]:
-            self._resolution = "480p"
+        self._resolution, resolved_resolution_value = self.__resolve_resolution_setting(
+            self._resolution,
+            self._custom_width,
+            self._custom_height,
+        )
+        if self._resolution == "custom" and isinstance(resolved_resolution_value, tuple):
+            self._custom_width, self._custom_height = resolved_resolution_value
         try:
-            self._resolution_config = self.__new_resolution_config(self._resolution)
+            self._resolution_config = self.__new_resolution_config(resolved_resolution_value)
         except Exception:
             self._resolution_config = self.__new_resolution_config("480p")
 
@@ -3884,6 +3922,50 @@ class WsEmbyCover(_PluginBase):
             title_config = yaml.safe_load(processed_yaml) or {}
             if not isinstance(title_config, dict):
                 return {}
+
+            def normalize_title_value(raw_value: Any, item_key: str) -> Optional[List[str]]:
+                if raw_value is None:
+                    return None
+                if isinstance(raw_value, list):
+                    if not raw_value:
+                        return None
+                    zh = str(raw_value[0] or "").strip()
+                    en = str(raw_value[1] or "").strip() if len(raw_value) > 1 else ""
+                    bg = str(raw_value[2] or "").strip() if len(raw_value) > 2 else ""
+                    if not zh:
+                        return None
+                    value = [zh, en]
+                    if bg:
+                        value.append(bg)
+                    return value
+                if isinstance(raw_value, dict):
+                    zh = raw_value.get("zh", raw_value.get("title_zh", raw_value.get("cn", raw_value.get("中文", ""))))
+                    en = raw_value.get("en", raw_value.get("title_en", raw_value.get("english", raw_value.get("英文", ""))))
+                    bg = raw_value.get("bg_color", raw_value.get("color", raw_value.get("bg", raw_value.get("背景色", ""))))
+                    zh_text = str(zh or "").strip()
+                    if not zh_text:
+                        return None
+                    value = [zh_text, str(en or "").strip()]
+                    bg_text = str(bg or "").strip()
+                    if bg_text:
+                        value.append(bg_text)
+                    return value
+                if isinstance(raw_value, str):
+                    text = raw_value.strip()
+                    if not text:
+                        return None
+                    for sep in ("|", "｜", "/", "／"):
+                        if sep in text:
+                            parts = [part.strip() for part in text.split(sep)]
+                            if not parts or not parts[0]:
+                                return None
+                            value = [parts[0], parts[1] if len(parts) > 1 else ""]
+                            if len(parts) > 2 and parts[2]:
+                                value.append(parts[2])
+                            return value
+                    return [text, ""]
+                logger.warning(f"[WsEmbyCover] ignore invalid title config item: {item_key} -> {raw_value}")
+                return None
             filtered = {}
             for key, value in title_config.items():
                 if value is None:
@@ -3993,6 +4075,27 @@ class WsEmbyCover(_PluginBase):
                     f"title config library matched: server={server_name} library={library_name} key={lib_name_text} zh={zh_title} en={en_title} bg={bg_color}"
                 )
                 break
+
+        if not matched and nested_mode and isinstance(title_config, dict):
+            # Fallback when server key mismatches: scan all nested server groups by library key.
+            for scoped_server_name, server_config in title_config.items():
+                if not isinstance(server_config, dict):
+                    continue
+                for lib_name, config_values in server_config.items():
+                    if not isinstance(config_values, list) or len(config_values) < 2:
+                        continue
+                    if self.__normalize_title_key(lib_name) != normalized_library:
+                        continue
+                    zh_title = config_values[0]
+                    en_title = config_values[1] if len(config_values) > 1 else ''
+                    bg_color = config_values[2] if len(config_values) > 2 else None
+                    matched = True
+                    logger.warning(
+                        f"[WsEmbyCover] title config fallback matched by library across server groups: requested_server={server_name} matched_server={scoped_server_name} library={library_name}"
+                    )
+                    break
+                if matched:
+                    break
 
         if not matched:
             logger.warning(
