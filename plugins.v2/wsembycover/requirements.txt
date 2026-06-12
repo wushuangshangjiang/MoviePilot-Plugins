@@ -1,4 +1,2 @@
-pillow==11.2.1
-numpy==2.2.0
-pytz==2025.2
-pyyaml==6.0.2
+# numpy, Pillow, PyYAML, pytz, and requests are provided by MoviePilot.
+# Do not pin shared runtime packages here, as that can force unsafe downgrades.
