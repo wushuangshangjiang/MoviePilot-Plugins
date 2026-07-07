@@ -180,7 +180,7 @@ class WsEmbyCover(_PluginBase):
     # 鎻掍欢鍥炬爣
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 鎻掍欢鐗堟湰
-    plugin_version = "1.20"
+    plugin_version = "1.21"
     # 鎻掍欢浣滆€?
     plugin_author = "wushuangshangjiang"
     # 浣滆€呬富椤?
@@ -946,6 +946,7 @@ class WsEmbyCover(_PluginBase):
             return
         self._cover_style = "static_2" if str(profile.get("style", "static_1")) == "static_2" else "static_1"
         self._cover_style_base = self._cover_style
+        previous_title_config = str(self._title_config or "")
         profile_title_config = str(profile.get("title_config") or "").strip()
         current_title_config = str(self._title_config or "").strip()
         if profile_title_config:
@@ -954,6 +955,8 @@ class WsEmbyCover(_PluginBase):
             self._title_config = current_title_config
         else:
             self._title_config = self.__default_title_config_template()
+        if str(self._title_config or "") != previous_title_config:
+            self._current_config = self.__load_title_config(self._title_config)
         self._sort_by = profile.get("sort_by") or "Random"
         self._covers_input = profile.get("covers_input") or ""
         self._covers_output = profile.get("covers_output") or ""
