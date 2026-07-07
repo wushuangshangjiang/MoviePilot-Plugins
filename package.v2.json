@@ -36,7 +36,7 @@
     "name": "WsEmbyCover",
     "description": "Generate dynamic or static library covers for Emby/Jellyfin",
     "labels": "Emby,Cover,Library",
-    "version": "1.21",
+    "version": "1.22",
     "icon": "emby.png",
     "author": "wushuangshangjiang",
     "level": 1,
@@ -60,7 +60,8 @@
       "v1.18": "Fix nested title config parsing and tune static_2 poster size/spacing with readable EN subtitle rendering",
       "v1.19": "Fix profile hydration for title/font settings and improve static_2 poster sizing behavior",
       "v1.20": "Remove pinned host-provided dependencies to prevent shared runtime installation conflicts",
-      "v1.21": "Fix long-running profile title state refresh to keep English subtitles and custom fonts active"
+      "v1.21": "Fix long-running profile title state refresh to keep English subtitles and custom fonts active",
+      "v1.22": "Fix garbled WsEmbyCover Chinese logs and save source updates as UTF-8"
     }
   }
 }
