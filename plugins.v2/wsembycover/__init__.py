@@ -181,7 +181,7 @@ class WsEmbyCover(_PluginBase):
     # 插件图标
     plugin_icon = "https://raw.githubusercontent.com/wushuangshangjiang/MoviePilot-Plugins/main/icons/emby.png"
     # 插件版本
-    plugin_version = "1.22"
+    plugin_version = "1.23"
     # 插件作者
     plugin_author = "wushuangshangjiang"
     # 作者主页
@@ -301,7 +301,11 @@ class WsEmbyCover(_PluginBase):
             self._servers_config = config.get("servers_config", "")
             self._manual_servers = self.__parse_manual_servers_from_config(config)
             parsed_from_servers_config = self.__parse_servers_config(self._servers_config)
-            if parsed_from_servers_config:
+            form_profiles = self.__parse_server_profiles_from_form_slots(config)
+            saved_profiles = self.__parse_server_profiles_from_config(config)
+            if saved_profiles or form_profiles:
+                self._server_profiles = saved_profiles or form_profiles
+            elif parsed_from_servers_config:
                 self._server_profiles = {}
                 for item in parsed_from_servers_config:
                     name = str(item.get("name", "")).strip()
@@ -315,8 +319,7 @@ class WsEmbyCover(_PluginBase):
                     )
                 form_profiles = {}
             else:
-                form_profiles = self.__parse_server_profiles_from_form_slots(config)
-                self._server_profiles = self.__parse_server_profiles_from_config(config) or form_profiles
+                self._server_profiles = {}
             self._include_libraries = []
             selected_libraries = config.get("selected_libraries")
             if isinstance(selected_libraries, list):
@@ -435,10 +438,6 @@ class WsEmbyCover(_PluginBase):
         if config and self.__merge_form_values_into_active_profile(config):
             profile_dirty = True
         if (not loaded_profiles_from_form) and self.__upsert_active_server_profile(config or {}):
-            profile_dirty = True
-        if self.__sync_profile_styles_with_selected_style():
-            profile_dirty = True
-        if self.__sync_profile_sort_with_selected_sort():
             profile_dirty = True
         if self.__hydrate_profiles_from_global_defaults():
             profile_dirty = True
@@ -1130,6 +1129,32 @@ class WsEmbyCover(_PluginBase):
             return
         self.__apply_server_profile_values(profile)
 
+    def __snapshot_runtime_profile_values(self) -> Dict[str, Any]:
+        fields = [
+            "_cover_style", "_cover_style_base", "_title_config", "_current_config",
+            "_sort_by", "_covers_input", "_covers_output", "_save_recent_covers",
+            "_covers_history_limit_per_library", "_covers_page_history_limit",
+            "_use_primary", "_multi_1_blur", "_resolution", "_custom_width",
+            "_custom_height", "_bg_color_mode", "_custom_bg_color",
+            "_zh_font_preset", "_en_font_preset", "_zh_font_custom", "_en_font_custom",
+            "_zh_font_size", "_en_font_size", "_blur_size", "_color_ratio",
+            "_title_scale", "_zh_font_offset", "_title_spacing", "_en_line_spacing",
+            "_resolution_config", "_zh_font_path", "_en_font_path",
+        ]
+        snapshot = {}
+        for field in fields:
+            value = getattr(self, field, None)
+            if field == "_current_config" and isinstance(value, dict):
+                value = dict(value)
+            snapshot[field] = value
+        return snapshot
+
+    def __restore_runtime_profile_values(self, snapshot: Dict[str, Any]):
+        if not isinstance(snapshot, dict):
+            return
+        for field, value in snapshot.items():
+            setattr(self, field, value)
+
     def __sync_profile_styles_with_selected_style(self) -> bool:
         target_style = "static_2" if str(self._cover_style_base or "static_1") == "static_2" else "static_1"
         dirty = False
@@ -1247,8 +1272,6 @@ class WsEmbyCover(_PluginBase):
         """
         self.__sync_runtime_values_to_active_profile()
         self._cover_style = self.__compose_cover_style(self._cover_style_base, "static")
-        self.__sync_profile_styles_with_selected_style()
-        self.__sync_profile_sort_with_selected_sort()
         self.update_config({
             "enabled": self._enabled,
             "update_now": self._update_now,
@@ -1675,7 +1698,6 @@ class WsEmbyCover(_PluginBase):
             self._cover_style = target_style
             self._cover_style_base = target_style
             self._active_server_style = target_style
-            self.__sync_profile_styles_with_selected_style()
             self.__update_config()
             logger.info(f"【WsEmbyCover】生成页已切换风格: {target_style}")
             return {"code": 0, "msg": f"已切换到 {target_style}"}
@@ -3178,59 +3200,67 @@ class WsEmbyCover(_PluginBase):
         item_id = existsinfo.itemid
         server = existsinfo.server
         service = self._servers.get(server)
-        self.__apply_server_profile(server)
-        if service:
-            libraries = self.__get_server_libraries(service)
-        if libraries and not library_id:
-            library = next(
-                (library
-                 for library in libraries if library.get('Locations', []) 
-                 and any(iteminfo.path.startswith(path) for path in library.get('Locations', []))),
-                None
-            )
-        
-        if not library:
-            logger.warning(f"找不到 {mediainfo.title_year} 所在的媒体库")
+        if not service:
+            logger.warning(f"找不到媒体服务器配置：{server}")
             return
-        if service.type == 'emby':
-            library_id = library.get("Id")
-        else:
-            library_id = library.get("ItemId")
-
-        update_key = (server, item_id)
-        if update_key in self._current_updating_items:
-            logger.info(f"媒体库 {server}：{library['Name']} 的项目 {mediainfo.title_year} 正在更新中，跳过本次更新")
-            return
-        # self.clean_cover_history(save=True)
-        old_history = self.get_data('cover_history') or []
-        # 新增去重判断逻辑
-        latest_item = max(
-            (item for item in old_history if str(item.get("library_id")) == str(library_id)),
-            key=lambda x: x["timestamp"],
-            default=None
-        )
-        if latest_item and str(latest_item.get("item_id")) == str(item_id):
-            logger.info(f"媒体 {mediainfo.title_year} 在库中是朢新记录，不更新封面图")
-            return
-        
-        # 瀹夊叏鍦拌幏鍙栧瓧浣撳拰缈昏瘧
+        libraries = []
+        runtime_snapshot = self.__snapshot_runtime_profile_values()
+        update_key = None
         try:
-            self.__get_fonts()
-        except Exception as e:
-            logger.error(f"初始化字体或翻译时出错: {e}")
-            # 继续执行，但可能会影响封面生成质?
-        new_history = self.update_cover_history(
-            server=server, 
-            library_id=library_id, 
-            item_id=item_id
-        )
-        # logger.info(f"朢新数据： {new_history}")
-        self._monitor_sort = 'DateCreated'
-        self._current_updating_items.add(update_key)
-        if self.__update_library(service, library):
+            self.__apply_server_profile(server)
+            if service:
+                libraries = self.__get_server_libraries(service)
+            if libraries and not library_id:
+                library = next(
+                    (library
+                     for library in libraries if library.get('Locations', [])
+                     and any(iteminfo.path.startswith(path) for path in library.get('Locations', []))),
+                    None
+                )
+
+            if not library:
+                logger.warning(f"找不到 {mediainfo.title_year} 所在的媒体库")
+                return
+            if service.type == 'emby':
+                library_id = library.get("Id")
+            else:
+                library_id = library.get("ItemId")
+
+            update_key = (server, item_id)
+            if update_key in self._current_updating_items:
+                logger.info(f"媒体库 {server}：{library['Name']} 的项目 {mediainfo.title_year} 正在更新中，跳过本次更新")
+                return
+            # self.clean_cover_history(save=True)
+            old_history = self.get_data('cover_history') or []
+            # 新增去重判断逻辑
+            latest_item = max(
+                (item for item in old_history if str(item.get("library_id")) == str(library_id)),
+                key=lambda x: x["timestamp"],
+                default=None
+            )
+            if latest_item and str(latest_item.get("item_id")) == str(item_id):
+                logger.info(f"媒体 {mediainfo.title_year} 在库中是最新记录，不更新封面图")
+                return
+
+            try:
+                self.__get_fonts()
+            except Exception as e:
+                logger.error(f"初始化字体或翻译时出错: {e}")
+                # 继续执行，但可能会影响封面生成质量
+            self.update_cover_history(
+                server=server,
+                library_id=library_id,
+                item_id=item_id
+            )
+            self._monitor_sort = 'DateCreated'
+            self._current_updating_items.add(update_key)
+            if self.__update_library(service, library):
+                logger.info(f"媒体库 {server}：{library['Name']} 封面更新成功")
+        finally:
             self._monitor_sort = ''
-            self._current_updating_items.remove(update_key)
-            logger.info(f"媒体库 {server}：{library['Name']} 封面更新成功")
+            if update_key in self._current_updating_items:
+                self._current_updating_items.remove(update_key)
+            self.__restore_runtime_profile_values(runtime_snapshot)
 
     
     def __update_all_libraries(self):
@@ -3250,61 +3280,67 @@ class WsEmbyCover(_PluginBase):
         logger.info("开始更新媒体库封面 ...")
         self.__debug_log(f"调试模式开启：selected_libraries={self._selected_libraries}")
         self._event.clear()
-        global_style = self._cover_style
+        global_runtime = self.__snapshot_runtime_profile_values()
         total_success_count = 0
         total_fail_count = 0
         selected_pairs = self.__parse_selected_libraries()
         selected_servers = {server for server, _ in selected_pairs}
-        for server, service in self._servers.items():
-            if selected_servers and server not in selected_servers:
-                continue
-            self.__apply_server_profile(server)
-            logger.info(f"[WsEmbyCover] sort rule active: server={server}, sort_by={self._sort_by}")
-            logger.info(f"当前服务器：{server}")
-            cover_style = {
-                "static_1": "静态 1",
-                "static_2": "静态 2",
-            }.get(self._cover_style, "静态 1")
-            logger.info(f"当前风格：{cover_style}")
-            libraries = self.__get_server_libraries(service)
-            if not libraries:
-                logger.warning(f"服务器 {server} 的媒体库列表获取失败或为空，已跳过")
-                continue
-            self.__debug_log(f"服务器 {server} 可用媒体库数量：{len(libraries)}")
-            selected_library_ids = {library_id for srv, library_id in selected_pairs if srv == server}
-            if selected_library_ids:
-                self.__debug_log(f"服务器 {server} 指定媒体库过滤：{sorted(selected_library_ids)}")
-                filtered_libraries = []
-                for library in libraries:
-                    current_library_id = library.get("Id") if service.type == 'emby' else library.get("ItemId")
-                    if str(current_library_id or "").strip() in selected_library_ids:
-                        filtered_libraries.append(library)
-                libraries = filtered_libraries
-                if not libraries:
-                    logger.warning(f"服务器 {server} 中未找到已选择的媒体库，已跳过")
+        try:
+            for server, service in self._servers.items():
+                if selected_servers and server not in selected_servers:
                     continue
-            success_count = 0
-            fail_count = 0
-            for library in libraries:
-                if self._event.is_set():
-                    logger.info("媒体库封面更新服务已停止")
-                    self._event.clear()
-                    return
-                library_name = str(library.get("Name") or "").strip() or "未知媒体库"
-                logger.info(f"当前执行：{server} -> {library_name}")
-                if service.type == 'emby':
-                    library_id = library.get("Id")
-                else:
-                    library_id = library.get("ItemId")
-                if self.__update_library(service, library):
-                    logger.info(f"媒体库 {server}：{library['Name']} 封面更新成功")
-                    success_count += 1
-                else:
-                    logger.warning(f"媒体库 {server}：{library['Name']} 封面更新失败")
-                    fail_count += 1
-            total_success_count += success_count
-            total_fail_count += fail_count
-        self._cover_style = global_style
+                server_runtime = self.__snapshot_runtime_profile_values()
+                try:
+                    self.__apply_server_profile(server)
+                    logger.info(f"[WsEmbyCover] sort rule active: server={server}, sort_by={self._sort_by}")
+                    logger.info(f"当前服务器：{server}")
+                    cover_style = {
+                        "static_1": "静态 1",
+                        "static_2": "静态 2",
+                    }.get(self._cover_style, "静态 1")
+                    logger.info(f"当前风格：{cover_style}")
+                    libraries = self.__get_server_libraries(service)
+                    if not libraries:
+                        logger.warning(f"服务器 {server} 的媒体库列表获取失败或为空，已跳过")
+                        continue
+                    self.__debug_log(f"服务器 {server} 可用媒体库数量：{len(libraries)}")
+                    selected_library_ids = {library_id for srv, library_id in selected_pairs if srv == server}
+                    if selected_library_ids:
+                        self.__debug_log(f"服务器 {server} 指定媒体库过滤：{sorted(selected_library_ids)}")
+                        filtered_libraries = []
+                        for library in libraries:
+                            current_library_id = library.get("Id") if service.type == 'emby' else library.get("ItemId")
+                            if str(current_library_id or "").strip() in selected_library_ids:
+                                filtered_libraries.append(library)
+                        libraries = filtered_libraries
+                        if not libraries:
+                            logger.warning(f"服务器 {server} 中未找到已选择的媒体库，已跳过")
+                            continue
+                    success_count = 0
+                    fail_count = 0
+                    for library in libraries:
+                        if self._event.is_set():
+                            logger.info("媒体库封面更新服务已停止")
+                            self._event.clear()
+                            return
+                        library_name = str(library.get("Name") or "").strip() or "未知媒体库"
+                        logger.info(f"当前执行：{server} -> {library_name}")
+                        if service.type == 'emby':
+                            library_id = library.get("Id")
+                        else:
+                            library_id = library.get("ItemId")
+                        if self.__update_library(service, library):
+                            logger.info(f"媒体库 {server}：{library['Name']} 封面更新成功")
+                            success_count += 1
+                        else:
+                            logger.warning(f"媒体库 {server}：{library['Name']} 封面更新失败")
+                            fail_count += 1
+                    total_success_count += success_count
+                    total_fail_count += fail_count
+                finally:
+                    self.__restore_runtime_profile_values(server_runtime)
+        finally:
+            self.__restore_runtime_profile_values(global_runtime)
         tips = f"媒体库封面更新任务结束，成功 {total_success_count} 个，失败 {total_fail_count} 个"
         logger.info(tips)
         return tips
